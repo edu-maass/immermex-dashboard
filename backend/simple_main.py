@@ -9,6 +9,8 @@ import json
 import os
 from datetime import datetime
 import logging
+import pandas as pd
+import io
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -35,36 +37,87 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Datos de prueba en memoria
-sample_kpis = {
-    "facturacion_total": 500000.0,
-    "cobranza_total": 400000.0,
-    "anticipos_total": 50000.0,
-    "porcentaje_cobrado": 80.0,
-    "rotacion_inventario": 2.5,
-    "total_facturas": 100,
-    "clientes_unicos": 8,
-    "aging_cartera": {
-        "0-30 días": 5,
-        "31-60 días": 3,
-        "61-90 días": 2,
-        "90+ días": 1
-    },
-    "top_clientes": {
-        "ACME Corp": 150000.0,
-        "Tech Solutions": 120000.0,
-        "Industrial Supplies": 100000.0,
-        "Manufacturing Co": 80000.0,
-        "Global Systems": 50000.0
-    },
-    "consumo_material": {
-        "Acero Inoxidable 304": 2000.0,
-        "Aluminio 6061": 1500.0,
-        "Cobre C11000": 1000.0,
-        "Bronce C83600": 800.0,
-        "Titanio Grade 2": 600.0
-    }
+# Almacenamiento en memoria de datos procesados
+processed_data = {
+    "facturas": [],
+    "anticipos": [],
+    "inventario": []
 }
+
+# Datos de prueba por defecto
+default_kpis = {
+    "facturacion_total": 0.0,
+    "cobranza_total": 0.0,
+    "anticipos_total": 0.0,
+    "porcentaje_cobrado": 0.0,
+    "rotacion_inventario": 0.0,
+    "total_facturas": 0,
+    "clientes_unicos": 0,
+    "aging_cartera": {},
+    "top_clientes": {},
+    "consumo_material": {}
+}
+
+def calculate_kpis():
+    """Calcula KPIs basados en los datos procesados"""
+    facturas = processed_data["facturas"]
+    anticipos = processed_data["anticipos"]
+    inventario = processed_data["inventario"]
+    
+    if not facturas:
+        return default_kpis
+    
+    # Cálculos básicos
+    facturacion_total = sum(f.get("total", 0) for f in facturas)
+    cobranza_total = sum(f.get("cobrado", 0) for f in facturas)
+    anticipos_total = sum(a.get("monto", 0) for a in anticipos)
+    total_facturas = len(facturas)
+    clientes_unicos = len(set(f.get("cliente", "") for f in facturas))
+    
+    # Porcentaje cobrado
+    porcentaje_cobrado = (cobranza_total / facturacion_total * 100) if facturacion_total > 0 else 0
+    
+    # Aging de cartera (simulado basado en fechas)
+    aging_cartera = {
+        "0-30 días": len([f for f in facturas if f.get("dias_vencimiento", 0) <= 30]),
+        "31-60 días": len([f for f in facturas if 31 <= f.get("dias_vencimiento", 0) <= 60]),
+        "61-90 días": len([f for f in facturas if 61 <= f.get("dias_vencimiento", 0) <= 90]),
+        "90+ días": len([f for f in facturas if f.get("dias_vencimiento", 0) > 90])
+    }
+    
+    # Top clientes
+    clientes_totales = {}
+    for f in facturas:
+        cliente = f.get("cliente", "")
+        if cliente:
+            clientes_totales[cliente] = clientes_totales.get(cliente, 0) + f.get("total", 0)
+    
+    top_clientes = dict(sorted(clientes_totales.items(), key=lambda x: x[1], reverse=True)[:5])
+    
+    # Consumo de material (simulado)
+    consumo_material = {
+        "Acero Inoxidable 304": sum(f.get("total", 0) * 0.3 for f in facturas),
+        "Aluminio 6061": sum(f.get("total", 0) * 0.25 for f in facturas),
+        "Cobre C11000": sum(f.get("total", 0) * 0.2 for f in facturas),
+        "Bronce C83600": sum(f.get("total", 0) * 0.15 for f in facturas),
+        "Titanio Grade 2": sum(f.get("total", 0) * 0.1 for f in facturas)
+    }
+    
+    # Rotación de inventario (simulado)
+    rotacion_inventario = (facturacion_total / 100000) if facturacion_total > 0 else 0
+    
+    return {
+        "facturacion_total": round(facturacion_total, 2),
+        "cobranza_total": round(cobranza_total, 2),
+        "anticipos_total": round(anticipos_total, 2),
+        "porcentaje_cobrado": round(porcentaje_cobrado, 2),
+        "rotacion_inventario": round(rotacion_inventario, 2),
+        "total_facturas": total_facturas,
+        "clientes_unicos": clientes_unicos,
+        "aging_cartera": aging_cartera,
+        "top_clientes": top_clientes,
+        "consumo_material": consumo_material
+    }
 
 @app.on_event("startup")
 async def startup_event():
@@ -84,7 +137,7 @@ async def health_check():
 async def get_kpis():
     """Obtiene KPIs principales del dashboard"""
     try:
-        return sample_kpis
+        return calculate_kpis()
     except Exception as e:
         logger.error(f"Error obteniendo KPIs: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -93,7 +146,8 @@ async def get_kpis():
 async def get_grafico_aging():
     """Obtiene datos para gráfico de aging de cartera"""
     try:
-        aging = sample_kpis["aging_cartera"]
+        kpis = calculate_kpis()
+        aging = kpis["aging_cartera"]
         return {
             "labels": list(aging.keys()),
             "data": list(aging.values()),
@@ -107,7 +161,8 @@ async def get_grafico_aging():
 async def get_grafico_top_clientes(limite: int = 10):
     """Obtiene datos para gráfico de top clientes"""
     try:
-        clientes = sample_kpis["top_clientes"]
+        kpis = calculate_kpis()
+        clientes = kpis["top_clientes"]
         labels = list(clientes.keys())[:limite]
         data = list(clientes.values())[:limite]
         return {
@@ -123,7 +178,8 @@ async def get_grafico_top_clientes(limite: int = 10):
 async def get_grafico_consumo_material(limite: int = 10):
     """Obtiene datos para gráfico de consumo por material"""
     try:
-        materiales = sample_kpis["consumo_material"]
+        kpis = calculate_kpis()
+        materiales = kpis["consumo_material"]
         labels = list(materiales.keys())[:limite]
         data = list(materiales.values())[:limite]
         return {
@@ -162,11 +218,52 @@ async def upload_file(file: UploadFile = File(...)):
         if not file.filename.endswith(('.xlsx', '.xls')):
             raise HTTPException(status_code=400, detail="Solo se permiten archivos Excel (.xlsx, .xls)")
         
-        # Simular procesamiento
-        logger.info(f"Archivo recibido: {file.filename}")
+        logger.info(f"Procesando archivo: {file.filename}")
         
-        # Simular datos procesados
-        registros_procesados = 50  # Simulado
+        # Leer contenido del archivo
+        contents = await file.read()
+        
+        # Procesar con pandas
+        df = pd.read_excel(io.BytesIO(contents))
+        
+        # Limpiar datos procesados anteriores
+        processed_data["facturas"] = []
+        processed_data["anticipos"] = []
+        processed_data["inventario"] = []
+        
+        registros_procesados = 0
+        
+        # Procesar cada fila del Excel
+        for index, row in df.iterrows():
+            try:
+                # Mapear columnas comunes (ajustar según tu estructura de Excel)
+                factura = {
+                    "numero_pedido": str(row.get("Número de Pedido", f"PED-{index+1}")),
+                    "cliente": str(row.get("Cliente", f"Cliente {index+1}")),
+                    "agente": str(row.get("Agente", "N/A")),
+                    "fecha_factura": str(row.get("Fecha Factura", datetime.now().strftime("%Y-%m-%d"))),
+                    "total": float(row.get("Total", 0)),
+                    "cobrado": float(row.get("Cobrado", 0)),
+                    "dias_vencimiento": int(row.get("Días Vencimiento", 30))
+                }
+                
+                processed_data["facturas"].append(factura)
+                registros_procesados += 1
+                
+                # Procesar anticipos si existe la columna
+                if "Anticipo" in row and pd.notna(row["Anticipo"]) and row["Anticipo"] > 0:
+                    anticipo = {
+                        "numero_pedido": factura["numero_pedido"],
+                        "monto": float(row["Anticipo"]),
+                        "fecha": factura["fecha_factura"]
+                    }
+                    processed_data["anticipos"].append(anticipo)
+                
+            except Exception as e:
+                logger.warning(f"Error procesando fila {index}: {str(e)}")
+                continue
+        
+        logger.info(f"Procesados {registros_procesados} registros de {file.filename}")
         
         return {
             "mensaje": "Archivo procesado exitosamente",
