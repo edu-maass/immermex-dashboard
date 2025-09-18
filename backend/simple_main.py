@@ -2,7 +2,7 @@
 API REST simplificada para Immermex Dashboard (sin pandas)
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import json
@@ -152,6 +152,31 @@ async def get_archivos_procesados():
         ]
     except Exception as e:
         logger.error(f"Error obteniendo archivos: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/upload")
+async def upload_file(file: UploadFile = File(...)):
+    """Endpoint para subir archivos Excel"""
+    try:
+        # Validar tipo de archivo
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            raise HTTPException(status_code=400, detail="Solo se permiten archivos Excel (.xlsx, .xls)")
+        
+        # Simular procesamiento
+        logger.info(f"Archivo recibido: {file.filename}")
+        
+        # Simular datos procesados
+        registros_procesados = 50  # Simulado
+        
+        return {
+            "mensaje": "Archivo procesado exitosamente",
+            "nombre_archivo": file.filename,
+            "registros_procesados": registros_procesados,
+            "fecha_procesamiento": datetime.now().isoformat(),
+            "estado": "procesado"
+        }
+    except Exception as e:
+        logger.error(f"Error procesando archivo: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
