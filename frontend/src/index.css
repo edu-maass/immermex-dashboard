@@ -3,10 +3,7 @@
 @tailwind utilities;
 
 @layer base {
-  * {
-    @apply border-gray-300;
-  }
   body {
-    @apply bg-white text-gray-900;
+    @apply bg-background text-foreground font-sans antialiased;
   }
 }
