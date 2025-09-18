@@ -3,6 +3,7 @@ name: Deploy Dashboard to GitHub Pages
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -39,6 +40,10 @@ jobs:
         echo "NODE VERSION: $(node -v)"
         echo "NPM VERSION: $(npm -v)"
         npm run build -- --mode production --logLevel info || { echo 'Build failed'; cat vite.config.ts || true; exit 1; }
+        echo "CSS asset details:" 
+        ls -l dist/assets/*.css || true
+        echo "First 50 lines of CSS:" 
+        head -n 50 dist/assets/*.css || true
         
     - name: Setup Pages
       uses: actions/configure-pages@v4
