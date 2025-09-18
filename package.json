@@ -1,0 +1,23 @@
+{
+  "name": "immermex-dashboard",
+  "version": "1.0.0",
+  "description": "Dashboard financiero y operacional para Immermex",
+  "main": "index.js",
+  "scripts": {
+    "install-all": "npm run install-backend && npm run install-frontend",
+    "install-backend": "cd backend && pip install -r requirements.txt",
+    "install-frontend": "cd frontend && npm install",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "backend": "cd backend && python simple_main.py",
+    "frontend": "cd frontend && npm run dev",
+    "start": "npm run install-all && npm run dev",
+    "build": "cd frontend && npm run build",
+    "test": "cd backend && python -c \"import requests; print('Backend Status:', requests.get('http://localhost:8000/api/health').status_code)\""
+  },
+  "keywords": ["dashboard", "financial", "react", "fastapi", "tailwind"],
+  "author": "Immermex Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

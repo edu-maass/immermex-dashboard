@@ -1,0 +1,11 @@
+Folio,Fecha Cobro,Cliente,Importe Cobrado,Forma Pago,Referencia,UUID
+FAC-0001,2024-01-25,ACME Corp,58000.0,Transferencia,REF-123456,uuid-000001-1234
+FAC-0002,2024-02-05,Tech Solutions,34800.0,Efectivo,REF-234567,uuid-000002-5678
+FAC-0003,2024-02-15,Industrial Supplies,46400.0,Cheque,REF-345678,uuid-000003-9012
+FAC-0004,2024-02-25,Manufacturing Co,18560.0,Transferencia,REF-456789,uuid-000004-3456
+FAC-0005,2024-03-01,Global Systems,69600.0,Transferencia,REF-567890,uuid-000005-7890
+FAC-0006,2024-03-15,Premium Materials,36540.0,Efectivo,REF-678901,uuid-000006-2345
+FAC-0007,2024-04-01,Quality Products,27840.0,Cheque,REF-789012,uuid-000007-6789
+FAC-0008,2024-04-10,Advanced Tech,52200.0,Transferencia,REF-890123,uuid-000008-0123
+FAC-0009,2024-04-25,Enterprise Solutions,32480.0,Transferencia,REF-901234,uuid-000009-4567
+FAC-0010,2024-05-01,Innovation Labs,46400.0,Efectivo,REF-012345,uuid-000010-8901
