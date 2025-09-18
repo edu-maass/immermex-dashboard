@@ -20,13 +20,14 @@ class ApiService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const buildUrl = (prefix: string) => `${this.baseUrl}${prefix}${endpoint}`;
     let url = buildUrl(apiPrefix ?? '');
-    const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
+    const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+    const mergedHeaders: Record<string, string> = {
+      ...(options.headers as Record<string, string> | undefined),
     };
+    if (!isFormData && !('Content-Type' in (mergedHeaders || {}))) {
+      mergedHeaders['Content-Type'] = 'application/json';
+    }
+    const config: RequestInit = { ...options, headers: mergedHeaders };
 
     try {
       let response = await fetch(url, config);
