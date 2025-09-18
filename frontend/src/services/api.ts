@@ -3,11 +3,9 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://immermex-dashboard.vercel.app';
 const STORED_PREFIX_KEY = 'immermex_api_prefix';
 function getInitialPrefix(): string {
-  // Force fresh detection for now
-  if (typeof window !== 'undefined') {
-    window.localStorage.removeItem(STORED_PREFIX_KEY);
-  }
-  return '/api';
+  const stored = typeof window !== 'undefined' ? window.localStorage.getItem(STORED_PREFIX_KEY) : null;
+  if (stored === '' || stored === '/api') return stored;
+  return ''; // Start without prefix, will auto-detect
 }
 
 let apiPrefix = getInitialPrefix();
@@ -34,14 +32,14 @@ class ApiService {
     try {
       let response = await fetch(url, config);
       
-      // Auto-detect API prefix: if 404 with '/api', retry without prefix once
-      if (response.status === 404 && apiPrefix === '/api') {
-        console.log('Retrying without /api prefix...');
-        const retryUrl = buildUrl('');
+      // Auto-detect API prefix: if 404 without '/api', retry with prefix once
+      if (response.status === 404 && apiPrefix === '') {
+        console.log('Retrying with /api prefix...');
+        const retryUrl = buildUrl('/api');
         const retry = await fetch(retryUrl, config);
         if (retry.ok) {
-          apiPrefix = '';
-          try { window.localStorage.setItem(STORED_PREFIX_KEY, ''); } catch {}
+          apiPrefix = '/api';
+          try { window.localStorage.setItem(STORED_PREFIX_KEY, '/api'); } catch {}
           return await retry.json();
         }
         response = retry; // fall through to error handling
