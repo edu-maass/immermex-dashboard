@@ -29,7 +29,8 @@ export const FileUpload: FC<FileUploadProps> = ({
     try {
       const result = await apiService.uploadFile(file);
       setUploadStatus('success');
-      setUploadMessage(`Archivo procesado exitosamente. ${result.registros_procesados} registros importados.`);
+      const processed = typeof result.registros_procesados === 'number' ? result.registros_procesados : 0;
+      setUploadMessage(`Archivo procesado exitosamente. ${processed} registros importados.`);
       onUploadSuccess?.(result);
     } catch (error) {
       setUploadStatus('error');

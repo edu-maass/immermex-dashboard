@@ -110,11 +110,11 @@ class ApiService {
   }
 
   // Archivos
-  async uploadFile(file: File) {
+  async uploadFile(file: File): Promise<{ registros_procesados?: number; [key: string]: any }> {
     const formData = new FormData();
     formData.append('file', file);
 
-    return this.request('/api/upload', {
+    return this.request<{ registros_procesados?: number; [key: string]: any }>('/api/upload', {
       method: 'POST',
       headers: {}, // No Content-Type header for FormData
       body: formData,
