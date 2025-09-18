@@ -5,6 +5,8 @@ Dashboard financiero y operacional moderno para Immermex, construido con React, 
 ## 🌐 Demo en Línea
 
 **Dashboard en vivo**: https://edu-maass.github.io/immermex-dashboard/
+**Backend API**: https://immermex-dashboard.vercel.app
+**Documentación API**: https://immermex-dashboard.vercel.app/docs
 
 ## 🚀 Inicio Rápido
 
