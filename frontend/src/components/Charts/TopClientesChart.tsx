@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
@@ -6,7 +6,7 @@ interface TopClientesChartProps {
   data: Array<{ name: string; value: number }>;
 }
 
-export const TopClientesChart: React.FC<TopClientesChartProps> = ({ data }) => {
+export const TopClientesChart: FC<TopClientesChartProps> = ({ data }) => {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',

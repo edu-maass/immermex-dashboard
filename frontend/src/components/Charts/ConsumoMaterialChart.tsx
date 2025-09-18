@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
@@ -6,7 +6,7 @@ interface ConsumoMaterialChartProps {
   data: Array<{ name: string; value: number }>;
 }
 
-export const ConsumoMaterialChart: React.FC<ConsumoMaterialChartProps> = ({ data }) => {
+export const ConsumoMaterialChart: FC<ConsumoMaterialChartProps> = ({ data }) => {
   const COLORS = [
     '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
     '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'
@@ -30,12 +30,12 @@ export const ConsumoMaterialChart: React.FC<ConsumoMaterialChartProps> = ({ data
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(1)}%)`}
+                label={({ name, percent }: { name: string; percent: number }) => `${name} (${(percent * 100).toFixed(1)}%)`}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
               >
-                {data.map((entry, index) => (
+                {data.map((_, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>

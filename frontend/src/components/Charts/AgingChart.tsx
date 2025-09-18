@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
@@ -6,7 +6,7 @@ interface AgingChartProps {
   data: Array<{ name: string; value: number; color?: string }>;
 }
 
-export const AgingChart: React.FC<AgingChartProps> = ({ data }) => {
+export const AgingChart: FC<AgingChartProps> = ({ data }) => {
   const colors = {
     '0-30 días': '#10b981',
     '31-60 días': '#f59e0b',

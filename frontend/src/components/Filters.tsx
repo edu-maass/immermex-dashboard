@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, FC } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
@@ -11,7 +11,7 @@ interface FiltersProps {
   onClearFilters: () => void;
 }
 
-export const Filters: React.FC<FiltersProps> = ({ onFiltersChange, onClearFilters }) => {
+export const Filters: FC<FiltersProps> = ({ onFiltersChange, onClearFilters }) => {
   const [filtros, setFiltros] = useState<FiltrosDashboard>({});
 
   const handleInputChange = (field: keyof FiltrosDashboard, value: string | number) => {

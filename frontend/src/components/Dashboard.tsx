@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { KPICard } from './KPICard';
@@ -36,7 +36,7 @@ export const Dashboard: React.FC = () => {
 
       // Cargar KPIs
       const kpisData = await apiService.getKPIs(filtrosAplicados);
-      setKpis(kpisData);
+      setKpis(kpisData as KPIs);
 
       // Cargar gráficos
       const [aging, topClientes, consumoMaterial] = await Promise.all([
@@ -45,9 +45,9 @@ export const Dashboard: React.FC = () => {
         apiService.getGraficoConsumoMaterial(10, filtrosAplicados)
       ]);
 
-      setAgingData(aging);
-      setTopClientesData(topClientes);
-      setConsumoMaterialData(consumoMaterial);
+      setAgingData(aging as GraficoDatos);
+      setTopClientesData(topClientes as GraficoDatos);
+      setConsumoMaterialData(consumoMaterial as GraficoDatos);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error cargando datos');

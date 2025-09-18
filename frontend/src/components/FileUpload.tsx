@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState, FC } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
@@ -10,7 +10,7 @@ interface FileUploadProps {
   onUploadError?: (error: string) => void;
 }
 
-export const FileUpload: React.FC<FileUploadProps> = ({
+export const FileUpload: FC<FileUploadProps> = ({
   onUploadSuccess,
   onUploadError
 }) => {

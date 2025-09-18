@@ -1,13 +1,13 @@
-import React from 'react';
+import { FC } from 'react';
 import { Dashboard } from './components/Dashboard';
 import './index.css';
 
-function App() {
+const App: FC = () => {
   return (
     <div className="min-h-screen bg-background">
       <Dashboard />
     </div>
   );
-}
+};
 
 export default App;

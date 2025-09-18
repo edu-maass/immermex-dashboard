@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { LucideIcon } from 'lucide-react';
 
@@ -14,7 +14,7 @@ interface KPICardProps {
   className?: string;
 }
 
-export const KPICard: React.FC<KPICardProps> = ({
+export const KPICard: FC<KPICardProps> = ({
   title,
   value,
   description,
