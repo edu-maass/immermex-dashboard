@@ -6,11 +6,34 @@ export interface KPIs {
   anticipos_total: number;
   porcentaje_cobrado: number;
   rotacion_inventario: number;
+  dias_cxc_ajustado: number;
+  ciclo_efectivo: number;
   total_facturas: number;
   clientes_unicos: number;
   aging_cartera: Record<string, number>;
   top_clientes: Record<string, number>;
   consumo_material: Record<string, number>;
+  analisis_pedidos: PedidoAnalisis[];
+  clientes_analisis: Record<string, ClienteAnalisis>;
+}
+
+export interface PedidoAnalisis {
+  numero_pedido: string;
+  cliente: string;
+  kg: number;
+  importe: number;
+  ticket_promedio: number;
+  margen: number;
+  estado_cobro: string;
+  dias_credito: number;
+}
+
+export interface ClienteAnalisis {
+  facturacion: number;
+  cobranza: number;
+  puntualidad: number;
+  ticket_promedio: number;
+  facturas_count: number;
 }
 
 export interface FiltrosDashboard {

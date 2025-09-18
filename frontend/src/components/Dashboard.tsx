@@ -16,7 +16,8 @@ import {
   Users, 
   FileText,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Clock
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
@@ -179,6 +180,20 @@ export const Dashboard: React.FC = () => {
             value={kpis.rotacion_inventario}
             icon={Package}
             description="Veces que se rotó el inventario"
+            raw
+          />
+          <KPICard
+            title="Días CxC Ajustado"
+            value={kpis.dias_cxc_ajustado || 0}
+            icon={Clock}
+            description="Días promedio de cobro ajustado"
+            raw
+          />
+          <KPICard
+            title="Ciclo de Efectivo"
+            value={kpis.ciclo_efectivo || 0}
+            icon={RefreshCw}
+            description="Inventario + Cuentas por Cobrar"
             raw
           />
         </div>

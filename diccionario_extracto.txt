@@ -1,0 +1,46 @@
+Diccionario de Extracción de Datos - Immermex
+Campo en bruto Hoja origen Columna origen Uso en KPI
+Fecha de factura facturacion Todos los Documentos Base para aging y días de crédito
+Serie factura facturacion Unnamed: 1 Identificador factura
+Folio factura facturacion Unnamed: 2 Identificador factura
+Cliente facturacion Unnamed: 3 Cliente facturado
+Monto neto facturacion Unnamed: 4 Base de facturación
+Monto total facturacion Unnamed: 5 Facturación total
+Saldo pendiente facturacion Unnamed: 6 Cuentas por cobrar
+Referencia / días crédito facturacion Unnamed: 7 Condiciones de pago
+Agente facturacion Unnamed: 10 Análisis comercial
+UUID factura facturacion Unnamed: 13 Identificador único SAT
+Fecha de pago cobranza CONTPAQ i Fecha de cobro
+Serie pago cobranza Unnamed: 1 Identificador del pago
+Folio pago cobranza Unnamed: 2 Identificador del pago
+Concepto pago cobranza Unnamed: 3 Referencia bancaria
+UUID pago cobranza Unnamed: 4 Identificador único SAT
+Cliente cobranza Immermex S.A. de C.V. 2022 Cliente que paga
+Moneda cobranza Unnamed: 6 Moneda del pago
+Tipo de cambio cobranza Unnamed: 7 Tipo de cambio aplicado
+Forma pago cobranza Unnamed: 8 Medio de pago
+No. parcialidad cobranza Unnamed: 9 Número de parcialidad
+Importe pagado cobranza Unnamed: 10 Monto cobrado
+Número operación cobranza Unnamed: 11 Referencia bancaria
+Fecha emisión pago cobranza Unnamed: 12 Fecha de timbrado del pago
+Fecha factura relacionada cobranza Unnamed: 14 Cruce con factura
+Serie factura relacionada cobranza Unnamed: 15 Cruce con factura
+Folio factura relacionada cobranza Unnamed: 16 Cruce con factura
+UUID factura relacionada cobranza 2025-09-16 00:00:00 Cruce con factura
+UUID CFDI cfdi relacionados XML Identificador CFDI
+Cliente receptor cfdi relacionados Nombre Receptor Cliente vinculado
+Fecha emisión CFDI cfdi relacionados Fecha Consulta Fecha del comprobante
+Tipo relación cfdi relacionados Tipo Relación Nota de crédito / anticipo
+Campo en bruto Hoja origen Columna origen Uso en KPI
+Importe relación cfdi relacionados Traslado IVA 0.160000 % Monto aplicado
+UUID factura relacionada cfdi relacionados Relacionados Factura vinculada
+Factura asociada 1-14 sep Unnamed: 0 Factura de venta
+Número de pedido 1-14 sep Unnamed: 2 Pedido del cliente
+Kg 1-14 sep Immermex S.A. de C.V. Volumen vendido
+Precio unitario 1-14 sep Unnamed: 4 Precio por kg
+Importe sin IVA 1-14 sep Unnamed: 5 Monto facturado
+Material 1-14 sep Unnamed: 6 Código de material
+Cliente 1-14 sep Unnamed: 7 Cliente
+Días crédito 1-14 sep Unnamed: 8 Condiciones de pago
+Fecha factura 1-14 sep Unnamed: 9 Fecha de facturación
+Fecha pago 1-14 sep Unnamed: 10 Fecha de cobro
