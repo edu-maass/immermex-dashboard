@@ -1,6 +1,14 @@
 // Servicio de API para el dashboard de Immermex
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://immermex-dashboard.vercel.app';
+const STORED_PREFIX_KEY = 'immermex_api_prefix';
+function getInitialPrefix(): string {
+  const stored = typeof window !== 'undefined' ? window.localStorage.getItem(STORED_PREFIX_KEY) : null;
+  if (stored === '' || stored === '/api') return stored;
+  return '/api';
+}
+
+let apiPrefix = getInitialPrefix();
 
 class ApiService {
   private baseUrl: string;
@@ -10,7 +18,8 @@ class ApiService {
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
+    const buildUrl = (prefix: string) => `${this.baseUrl}${prefix}${endpoint}`;
+    let url = buildUrl(apiPrefix ?? '');
     const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
@@ -20,8 +29,20 @@ class ApiService {
     };
 
     try {
-      const response = await fetch(url, config);
+      let response = await fetch(url, config);
       
+      // Auto-detect API prefix: if 404 with '/api', retry without prefix once
+      if (response.status === 404 && apiPrefix === '/api') {
+        const retryUrl = buildUrl('');
+        const retry = await fetch(retryUrl, config);
+        if (retry.ok) {
+          apiPrefix = '';
+          try { window.localStorage.setItem(STORED_PREFIX_KEY, ''); } catch {}
+          return await retry.json();
+        }
+        response = retry; // fall through to error handling
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -45,19 +66,19 @@ class ApiService {
     }
     
     const queryString = params.toString();
-    const endpoint = queryString ? `/api/kpis?${queryString}` : '/api/kpis';
+    const endpoint = queryString ? `/kpis?${queryString}` : '/kpis';
     
     return this.request(endpoint);
   }
 
   // Pedidos
   async getPedidoDetalle(numeroPedido: string) {
-    return this.request(`/api/pedido/${numeroPedido}`);
+    return this.request(`/pedido/${numeroPedido}`);
   }
 
   // Clientes
   async getClienteDetalle(cliente: string) {
-    return this.request(`/api/cliente/${cliente}`);
+    return this.request(`/cliente/${cliente}`);
   }
 
   // Gráficos
@@ -72,7 +93,7 @@ class ApiService {
     }
     
     const queryString = params.toString();
-    const endpoint = queryString ? `/api/graficos/aging?${queryString}` : '/api/graficos/aging';
+    const endpoint = queryString ? `/graficos/aging?${queryString}` : '/graficos/aging';
     
     return this.request(endpoint);
   }
@@ -90,7 +111,7 @@ class ApiService {
     }
     
     const queryString = params.toString();
-    return this.request(`/api/graficos/top-clientes?${queryString}`);
+    return this.request(`/graficos/top-clientes?${queryString}`);
   }
 
   async getGraficoConsumoMaterial(limite: number = 10, filtros?: any) {
@@ -106,7 +127,7 @@ class ApiService {
     }
     
     const queryString = params.toString();
-    return this.request(`/api/graficos/consumo-material?${queryString}`);
+    return this.request(`/graficos/consumo-material?${queryString}`);
   }
 
   // Archivos
@@ -114,7 +135,7 @@ class ApiService {
     const formData = new FormData();
     formData.append('file', file);
 
-    return this.request<{ registros_procesados?: number; [key: string]: any }>('/api/upload', {
+    return this.request<{ registros_procesados?: number; [key: string]: any }>('/upload', {
       method: 'POST',
       headers: {}, // No Content-Type header for FormData
       body: formData,
@@ -122,12 +143,12 @@ class ApiService {
   }
 
   async getArchivosProcesados(skip: number = 0, limit: number = 100) {
-    return this.request(`/api/archivos?skip=${skip}&limit=${limit}`);
+    return this.request(`/archivos?skip=${skip}&limit=${limit}`);
   }
 
   // Health check
   async healthCheck() {
-    return this.request('/api/health');
+    return this.request('/health');
   }
 }
 
