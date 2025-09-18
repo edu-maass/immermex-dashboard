@@ -36,7 +36,9 @@ jobs:
     - name: Build
       run: |
         cd frontend
-        npm run build -- --mode production
+        echo "NODE VERSION: $(node -v)"
+        echo "NPM VERSION: $(npm -v)"
+        npm run build -- --mode production --logLevel info || { echo 'Build failed'; cat vite.config.ts || true; exit 1; }
         
     - name: Setup Pages
       uses: actions/configure-pages@v4
