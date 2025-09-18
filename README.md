@@ -2,12 +2,16 @@
 
 Dashboard financiero y operacional moderno para Immermex, construido con React, FastAPI y Tailwind CSS.
 
+## 🌐 Demo en Línea
+
+**Dashboard en vivo**: https://edu-maass.github.io/immermex-dashboard/
+
 ## 🚀 Inicio Rápido
 
 ### Windows
 ```bash
 # Clonar el repositorio
-git clone <tu-repo-url>
+git clone https://github.com/edu-maass/immermex-dashboard.git
 cd immermex-dashboard
 
 # Ejecutar el sistema completo
@@ -17,7 +21,7 @@ start.bat
 ### Linux/Mac
 ```bash
 # Clonar el repositorio
-git clone <tu-repo-url>
+git clone https://github.com/edu-maass/immermex-dashboard.git
 cd immermex-dashboard
 
 # Dar permisos de ejecución

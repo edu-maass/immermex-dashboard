@@ -1,6 +1,6 @@
 // Servicio de API para el dashboard de Immermex
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://immermex-dashboard-backend.vercel.app';
 
 class ApiService {
   private baseUrl: string;
