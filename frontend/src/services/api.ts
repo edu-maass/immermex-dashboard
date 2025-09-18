@@ -3,8 +3,10 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://immermex-dashboard.vercel.app';
 const STORED_PREFIX_KEY = 'immermex_api_prefix';
 function getInitialPrefix(): string {
-  const stored = typeof window !== 'undefined' ? window.localStorage.getItem(STORED_PREFIX_KEY) : null;
-  if (stored === '' || stored === '/api') return stored;
+  // Force fresh detection for now
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem(STORED_PREFIX_KEY);
+  }
   return '/api';
 }
 
@@ -34,6 +36,7 @@ class ApiService {
       
       // Auto-detect API prefix: if 404 with '/api', retry without prefix once
       if (response.status === 404 && apiPrefix === '/api') {
+        console.log('Retrying without /api prefix...');
         const retryUrl = buildUrl('');
         const retry = await fetch(retryUrl, config);
         if (retry.ok) {
