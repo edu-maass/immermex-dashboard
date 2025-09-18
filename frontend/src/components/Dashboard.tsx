@@ -106,12 +106,12 @@ export const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard Immermex</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-bold tracking-tight">Dashboard Immermex</h1>
+          <p className="text-muted-foreground mt-1">
             Indicadores financieros y operativos
           </p>
         </div>
@@ -135,7 +135,7 @@ export const Dashboard: React.FC = () => {
 
       {/* KPIs Grid */}
       {kpis && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           <KPICard
             title="Facturación Total"
             value={kpis.facturacion_total}
@@ -165,24 +165,27 @@ export const Dashboard: React.FC = () => {
             value={kpis.total_facturas}
             icon={FileText}
             description="Número de facturas emitidas"
+            raw
           />
           <KPICard
             title="Clientes Únicos"
             value={kpis.clientes_unicos}
             icon={Users}
             description="Clientes únicos en el período"
+            raw
           />
           <KPICard
             title="Rotación Inventario"
             value={kpis.rotacion_inventario}
             icon={Package}
             description="Veces que se rotó el inventario"
+            raw
           />
         </div>
       )}
 
       {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Aging de Cartera */}
         {agingData && (
           <AgingChart 

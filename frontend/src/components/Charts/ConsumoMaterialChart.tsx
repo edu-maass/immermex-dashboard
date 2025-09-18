@@ -29,13 +29,14 @@ export const ConsumoMaterialChart: FC<ConsumoMaterialChartProps> = ({ data }) =>
                 data={data}
                 cx="50%"
                 cy="50%"
+                innerRadius={48}
+                outerRadius={88}
                 labelLine={false}
                 label={(props: any) => {
                   const { name, percent } = props || {};
                   const pct = typeof percent === 'number' ? percent : 0;
                   return `${name ?? ''} (${(pct * 100).toFixed(1)}%)`;
                 }}
-                outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
               >
