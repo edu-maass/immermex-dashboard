@@ -137,7 +137,7 @@ class ApiService {
     const formData = new FormData();
     formData.append('file', file);
 
-    return this.request<{ registros_procesados?: number; [key: string]: any }>('/api/upload', {
+    return this.request<{ registros_procesados?: number; [key: string]: any }>('/upload', {
       method: 'POST',
       headers: {}, // No Content-Type header for FormData
       body: formData,
