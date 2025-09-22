@@ -12,6 +12,7 @@ import logging
 import pandas as pd
 import io
 from logging_config import setup_logging, log_api_request, log_file_processing, log_error
+from data_processor import load_and_clean_excel, process_immermex_file_advanced
 
 # Configurar logging
 logger = setup_logging()
@@ -343,13 +344,13 @@ async def get_archivos_procesados():
 
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
-    """Endpoint para subir archivos Excel según especificaciones Immermex"""
+    """Endpoint para subir archivos Excel con procesamiento avanzado integrado"""
     try:
         # Validar tipo de archivo
         if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
             raise HTTPException(status_code=400, detail="Solo se permiten archivos Excel (.xlsx, .xls)")
         
-        logger.info(f"Procesando archivo Immermex: {file.filename}")
+        logger.info(f"Procesando archivo Immermex con algoritmo avanzado: {file.filename}")
         
         # Leer contenido del archivo
         contents = await file.read()
@@ -358,155 +359,136 @@ async def upload_file(file: UploadFile = File(...)):
         if len(contents) > 10 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="El archivo es demasiado grande. Máximo 10MB permitido.")
         
-        # Leer todas las hojas del Excel
-        excel_file = pd.ExcelFile(io.BytesIO(contents))
-        logger.info(f"Hojas disponibles: {excel_file.sheet_names}")
+        # Guardar archivo temporalmente para procesamiento
+        temp_file_path = f"temp_{file.filename}"
+        with open(temp_file_path, "wb") as temp_file:
+            temp_file.write(contents)
         
-        # Limpiar datos procesados anteriores
-        for key in processed_data:
-            processed_data[key] = []
-        
-        registros_procesados = 0
-        
-        # 1. PROCESAR HOJA 'facturacion'
-        if 'facturacion' in excel_file.sheet_names:
-            df_facturacion = pd.read_excel(io.BytesIO(contents), sheet_name='facturacion')
-            logger.info(f"Procesando hoja facturacion: {len(df_facturacion)} filas")
+        try:
+            # Usar el procesador avanzado integrado
+            processed_data_dict, kpis = process_immermex_file_advanced(temp_file_path)
             
-            for index, row in df_facturacion.iterrows():
-                try:
+            # Convertir DataFrames a formato compatible con el backend existente
+            global processed_data
+            processed_data = {
+                "facturas": [],
+                "cobranzas": [],
+                "anticipos": [],
+                "inventario": [],
+                "pedidos": []
+            }
+            
+            # Convertir facturación
+            if not processed_data_dict["facturacion_clean"].empty:
+                for _, row in processed_data_dict["facturacion_clean"].iterrows():
                     factura = {
-                        "fecha_factura": str(row.get("Fecha de factura", "")),
-                        "serie": str(row.get("Serie factura", "")),
-                        "folio": str(row.get("Folio factura", "")),
-                        "cliente": str(row.get("Cliente", "")),
-                        "monto_neto": float(row.get("Monto neto", 0)),
-                        "monto_total": float(row.get("Monto total", 0)),
-                        "saldo_pendiente": float(row.get("Saldo pendiente", 0)),
-                        "dias_credito": int(row.get("Referencia / días crédito", 30)),
-                        "agente": str(row.get("Agente", "")),
-                        "uuid": str(row.get("UUID factura", ""))
+                        "fecha_factura": str(row.get("fecha_factura", "")),
+                        "serie": str(row.get("serie_factura", "")),
+                        "folio": str(row.get("folio_factura", "")),
+                        "cliente": str(row.get("cliente", "")),
+                        "monto_neto": float(row.get("monto_neto", 0)),
+                        "monto_total": float(row.get("monto_total", 0)),
+                        "saldo_pendiente": float(row.get("saldo_pendiente", 0)),
+                        "dias_credito": int(row.get("dias_credito", 30)),
+                        "agente": str(row.get("agente", "")),
+                        "uuid": str(row.get("uuid_factura", ""))
                     }
                     processed_data["facturas"].append(factura)
-                    registros_procesados += 1
-                except Exception as e:
-                    logger.warning(f"Error procesando factura {index}: {str(e)}")
-                    # Agregar factura con datos por defecto para evitar pérdida de datos
-                    factura = {
-                        "fecha_factura": "",
-                        "serie": "",
-                        "folio": "",
-                        "cliente": "",
-                        "monto_neto": 0.0,
-                        "monto_total": 0.0,
-                        "saldo_pendiente": 0.0,
-                        "dias_credito": 30,
-                        "agente": "",
-                        "uuid": ""
-                    }
-                    processed_data["facturas"].append(factura)
-                    continue
-        
-        # 2. PROCESAR HOJA 'cobranza'
-        if 'cobranza' in excel_file.sheet_names:
-            df_cobranza = pd.read_excel(io.BytesIO(contents), sheet_name='cobranza')
-            logger.info(f"Procesando hoja cobranza: {len(df_cobranza)} filas")
             
-            for index, row in df_cobranza.iterrows():
-                try:
+            # Convertir cobranza
+            if not processed_data_dict["cobranza_clean"].empty:
+                for _, row in processed_data_dict["cobranza_clean"].iterrows():
                     cobranza = {
-                        "fecha_pago": str(row.get("Fecha de pago", "")),
-                        "serie_pago": str(row.get("Serie pago", "")),
-                        "folio_pago": str(row.get("Folio pago", "")),
-                        "concepto_pago": str(row.get("Concepto pago", "")),
-                        "uuid_pago": str(row.get("UUID pago", "")),
-                        "cliente": str(row.get("Cliente", "")),
-                        "moneda": str(row.get("Moneda", "")),
-                        "tipo_cambio": float(row.get("Tipo de cambio", 1)),
-                        "forma_pago": str(row.get("Forma pago", "")),
-                        "no_parcialidad": int(row.get("No. parcialidad", 1)),
-                        "importe_pagado": float(row.get("Importe pagado", 0)),
-                        "numero_operacion": str(row.get("Número operación", "")),
-                        "fecha_emision_pago": str(row.get("Fecha emisión pago", "")),
-                        "fecha_factura_relacionada": str(row.get("Fecha factura relacionada", "")),
-                        "serie_factura_relacionada": str(row.get("Serie factura relacionada", "")),
-                        "folio_factura_relacionada": str(row.get("Folio factura relacionada", "")),
-                        "uuid_factura_relacionada": str(row.get("UUID factura relacionada", ""))
+                        "fecha_pago": str(row.get("fecha_pago", "")),
+                        "serie_pago": str(row.get("serie_pago", "")),
+                        "folio_pago": str(row.get("folio_pago", "")),
+                        "concepto_pago": str(row.get("forma_pago", "")),
+                        "uuid_pago": str(row.get("uuid_factura_relacionada", "")),
+                        "cliente": str(row.get("cliente", "")),
+                        "moneda": str(row.get("moneda", "MXN")),
+                        "tipo_cambio": float(row.get("tipo_cambio", 1)),
+                        "forma_pago": str(row.get("forma_pago", "")),
+                        "no_parcialidad": int(row.get("parcialidad", 1)),
+                        "importe_pagado": float(row.get("importe_pagado", 0)),
+                        "numero_operacion": "",
+                        "fecha_emision_pago": str(row.get("fecha_pago", "")),
+                        "fecha_factura_relacionada": "",
+                        "serie_factura_relacionada": "",
+                        "folio_factura_relacionada": "",
+                        "uuid_factura_relacionada": str(row.get("uuid_factura_relacionada", ""))
                     }
                     processed_data["cobranzas"].append(cobranza)
-                    registros_procesados += 1
-                except Exception as e:
-                    logger.warning(f"Error procesando cobranza {index}: {str(e)}")
-                    continue
-        
-        # 3. PROCESAR HOJA 'cfdi relacionados' (anticipos)
-        if 'cfdi relacionados' in excel_file.sheet_names:
-            df_cfdi = pd.read_excel(io.BytesIO(contents), sheet_name='cfdi relacionados')
-            logger.info(f"Procesando hoja cfdi relacionados: {len(df_cfdi)} filas")
             
-            for index, row in df_cfdi.iterrows():
-                try:
-                    tipo_relacion = str(row.get("Tipo relación", ""))
-                    if "anticipo" in tipo_relacion.lower() or "anticipo" in str(row.get("Cliente receptor", "")).lower():
-                        anticipo = {
-                            "uuid_cfdi": str(row.get("UUID CFDI", "")),
-                            "cliente_receptor": str(row.get("Cliente receptor", "")),
-                            "fecha_emision": str(row.get("Fecha emisión CFDI", "")),
-                            "tipo_relacion": tipo_relacion,
-                            "importe_relacion": float(row.get("Importe relación", 0)),
-                            "uuid_factura_relacionada": str(row.get("UUID factura relacionada", ""))
-                        }
-                        processed_data["anticipos"].append(anticipo)
-                        registros_procesados += 1
-                except Exception as e:
-                    logger.warning(f"Error procesando CFDI {index}: {str(e)}")
-                    continue
-        
-        # 4. PROCESAR HOJA '1-14 sep' (pedidos)
-        for sheet_name in excel_file.sheet_names:
-            if 'sep' in sheet_name.lower() or 'pedido' in sheet_name.lower():
-                df_pedidos = pd.read_excel(io.BytesIO(contents), sheet_name=sheet_name)
-                logger.info(f"Procesando hoja {sheet_name}: {len(df_pedidos)} filas")
-                
-                for index, row in df_pedidos.iterrows():
-                    try:
-                        pedido = {
-                            "factura_asociada": str(row.get("Factura asociada", "")),
-                            "numero_pedido": str(row.get("Número de pedido", "")),
-                            "kg": float(row.get("Kg", 0)),
-                            "precio_unitario": float(row.get("Precio unitario", 0)),
-                            "importe_sin_iva": float(row.get("Importe sin IVA", 0)),
-                            "material": str(row.get("Material", "")),
-                            "cliente": str(row.get("Cliente", "")),
-                            "dias_credito": int(row.get("Días crédito", 30)),
-                            "fecha_factura": str(row.get("Fecha factura", "")),
-                            "fecha_pago": str(row.get("Fecha pago", ""))
-                        }
-                        processed_data["pedidos"].append(pedido)
-                        registros_procesados += 1
-                    except Exception as e:
-                        logger.warning(f"Error procesando pedido {index}: {str(e)}")
-                        continue
-                break  # Solo procesar la primera hoja que contenga 'sep' o 'pedido'
-        
-        logger.info(f"Procesados {registros_procesados} registros de {file.filename}")
-        logger.info(f"Resumen: {len(processed_data['facturas'])} facturas, {len(processed_data['cobranzas'])} cobranzas, {len(processed_data['anticipos'])} anticipos, {len(processed_data['pedidos'])} pedidos")
-        
-        return {
-            "mensaje": "Archivo procesado exitosamente según especificaciones Immermex",
-            "nombre_archivo": file.filename,
-            "registros_procesados": registros_procesados,
-            "fecha_procesamiento": datetime.now().isoformat(),
-            "estado": "procesado",
-            "resumen": {
-                "facturas": len(processed_data["facturas"]),
-                "cobranzas": len(processed_data["cobranzas"]),
-                "anticipos": len(processed_data["anticipos"]),
-                "pedidos": len(processed_data["pedidos"])
+            # Convertir CFDI (anticipos)
+            if not processed_data_dict["cfdi_clean"].empty:
+                for _, row in processed_data_dict["cfdi_clean"].iterrows():
+                    anticipo = {
+                        "uuid_cfdi": str(row.get("xml", "")),
+                        "cliente_receptor": str(row.get("cliente_receptor", "")),
+                        "fecha_emision": "",
+                        "tipo_relacion": str(row.get("tipo_relacion", "")),
+                        "importe_relacion": float(row.get("importe_relacion", 0)),
+                        "uuid_factura_relacionada": str(row.get("uuid_factura_relacionada", ""))
+                    }
+                    processed_data["anticipos"].append(anticipo)
+            
+            # Convertir pedidos
+            if not processed_data_dict["pedidos_clean"].empty:
+                for _, row in processed_data_dict["pedidos_clean"].iterrows():
+                    pedido = {
+                        "factura_asociada": str(row.get("folio_factura", "")),
+                        "numero_pedido": str(row.get("pedido", "")),
+                        "kg": float(row.get("kg", 0)),
+                        "precio_unitario": float(row.get("precio_unitario", 0)),
+                        "importe_sin_iva": float(row.get("importe_sin_iva", 0)),
+                        "material": str(row.get("material", "")),
+                        "cliente": "",
+                        "dias_credito": int(row.get("dias_credito", 30)),
+                        "fecha_factura": str(row.get("fecha_factura", "")),
+                        "fecha_pago": str(row.get("fecha_pago", ""))
+                    }
+                    processed_data["pedidos"].append(pedido)
+            
+            # Calcular registros procesados
+            registros_procesados = (
+                len(processed_data["facturas"]) + 
+                len(processed_data["cobranzas"]) + 
+                len(processed_data["anticipos"]) + 
+                len(processed_data["pedidos"])
+            )
+            
+            logger.info(f"Procesados {registros_procesados} registros de {file.filename} con algoritmo avanzado")
+            logger.info(f"Resumen: {len(processed_data['facturas'])} facturas, {len(processed_data['cobranzas'])} cobranzas, {len(processed_data['anticipos'])} anticipos, {len(processed_data['pedidos'])} pedidos")
+            
+            return {
+                "mensaje": "Archivo procesado exitosamente con algoritmo avanzado de limpieza",
+                "nombre_archivo": file.filename,
+                "registros_procesados": registros_procesados,
+                "fecha_procesamiento": datetime.now().isoformat(),
+                "estado": "procesado",
+                "algoritmo": "advanced_cleaning",
+                "resumen": {
+                    "facturas": len(processed_data["facturas"]),
+                    "cobranzas": len(processed_data["cobranzas"]),
+                    "anticipos": len(processed_data["anticipos"]),
+                    "pedidos": len(processed_data["pedidos"])
+                },
+                "caracteristicas": {
+                    "deteccion_automatica_encabezados": True,
+                    "mapeo_flexible_columnas": True,
+                    "validacion_datos": True,
+                    "calculo_relaciones": True,
+                    "limpieza_robusta": True
+                }
             }
-        }
+            
+        finally:
+            # Limpiar archivo temporal
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+        
     except Exception as e:
-        logger.error(f"Error procesando archivo: {str(e)}")
+        logger.error(f"Error procesando archivo con algoritmo avanzado: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/analisis/pedidos")
