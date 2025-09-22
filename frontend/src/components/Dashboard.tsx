@@ -152,7 +152,7 @@ export const Dashboard: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight">Dashboard Immermex</h1>
+          <h1 className="text-4xl font-bold tracking-tight">Dashboard General</h1>
           <p className="text-muted-foreground mt-1">
             Indicadores financieros y operativos
           </p>
@@ -162,12 +162,6 @@ export const Dashboard: React.FC = () => {
           Actualizar
         </Button>
       </div>
-
-      {/* Upload Section */}
-      <FileUpload 
-        onUploadSuccess={handleUploadSuccess}
-        onUploadError={(error) => setError(error)}
-      />
 
       {/* Filters */}
       <Filters 

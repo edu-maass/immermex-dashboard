@@ -1,11 +1,10 @@
 import { FC, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { RefreshCw, Upload, TrendingUp, DollarSign, Package, Users, Calendar, BarChart3 } from 'lucide-react';
+import { RefreshCw, Upload, TrendingUp, DollarSign, Package, Users, BarChart3 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { KPIs } from '../types';
 import { PedidoFilter } from './PedidoFilter';
-import { Filters } from './Filters';
 import { AgingChart } from './Charts/AgingChart';
 import { TopClientesChart } from './Charts/TopClientesChart';
 import { ConsumoMaterialChart } from './Charts/ConsumoMaterialChart';
@@ -19,22 +18,19 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
   const [kpis, setKpis] = useState<KPIs | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filtros, setFiltros] = useState<{ mes?: number; año?: number }>({});
   const [pedidosSeleccionados, setPedidosSeleccionados] = useState<string[]>([]);
 
-  const loadData = async (filtrosAplicar?: { mes?: number; año?: number }, pedidosAplicar?: string[]) => {
+  const loadData = async (pedidosAplicar?: string[]) => {
     setLoading(true);
     setError(null);
     
     try {
-      // Aplicar filtros de mes/año si existen
-      if (filtrosAplicar && (filtrosAplicar.mes || filtrosAplicar.año)) {
-        await apiService.aplicarFiltros(filtrosAplicar);
-      }
-      
       // Aplicar filtros de pedido si existen
       if (pedidosAplicar && pedidosAplicar.length > 0) {
         await apiService.aplicarFiltrosPedido(pedidosAplicar);
+      } else {
+        // Si no hay pedidos seleccionados, limpiar filtros
+        await apiService.aplicarFiltrosPedido([]);
       }
       
       // Obtener KPIs
@@ -53,35 +49,19 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
     loadData();
   }, []);
 
-  const handleFiltersChange = (nuevosFiltros: { mes?: number; año?: number }) => {
-    setFiltros(nuevosFiltros);
-    loadData(nuevosFiltros, pedidosSeleccionados);
-  };
-
-  const handleClearFilters = async () => {
-    setFiltros({});
-    try {
-      await apiService.aplicarFiltros({});
-      loadData({}, pedidosSeleccionados);
-    } catch (error) {
-      console.error('Error limpiando filtros:', error);
-      loadData({}, pedidosSeleccionados);
-    }
-  };
-
   const handlePedidosChange = (pedidos: string[]) => {
     setPedidosSeleccionados(pedidos);
-    loadData(filtros, pedidos);
+    loadData(pedidos);
   };
 
   const handleClearPedidos = async () => {
     setPedidosSeleccionados([]);
     try {
       await apiService.aplicarFiltrosPedido([]);
-      loadData(filtros, []);
+      loadData([]);
     } catch (error) {
       console.error('Error limpiando pedidos:', error);
-      loadData(filtros, []);
+      loadData([]);
     }
   };
 
@@ -159,14 +139,10 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
       )}
 
       {/* Filtros */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <PedidoFilter
           onPedidosChange={handlePedidosChange}
           onClearPedidos={handleClearPedidos}
-        />
-        <Filters
-          onFiltersChange={handleFiltersChange}
-          onClearFilters={handleClearFilters}
         />
       </div>
 
