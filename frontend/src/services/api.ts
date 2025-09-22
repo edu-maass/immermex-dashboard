@@ -162,6 +162,19 @@ class ApiService {
     return this.request(`/archivos?skip=${skip}&limit=${limit}`);
   }
 
+  // Filtros
+  async getClientesFiltro() {
+    return this.request<string[]>('/filtros/clientes');
+  }
+
+  async getMaterialesFiltro() {
+    return this.request<string[]>('/filtros/materiales');
+  }
+
+  async getPedidosFiltro() {
+    return this.request<string[]>('/filtros/pedidos');
+  }
+
   // Health check
   async healthCheck() {
     return this.request('/health');

@@ -172,7 +172,7 @@ async def get_kpis():
             cantidad = pedido.get("cantidad", 0)
             
             # Transformar código de material: tomar solo caracteres alfanuméricos del inicio
-            if material_codigo and str(material_codigo) != "nan" and str(material_codigo).strip():
+            if material_codigo and str(material_codigo) != "nan" and str(material_codigo).strip() and str(material_codigo) != "Matertial":
                 # Extraer solo caracteres alfanuméricos del inicio del código
                 import re
                 material_limpio = re.match(r'^[A-Za-z0-9]+', str(material_codigo).strip())
@@ -181,8 +181,8 @@ async def get_kpis():
                 else:
                     material_limpio = str(material_codigo).strip()[:10]  # Primeros 10 caracteres si no hay alfanuméricos
                 
-                # Solo procesar si hay cantidad válida
-                if cantidad > 0:
+                # Solo procesar si hay cantidad válida y material no es solo texto de encabezado
+                if cantidad > 0 and material_limpio and len(material_limpio) > 2:
                     if material_limpio in materiales:
                         materiales[material_limpio] += cantidad
                     else:
@@ -695,6 +695,36 @@ async def upload_file(file: UploadFile = File(...)):
         logger.error(f"Error general: {e}")
         logger.error(f"Traceback completo: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+@app.get("/api/filtros/clientes")
+async def get_clientes_filtro():
+    """Obtener lista de clientes para filtros"""
+    facturas = processed_data["facturas"]
+    clientes = list(set(f.get("cliente", "") for f in facturas if f.get("cliente") and f.get("cliente") != "nan"))
+    return sorted([c for c in clientes if c])
+
+@app.get("/api/filtros/materiales")
+async def get_materiales_filtro():
+    """Obtener lista de materiales para filtros"""
+    pedidos = processed_data["pedidos"]
+    materiales = []
+    for pedido in pedidos:
+        material = pedido.get("material", "")
+        if material and str(material) != "nan" and str(material).strip() and str(material) != "Matertial":
+            import re
+            material_limpio = re.match(r'^[A-Za-z0-9]+', str(material).strip())
+            if material_limpio:
+                material_limpio = material_limpio.group(0)
+                if len(material_limpio) > 2 and material_limpio not in materiales:
+                    materiales.append(material_limpio)
+    return sorted(materiales)
+
+@app.get("/api/filtros/pedidos")
+async def get_pedidos_filtro():
+    """Obtener lista de números de pedido para filtros"""
+    pedidos = processed_data["pedidos"]
+    numeros_pedido = list(set(str(p.get("numero_pedido", "")) for p in pedidos if p.get("numero_pedido") and str(p.get("numero_pedido")) != "nan"))
+    return sorted([p for p in numeros_pedido if p])
 
 if __name__ == "__main__":
     import uvicorn
