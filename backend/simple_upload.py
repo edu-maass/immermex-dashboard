@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import io
 import logging
+import traceback
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -247,6 +248,7 @@ async def upload_file(file: UploadFile = File(...)):
         # Procesar archivo
         try:
             # Leer todas las hojas disponibles
+            logger.info("Creando ExcelFile...")
             excel_file = pd.ExcelFile(io.BytesIO(contents))
             logger.info(f"Hojas disponibles: {excel_file.sheet_names}")
             
@@ -255,12 +257,14 @@ async def upload_file(file: UploadFile = File(...)):
             cobranzas = []
             anticipos = []
             pedidos = []
+            logger.info("Datos inicializados")
             
             # 1. PROCESAR FACTURACIÓN
             if 'facturacion' in excel_file.sheet_names:
-                logger.info("Procesando hoja de facturación...")
-                df_facturacion = pd.read_excel(io.BytesIO(contents), sheet_name='facturacion', header=2)
-                logger.info(f"Facturación leída: {len(df_facturacion)} filas, {len(df_facturacion.columns)} columnas")
+                try:
+                    logger.info("Procesando hoja de facturación...")
+                    df_facturacion = pd.read_excel(io.BytesIO(contents), sheet_name='facturacion', header=2)
+                    logger.info(f"Facturación leída: {len(df_facturacion)} filas, {len(df_facturacion.columns)} columnas")
                 
                 # Mapeo de columnas para facturación
                 column_mapping_fact = {
@@ -304,87 +308,125 @@ async def upload_file(file: UploadFile = File(...)):
             
             # 2. PROCESAR COBRANZA
             if 'cobranza' in excel_file.sheet_names:
-                logger.info("Procesando hoja de cobranza...")
-                df_cobranza = pd.read_excel(io.BytesIO(contents), sheet_name='cobranza', header=5)
-                logger.info(f"Cobranza leída: {len(df_cobranza)} filas, {len(df_cobranza.columns)} columnas")
-                
-                # Mapeo de columnas para cobranza (ajustar según estructura real)
-                column_mapping_cob = {
-                    'Fecha': 'fecha_cobro',
-                    'UUID': 'uuid_factura',
-                    'Importe': 'importe_cobrado',
-                    'Método': 'metodo_pago',
-                    'Referencia': 'referencia'
-                }
-                
-                # Renombrar columnas
-                for old_col, new_col in column_mapping_cob.items():
-                    if old_col in df_cobranza.columns:
-                        df_cobranza = df_cobranza.rename(columns={old_col: new_col})
-                
-                # Limpiar datos
-                df_cobranza = df_cobranza.dropna(subset=['fecha_cobro', 'importe_cobrado'])
-                df_cobranza['fecha_cobro'] = pd.to_datetime(df_cobranza['fecha_cobro'], errors='coerce')
-                df_cobranza = df_cobranza.dropna(subset=['fecha_cobro'])
-                
-                # Convertir a formato esperado
-                for _, row in df_cobranza.iterrows():
-                    cobranza = {
-                        "fecha_cobro": row.get("fecha_cobro", "").strftime("%Y-%m-%d") if pd.notna(row.get("fecha_cobro")) else "",
-                        "uuid_factura": str(row.get("uuid_factura", "")),
-                        "importe_cobrado": float(row.get("importe_cobrado", 0)) if pd.notna(row.get("importe_cobrado")) else 0.0,
-                        "tipo_cambio": 1.0,
-                        "parcialidad": 1,
-                        "importe_pagado": float(row.get("importe_cobrado", 0)) if pd.notna(row.get("importe_cobrado")) else 0.0,
-                        "metodo_pago": str(row.get("metodo_pago", "")),
-                        "referencia": str(row.get("referencia", ""))
+                try:
+                    logger.info("Procesando hoja de cobranza...")
+                    df_cobranza = pd.read_excel(io.BytesIO(contents), sheet_name='cobranza', header=5)
+                    logger.info(f"Cobranza leída: {len(df_cobranza)} filas, {len(df_cobranza.columns)} columnas")
+                    logger.info(f"Columnas de cobranza: {list(df_cobranza.columns)}")
+                    
+                    # Mapeo de columnas para cobranza (ajustar según estructura real)
+                    column_mapping_cob = {
+                        'Fecha': 'fecha_cobro',
+                        'UUID': 'uuid_factura',
+                        'Importe': 'importe_cobrado',
+                        'Método': 'metodo_pago',
+                        'Referencia': 'referencia'
                     }
-                    cobranzas.append(cobranza)
-                
-                logger.info(f"Cobranzas procesadas: {len(cobranzas)}")
+                    
+                    # Renombrar columnas
+                    for old_col, new_col in column_mapping_cob.items():
+                        if old_col in df_cobranza.columns:
+                            df_cobranza = df_cobranza.rename(columns={old_col: new_col})
+                    
+                    logger.info(f"Columnas después del mapeo: {list(df_cobranza.columns)}")
+                    
+                    # Verificar que las columnas necesarias existen
+                    required_cols = ['fecha_cobro', 'importe_cobrado']
+                    missing_cols = [col for col in required_cols if col not in df_cobranza.columns]
+                    if missing_cols:
+                        logger.warning(f"Columnas faltantes en cobranza: {missing_cols}")
+                        # Crear columnas faltantes con valores por defecto
+                        for col in missing_cols:
+                            df_cobranza[col] = 0
+                    
+                    # Limpiar datos
+                    df_cobranza = df_cobranza.dropna(subset=['fecha_cobro', 'importe_cobrado'])
+                    df_cobranza['fecha_cobro'] = pd.to_datetime(df_cobranza['fecha_cobro'], errors='coerce')
+                    df_cobranza = df_cobranza.dropna(subset=['fecha_cobro'])
+                    
+                    # Convertir a formato esperado
+                    for _, row in df_cobranza.iterrows():
+                        cobranza = {
+                            "fecha_cobro": row.get("fecha_cobro", "").strftime("%Y-%m-%d") if pd.notna(row.get("fecha_cobro")) else "",
+                            "uuid_factura": str(row.get("uuid_factura", "")),
+                            "importe_cobrado": float(row.get("importe_cobrado", 0)) if pd.notna(row.get("importe_cobrado")) else 0.0,
+                            "tipo_cambio": 1.0,
+                            "parcialidad": 1,
+                            "importe_pagado": float(row.get("importe_cobrado", 0)) if pd.notna(row.get("importe_cobrado")) else 0.0,
+                            "metodo_pago": str(row.get("metodo_pago", "")),
+                            "referencia": str(row.get("referencia", ""))
+                        }
+                        cobranzas.append(cobranza)
+                    
+                    logger.info(f"Cobranzas procesadas: {len(cobranzas)}")
+                    
+                except Exception as e:
+                    logger.error(f"Error procesando cobranza: {e}")
+                    logger.error(f"Traceback cobranza: {traceback.format_exc()}")
+                    # Continuar sin cobranza si hay error
             
             # 3. PROCESAR CFDI RELACIONADOS (ANTICIPOS)
             if 'cfdi relacionados' in excel_file.sheet_names:
-                logger.info("Procesando hoja de CFDI relacionados...")
-                df_cfdi = pd.read_excel(io.BytesIO(contents), sheet_name='cfdi relacionados', header=0)
-                logger.info(f"CFDI leído: {len(df_cfdi)} filas, {len(df_cfdi.columns)} columnas")
-                
-                # Filtrar solo anticipos y notas de crédito
-                df_cfdi = df_cfdi[df_cfdi['Tipo'].str.contains('anticipo|nota de crédito', case=False, na=False)]
-                
-                # Mapeo de columnas para CFDI
-                column_mapping_cfdi = {
-                    'Fecha': 'fecha_cfdi',
-                    'UUID': 'uuid_cfdi',
-                    'Relacionados': 'uuid_relacionado',
-                    'Tipo Relación': 'tipo_relacion',
-                    'Total': 'importe_relacion',
-                    'Tipo': 'tipo_cfdi'
-                }
-                
-                # Renombrar columnas
-                for old_col, new_col in column_mapping_cfdi.items():
-                    if old_col in df_cfdi.columns:
-                        df_cfdi = df_cfdi.rename(columns={old_col: new_col})
-                
-                # Limpiar datos
-                df_cfdi = df_cfdi.dropna(subset=['fecha_cfdi', 'importe_relacion'])
-                df_cfdi['fecha_cfdi'] = pd.to_datetime(df_cfdi['fecha_cfdi'], errors='coerce')
-                df_cfdi = df_cfdi.dropna(subset=['fecha_cfdi'])
-                
-                # Convertir a formato esperado
-                for _, row in df_cfdi.iterrows():
-                    anticipo = {
-                        "fecha_cfdi": row.get("fecha_cfdi", "").strftime("%Y-%m-%d") if pd.notna(row.get("fecha_cfdi")) else "",
-                        "uuid_cfdi": str(row.get("uuid_cfdi", "")),
-                        "uuid_relacionado": str(row.get("uuid_relacionado", "")),
-                        "tipo_relacion": str(row.get("tipo_relacion", "")),
-                        "importe_relacion": float(row.get("importe_relacion", 0)) if pd.notna(row.get("importe_relacion")) else 0.0,
-                        "tipo_cfdi": str(row.get("tipo_cfdi", ""))
+                try:
+                    logger.info("Procesando hoja de CFDI relacionados...")
+                    df_cfdi = pd.read_excel(io.BytesIO(contents), sheet_name='cfdi relacionados', header=0)
+                    logger.info(f"CFDI leído: {len(df_cfdi)} filas, {len(df_cfdi.columns)} columnas")
+                    logger.info(f"Columnas de CFDI: {list(df_cfdi.columns)}")
+                    
+                    # Filtrar solo anticipos y notas de crédito
+                    if 'Tipo' in df_cfdi.columns:
+                        df_cfdi = df_cfdi[df_cfdi['Tipo'].str.contains('anticipo|nota de crédito', case=False, na=False)]
+                    else:
+                        logger.warning("Columna 'Tipo' no encontrada en CFDI, procesando todos los registros")
+                    
+                    # Mapeo de columnas para CFDI
+                    column_mapping_cfdi = {
+                        'Fecha': 'fecha_cfdi',
+                        'UUID': 'uuid_cfdi',
+                        'Relacionados': 'uuid_relacionado',
+                        'Tipo Relación': 'tipo_relacion',
+                        'Total': 'importe_relacion',
+                        'Tipo': 'tipo_cfdi'
                     }
-                    anticipos.append(anticipo)
-                
-                logger.info(f"Anticipos procesados: {len(anticipos)}")
+                    
+                    # Renombrar columnas
+                    for old_col, new_col in column_mapping_cfdi.items():
+                        if old_col in df_cfdi.columns:
+                            df_cfdi = df_cfdi.rename(columns={old_col: new_col})
+                    
+                    logger.info(f"Columnas CFDI después del mapeo: {list(df_cfdi.columns)}")
+                    
+                    # Verificar columnas necesarias
+                    required_cols = ['fecha_cfdi', 'importe_relacion']
+                    missing_cols = [col for col in required_cols if col not in df_cfdi.columns]
+                    if missing_cols:
+                        logger.warning(f"Columnas faltantes en CFDI: {missing_cols}")
+                        for col in missing_cols:
+                            df_cfdi[col] = 0
+                    
+                    # Limpiar datos
+                    df_cfdi = df_cfdi.dropna(subset=['fecha_cfdi', 'importe_relacion'])
+                    df_cfdi['fecha_cfdi'] = pd.to_datetime(df_cfdi['fecha_cfdi'], errors='coerce')
+                    df_cfdi = df_cfdi.dropna(subset=['fecha_cfdi'])
+                    
+                    # Convertir a formato esperado
+                    for _, row in df_cfdi.iterrows():
+                        anticipo = {
+                            "fecha_cfdi": row.get("fecha_cfdi", "").strftime("%Y-%m-%d") if pd.notna(row.get("fecha_cfdi")) else "",
+                            "uuid_cfdi": str(row.get("uuid_cfdi", "")),
+                            "uuid_relacionado": str(row.get("uuid_relacionado", "")),
+                            "tipo_relacion": str(row.get("tipo_relacion", "")),
+                            "importe_relacion": float(row.get("importe_relacion", 0)) if pd.notna(row.get("importe_relacion")) else 0.0,
+                            "tipo_cfdi": str(row.get("tipo_cfdi", ""))
+                        }
+                        anticipos.append(anticipo)
+                    
+                    logger.info(f"Anticipos procesados: {len(anticipos)}")
+                    
+                except Exception as e:
+                    logger.error(f"Error procesando CFDI: {e}")
+                    logger.error(f"Traceback CFDI: {traceback.format_exc()}")
+                    # Continuar sin anticipos si hay error
             
             # 4. PROCESAR PEDIDOS (buscar hojas que contengan "pedido" o fechas)
             for sheet_name in excel_file.sheet_names:
@@ -440,10 +482,12 @@ async def upload_file(file: UploadFile = File(...)):
             
         except Exception as e:
             logger.error(f"Error procesando archivo: {e}")
+            logger.error(f"Traceback completo: {traceback.format_exc()}")
             raise HTTPException(status_code=500, detail=f"Error procesando archivo: {str(e)}")
         
     except Exception as e:
         logger.error(f"Error general: {e}")
+        logger.error(f"Traceback completo: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 if __name__ == "__main__":
