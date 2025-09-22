@@ -86,7 +86,7 @@ async def get_kpis():
     total_pedidos_count = len(pedidos)
     
     # Pedidos únicos (basado en número de pedido)
-    pedidos_unicos = len(set(p.get("numero_pedido", "") for p in pedidos if p.get("numero_pedido") and str(p.get("numero_pedido")) != "nan"))
+    pedidos_unicos = len(set(p.get("numero_pedido", "") for p in pedidos if p.get("numero_pedido") and str(p.get("numero_pedido")) != "nan" and str(p.get("numero_pedido")).strip()))
     
     # Convertir KGS a toneladas
     toneladas_total = cantidad_total_pedidos / 1000
@@ -631,18 +631,40 @@ async def upload_file(file: UploadFile = File(...)):
                         logger.info(f"Iniciando conversión de {len(df_pedidos)} filas a objetos pedido")
                         for i, (_, row) in enumerate(df_pedidos.iterrows()):
                             try:
+                                # Obtener numero_pedido de la columna correcta (Unnamed: 2)
+                                numero_pedido_raw = row.get("numero_pedido", "")
+                                if pd.notna(numero_pedido_raw):
+                                    numero_pedido = str(int(float(numero_pedido_raw))) if str(numero_pedido_raw) != "nan" else ""
+                                else:
+                                    numero_pedido = ""
+                                
+                                # Obtener cliente de la columna correcta (Unnamed: 8)
+                                cliente_raw = row.get("cliente", "")
+                                if pd.notna(cliente_raw) and str(cliente_raw) != "nan" and str(cliente_raw) != "dias de credito":
+                                    cliente = str(cliente_raw)
+                                else:
+                                    cliente = "Sin nombre"
+                                
+                                # Obtener material de la columna correcta (Unnamed: 6)
+                                material_raw = row.get("material", "")
+                                if pd.notna(material_raw) and str(material_raw) != "nan" and str(material_raw) != "Matertial":
+                                    material = str(material_raw)
+                                else:
+                                    material = "Sin material"
+                                
                                 pedido = {
                                     "fecha_pedido": row.get("fecha_pedido", "").strftime("%Y-%m-%d") if pd.notna(row.get("fecha_pedido")) and hasattr(row.get("fecha_pedido"), 'strftime') else "",
-                                    "numero_pedido": str(row.get("indice", "")),
-                                    "cliente": str(row.get("cliente", "")),
+                                    "numero_pedido": numero_pedido,
+                                    "cliente": cliente,
                                     "producto": str(row.get("producto", "Sin producto")),
+                                    "material": material,
                                     "cantidad": float(row.get("cantidad", 0)) if pd.notna(row.get("cantidad", 0)) else 0.0,
                                     "precio_unitario": float(row.get("precio_unitario", 0)) if pd.notna(row.get("precio_unitario", 0)) else 0.0,
                                     "total": float(row.get("total", 0)) if pd.notna(row.get("total", 0)) else 0.0
                                 }
                                 
                                 # Solo agregar si tiene datos válidos
-                                if pedido["cliente"] and pedido["cliente"] != "Sin nombre" and pedido["total"] > 0:
+                                if pedido["total"] > 0:
                                     pedidos.append(pedido)
                                     if len(pedidos) <= 3:  # Log solo los primeros 3
                                         logger.info(f"Pedido {len(pedidos)}: {pedido}")
@@ -700,7 +722,8 @@ async def upload_file(file: UploadFile = File(...)):
 async def get_clientes_filtro():
     """Obtener lista de clientes para filtros"""
     facturas = processed_data["facturas"]
-    clientes = list(set(f.get("cliente", "") for f in facturas if f.get("cliente") and f.get("cliente") != "nan"))
+    clientes = list(set(f.get("cliente", "") for f in facturas if f.get("cliente") and f.get("cliente") != "nan" and str(f.get("cliente")).strip()))
+    logger.info(f"Clientes para filtro: {len(clientes)} - {clientes[:5]}")
     return sorted([c for c in clientes if c])
 
 @app.get("/api/filtros/materiales")
@@ -717,13 +740,15 @@ async def get_materiales_filtro():
                 material_limpio = material_limpio.group(0)
                 if len(material_limpio) > 2 and material_limpio not in materiales:
                     materiales.append(material_limpio)
+    logger.info(f"Materiales para filtro: {len(materiales)} - {materiales[:5]}")
     return sorted(materiales)
 
 @app.get("/api/filtros/pedidos")
 async def get_pedidos_filtro():
     """Obtener lista de números de pedido para filtros"""
     pedidos = processed_data["pedidos"]
-    numeros_pedido = list(set(str(p.get("numero_pedido", "")) for p in pedidos if p.get("numero_pedido") and str(p.get("numero_pedido")) != "nan"))
+    numeros_pedido = list(set(str(p.get("numero_pedido", "")) for p in pedidos if p.get("numero_pedido") and str(p.get("numero_pedido")) != "nan" and str(p.get("numero_pedido")).strip()))
+    logger.info(f"Pedidos para filtro: {len(numeros_pedido)} - {numeros_pedido[:5]}")
     return sorted([p for p in numeros_pedido if p])
 
 if __name__ == "__main__":
