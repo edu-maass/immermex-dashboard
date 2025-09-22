@@ -265,46 +265,51 @@ async def upload_file(file: UploadFile = File(...)):
                     logger.info("Procesando hoja de facturación...")
                     df_facturacion = pd.read_excel(io.BytesIO(contents), sheet_name='facturacion', header=2)
                     logger.info(f"Facturación leída: {len(df_facturacion)} filas, {len(df_facturacion.columns)} columnas")
-                
-                # Mapeo de columnas para facturación
-                column_mapping_fact = {
-                    'Fecha': 'fecha_factura',
-                    'Serie': 'serie_factura', 
-                    'Folio': 'folio_factura',
-                    'Razón Social': 'cliente',
-                    'Neto': 'monto_neto',
-                    'Total': 'monto_total',
-                    'Pendiente': 'saldo_pendiente',
-                    'UUID': 'uuid_factura'
-                }
-                
-                # Renombrar columnas
-                for old_col, new_col in column_mapping_fact.items():
-                    if old_col in df_facturacion.columns:
-                        df_facturacion = df_facturacion.rename(columns={old_col: new_col})
-                
-                # Limpiar datos
-                df_facturacion = df_facturacion.dropna(subset=['fecha_factura', 'cliente'])
-                df_facturacion['fecha_factura'] = pd.to_datetime(df_facturacion['fecha_factura'], errors='coerce')
-                df_facturacion = df_facturacion.dropna(subset=['fecha_factura'])
-                
-                # Convertir a formato esperado
-                for _, row in df_facturacion.iterrows():
-                    factura = {
-                        "fecha_factura": row.get("fecha_factura", "").strftime("%Y-%m-%d") if pd.notna(row.get("fecha_factura")) else "",
-                        "serie": str(row.get("serie_factura", "")),
-                        "folio": str(row.get("folio_factura", "")),
-                        "cliente": str(row.get("cliente", "")),
-                        "monto_neto": float(row.get("monto_neto", 0)) if pd.notna(row.get("monto_neto")) else 0.0,
-                        "monto_total": float(row.get("monto_total", 0)) if pd.notna(row.get("monto_total")) else 0.0,
-                        "saldo_pendiente": float(row.get("saldo_pendiente", 0)) if pd.notna(row.get("saldo_pendiente")) else 0.0,
-                        "dias_credito": 30,
-                        "agente": "",
-                        "uuid": str(row.get("uuid_factura", ""))
+                    
+                    # Mapeo de columnas para facturación
+                    column_mapping_fact = {
+                        'Fecha': 'fecha_factura',
+                        'Serie': 'serie_factura', 
+                        'Folio': 'folio_factura',
+                        'Razón Social': 'cliente',
+                        'Neto': 'monto_neto',
+                        'Total': 'monto_total',
+                        'Pendiente': 'saldo_pendiente',
+                        'UUID': 'uuid_factura'
                     }
-                    facturas.append(factura)
-                
-                logger.info(f"Facturas procesadas: {len(facturas)}")
+                    
+                    # Renombrar columnas
+                    for old_col, new_col in column_mapping_fact.items():
+                        if old_col in df_facturacion.columns:
+                            df_facturacion = df_facturacion.rename(columns={old_col: new_col})
+                    
+                    # Limpiar datos
+                    df_facturacion = df_facturacion.dropna(subset=['fecha_factura', 'cliente'])
+                    df_facturacion['fecha_factura'] = pd.to_datetime(df_facturacion['fecha_factura'], errors='coerce')
+                    df_facturacion = df_facturacion.dropna(subset=['fecha_factura'])
+                    
+                    # Convertir a formato esperado
+                    for _, row in df_facturacion.iterrows():
+                        factura = {
+                            "fecha_factura": row.get("fecha_factura", "").strftime("%Y-%m-%d") if pd.notna(row.get("fecha_factura")) else "",
+                            "serie": str(row.get("serie_factura", "")),
+                            "folio": str(row.get("folio_factura", "")),
+                            "cliente": str(row.get("cliente", "")),
+                            "monto_neto": float(row.get("monto_neto", 0)) if pd.notna(row.get("monto_neto")) else 0.0,
+                            "monto_total": float(row.get("monto_total", 0)) if pd.notna(row.get("monto_total")) else 0.0,
+                            "saldo_pendiente": float(row.get("saldo_pendiente", 0)) if pd.notna(row.get("saldo_pendiente")) else 0.0,
+                            "dias_credito": 30,
+                            "agente": "",
+                            "uuid": str(row.get("uuid_factura", ""))
+                        }
+                        facturas.append(factura)
+                    
+                    logger.info(f"Facturas procesadas: {len(facturas)}")
+                    
+                except Exception as e:
+                    logger.error(f"Error procesando facturación: {e}")
+                    logger.error(f"Traceback facturación: {traceback.format_exc()}")
+                    # Continuar sin facturación si hay error
             
             # 2. PROCESAR COBRANZA
             if 'cobranza' in excel_file.sheet_names:
