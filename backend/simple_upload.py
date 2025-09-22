@@ -70,13 +70,22 @@ async def get_kpis():
     # KPIs de anticipos
     anticipos_total = sum(abs(a.get("importe_relacion", 0)) for a in anticipos)
     
-    # KPIs de inventario (simplificado)
+    # KPIs de inventario (mejorado)
     rotacion_inventario = 0.0
     if pedidos:
-        # Calcular rotación básica basada en pedidos
+        # Calcular rotación basada en pedidos reales
         total_pedidos = sum(p.get("total", 0) for p in pedidos)
-        inventario_promedio = facturacion_total * 0.3  # Estimación del 30% de facturación
+        cantidad_total = sum(p.get("cantidad", 0) for p in pedidos)
+        
+        # Inventario promedio estimado (30% de facturación o 20% de pedidos)
+        inventario_promedio = max(facturacion_total * 0.3, total_pedidos * 0.2)
+        
+        # Rotación = Total de pedidos / Inventario promedio
         rotacion_inventario = (total_pedidos / inventario_promedio) if inventario_promedio > 0 else 0.0
+        
+        logger.info(f"Cálculo rotación - Total pedidos: {total_pedidos}, Cantidad total: {cantidad_total}, Inventario promedio: {inventario_promedio}")
+    else:
+        logger.info("No hay pedidos para calcular rotación de inventario")
     
     # Calcular aging de cartera
     aging_cartera = {}
@@ -116,21 +125,30 @@ async def get_kpis():
         sorted_clientes = sorted(clientes.items(), key=lambda x: x[1], reverse=True)[:10]
         top_clientes = dict(sorted_clientes)
     
-    # Calcular consumo de material (simplificado)
+    # Calcular consumo de material (mejorado)
     consumo_material = {}
     if pedidos:
         productos = {}
         for pedido in pedidos:
             producto = pedido.get("producto", "Sin nombre")
             cantidad = pedido.get("cantidad", 0)
+            total = pedido.get("total", 0)
+            
+            # Usar cantidad si está disponible, sino usar total como proxy
+            valor_consumo = cantidad if cantidad > 0 else total / 100  # Aproximación
+            
             if producto in productos:
-                productos[producto] += cantidad
+                productos[producto] += valor_consumo
             else:
-                productos[producto] = cantidad
+                productos[producto] = valor_consumo
         
         # Ordenar y tomar los primeros 10
         sorted_productos = sorted(productos.items(), key=lambda x: x[1], reverse=True)[:10]
         consumo_material = dict(sorted_productos)
+        
+        logger.info(f"Consumo material calculado - {len(consumo_material)} productos únicos")
+    else:
+        logger.info("No hay pedidos para calcular consumo de material")
     
     logger.info(f"KPIs calculados - Facturación: {facturacion_total}, Cobranza: {cobranza_total}, Anticipos: {anticipos_total}")
     
@@ -436,30 +454,78 @@ async def upload_file(file: UploadFile = File(...)):
             # 4. PROCESAR PEDIDOS (buscar hojas que contengan "pedido" o fechas)
             for sheet_name in excel_file.sheet_names:
                 if 'pedido' in sheet_name.lower() or any(month in sheet_name for month in ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']):
-                    logger.info(f"Procesando hoja de pedidos: {sheet_name}")
                     try:
+                        logger.info(f"Procesando hoja de pedidos: {sheet_name}")
                         df_pedidos = pd.read_excel(io.BytesIO(contents), sheet_name=sheet_name, header=2)
                         logger.info(f"Pedidos leídos: {len(df_pedidos)} filas, {len(df_pedidos.columns)} columnas")
+                        logger.info(f"Columnas de pedidos: {list(df_pedidos.columns)}")
                         
-                        # Mapeo básico para pedidos (ajustar según estructura)
-                        if len(df_pedidos) > 0:
-                            for _, row in df_pedidos.iterrows():
-                                if pd.notna(row.get('Cliente', '')) and pd.notna(row.get('Total', 0)):
-                                    pedido = {
-                                        "fecha_pedido": "",
-                                        "numero_pedido": str(row.get('Folio', '')),
-                                        "cliente": str(row.get('Cliente', '')),
-                                        "producto": str(row.get('Producto', '')),
-                                        "cantidad": float(row.get('Cantidad', 0)) if pd.notna(row.get('Cantidad', 0)) else 0.0,
-                                        "precio_unitario": float(row.get('Precio', 0)) if pd.notna(row.get('Precio', 0)) else 0.0,
-                                        "total": float(row.get('Total', 0)) if pd.notna(row.get('Total', 0)) else 0.0
-                                    }
+                        # Mapeo de columnas para pedidos (más flexible)
+                        column_mapping_pedidos = {
+                            'Fecha': 'fecha_pedido',
+                            'Folio': 'numero_pedido',
+                            'Cliente': 'cliente',
+                            'Producto': 'producto',
+                            'Cantidad': 'cantidad',
+                            'Precio': 'precio_unitario',
+                            'Total': 'total',
+                            'Descripción': 'producto',
+                            'Razón Social': 'cliente'
+                        }
+                        
+                        # Renombrar columnas
+                        for old_col, new_col in column_mapping_pedidos.items():
+                            if old_col in df_pedidos.columns:
+                                df_pedidos = df_pedidos.rename(columns={old_col: new_col})
+                        
+                        logger.info(f"Columnas pedidos después del mapeo: {list(df_pedidos.columns)}")
+                        
+                        # Verificar columnas necesarias
+                        required_cols = ['cliente', 'total']
+                        missing_cols = [col for col in required_cols if col not in df_pedidos.columns]
+                        if missing_cols:
+                            logger.warning(f"Columnas faltantes en pedidos: {missing_cols}")
+                            for col in missing_cols:
+                                if col == 'cliente':
+                                    df_pedidos[col] = 'Sin nombre'
+                                elif col == 'total':
+                                    df_pedidos[col] = 0.0
+                        
+                        # Limpiar datos
+                        df_pedidos = df_pedidos.dropna(subset=['cliente', 'total'])
+                        df_pedidos = df_pedidos[df_pedidos['total'] > 0]  # Solo pedidos con total > 0
+                        
+                        # Convertir a formato esperado
+                        for _, row in df_pedidos.iterrows():
+                            try:
+                                pedido = {
+                                    "fecha_pedido": row.get("fecha_pedido", "").strftime("%Y-%m-%d") if pd.notna(row.get("fecha_pedido")) and hasattr(row.get("fecha_pedido"), 'strftime') else "",
+                                    "numero_pedido": str(row.get("numero_pedido", "")),
+                                    "cliente": str(row.get("cliente", "")),
+                                    "producto": str(row.get("producto", "Sin producto")),
+                                    "cantidad": float(row.get("cantidad", 0)) if pd.notna(row.get("cantidad", 0)) else 0.0,
+                                    "precio_unitario": float(row.get("precio_unitario", 0)) if pd.notna(row.get("precio_unitario", 0)) else 0.0,
+                                    "total": float(row.get("total", 0)) if pd.notna(row.get("total", 0)) else 0.0
+                                }
+                                
+                                # Solo agregar si tiene datos válidos
+                                if pedido["cliente"] and pedido["cliente"] != "Sin nombre" and pedido["total"] > 0:
                                     pedidos.append(pedido)
-                            
-                            logger.info(f"Pedidos procesados: {len(pedidos)}")
-                            break
+                                    
+                            except Exception as row_error:
+                                logger.warning(f"Error procesando fila de pedido: {row_error}")
+                                continue
+                        
+                        logger.info(f"Pedidos procesados: {len(pedidos)}")
+                        if pedidos:
+                            logger.info(f"Primer pedido: {pedidos[0]}")
+                            total_pedidos = sum(p.get("total", 0) for p in pedidos[:5])
+                            logger.info(f"Suma de primeros 5 pedidos: {total_pedidos}")
+                        break
+                        
                     except Exception as e:
-                        logger.warning(f"Error procesando hoja {sheet_name}: {e}")
+                        logger.error(f"Error procesando hoja de pedidos {sheet_name}: {e}")
+                        logger.error(f"Traceback pedidos: {traceback.format_exc()}")
                         continue
             
             # Actualizar datos globales
