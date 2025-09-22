@@ -83,11 +83,24 @@ class ImmermexDataProcessor:
             excel_file = pd.ExcelFile(file_path)
             sheets_data = {}
             
+            logger.info(f"Hojas encontradas: {excel_file.sheet_names}")
+            
             for sheet_name in excel_file.sheet_names:
                 logger.info(f"Procesando hoja: {sheet_name}")
                 df = pd.read_excel(file_path, sheet_name=sheet_name)
                 sheets_data[sheet_name] = df
                 logger.info(f"Hoja '{sheet_name}' cargada: {df.shape[0]} filas, {df.shape[1]} columnas")
+                
+                # Debug: mostrar columnas y primeras filas
+                logger.info(f"  Columnas: {list(df.columns)}")
+                if not df.empty:
+                    logger.info(f"  Primera fila: {df.iloc[0].to_dict()}")
+                    # Buscar filas con datos de facturación
+                    for i in range(min(5, len(df))):
+                        row_str = ' '.join(df.iloc[i].astype(str).fillna(''))
+                        if any(keyword in row_str.lower() for keyword in ['fecha', 'cliente', 'monto', 'total']):
+                            logger.info(f"  Fila {i} parece tener datos: {df.iloc[i].to_dict()}")
+                            break
             
             return sheets_data
             
