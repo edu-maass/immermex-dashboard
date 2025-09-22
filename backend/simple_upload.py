@@ -64,14 +64,18 @@ async def get_kpis():
     total_facturas = len(facturas)
     clientes_unicos = len(set(f.get("cliente", "") for f in facturas))
     
-    # KPIs de cobranza
-    cobranza_total = sum(c.get("importe_cobrado", 0) for c in cobranzas)
+    # KPIs de cobranza (manejar valores negativos como anticipos ya aplicados)
+    cobranza_positiva = sum(c.get("importe_cobrado", 0) for c in cobranzas if c.get("importe_cobrado", 0) > 0)
+    anticipos_aplicados = abs(sum(c.get("importe_cobrado", 0) for c in cobranzas if c.get("importe_cobrado", 0) < 0))
+    cobranza_total = cobranza_positiva  # Solo cobranza positiva
     cobranza_sin_iva = cobranza_total * 0.84  # Aproximación: 84% del total (sin IVA 16%)
     porcentaje_cobrado = (cobranza_total / facturacion_total * 100) if facturacion_total > 0 else 0.0
     
-    # KPIs de anticipos
-    anticipos_total = sum(abs(a.get("importe_relacion", 0)) for a in anticipos)
-    anticipos_porcentaje = (anticipos_total / facturacion_total * 100) if facturacion_total > 0 else 0.0
+    # Ajustar anticipos totales incluyendo los ya aplicados
+    anticipos_total_ajustado = anticipos_total + anticipos_aplicados
+    
+    # KPIs de anticipos (usar total ajustado)
+    anticipos_porcentaje = (anticipos_total_ajustado / facturacion_total * 100) if facturacion_total > 0 else 0.0
     
     # KPIs de pedidos
     total_pedidos = sum(p.get("total", 0) for p in pedidos)
@@ -200,7 +204,7 @@ async def get_kpis():
         "porcentaje_cobrado": round(porcentaje_cobrado, 2),
         
         # Anticipos
-        "anticipos_total": anticipos_total,
+        "anticipos_total": anticipos_total_ajustado,
         "anticipos_porcentaje": round(anticipos_porcentaje, 2),
         
         # Pedidos
