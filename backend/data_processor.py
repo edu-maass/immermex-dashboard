@@ -203,44 +203,54 @@ class ImmermexDataProcessor:
             clean_df = pd.DataFrame()
             
             # Fecha de factura
-            clean_df['fecha_factura'] = pd.to_datetime(
-                df_renamed.get('fecha_factura', ''), errors='coerce'
-            )
+            fecha_col = df_renamed.get('fecha_factura', pd.Series())
+            if isinstance(fecha_col, str):
+                fecha_col = pd.Series([fecha_col])
+            clean_df['fecha_factura'] = pd.to_datetime(fecha_col, errors='coerce')
             
             # Serie y folio
-            clean_df['serie_factura'] = self.clean_string_column(
-                df_renamed.get('serie_factura', '')
-            )
-            clean_df['folio_factura'] = self.clean_string_column(
-                df_renamed.get('folio_factura', '')
-            )
+            serie_col = df_renamed.get('serie_factura', pd.Series())
+            if isinstance(serie_col, str):
+                serie_col = pd.Series([serie_col])
+            clean_df['serie_factura'] = self.clean_string_column(serie_col)
+            
+            folio_col = df_renamed.get('folio_factura', pd.Series())
+            if isinstance(folio_col, str):
+                folio_col = pd.Series([folio_col])
+            clean_df['folio_factura'] = self.clean_string_column(folio_col)
             
             # Cliente
-            clean_df['cliente'] = self.clean_string_column(
-                df_renamed.get('cliente', '')
-            )
+            cliente_col = df_renamed.get('cliente', pd.Series())
+            if isinstance(cliente_col, str):
+                cliente_col = pd.Series([cliente_col])
+            clean_df['cliente'] = self.clean_string_column(cliente_col)
             
             # Montos numéricos
             for col in ['monto_neto', 'monto_total', 'saldo_pendiente']:
-                clean_df[col] = pd.to_numeric(
-                    df_renamed.get(col, 0), errors='coerce'
-                ).fillna(0)
+                col_data = df_renamed.get(col, pd.Series())
+                if isinstance(col_data, str):
+                    col_data = pd.Series([col_data])
+                clean_df[col] = pd.to_numeric(col_data, errors='coerce').fillna(0)
             
             # Condiciones de pago (extraer días de crédito)
-            condiciones = df_renamed.get('condiciones_pago', '')
+            condiciones = df_renamed.get('condiciones_pago', pd.Series())
+            if isinstance(condiciones, str):
+                condiciones = pd.Series([condiciones])
             clean_df['dias_credito'] = pd.to_numeric(
                 condiciones.astype(str).str.extract(r'(\d+)')[0], errors='coerce'
             ).fillna(30)  # Default 30 días
             
             # Agente
-            clean_df['agente'] = self.clean_string_column(
-                df_renamed.get('agente', '')
-            )
+            agente_col = df_renamed.get('agente', pd.Series())
+            if isinstance(agente_col, str):
+                agente_col = pd.Series([agente_col])
+            clean_df['agente'] = self.clean_string_column(agente_col)
             
             # UUID
-            clean_df['uuid_factura'] = self.clean_uuid(
-                df_renamed.get('uuid_factura', '')
-            )
+            uuid_col = df_renamed.get('uuid_factura', pd.Series())
+            if isinstance(uuid_col, str):
+                uuid_col = pd.Series([uuid_col])
+            clean_df['uuid_factura'] = self.clean_uuid(uuid_col)
             
             # Campos calculados
             clean_df['mes'] = clean_df['fecha_factura'].dt.month
