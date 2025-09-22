@@ -389,15 +389,15 @@ async def upload_file(file: UploadFile = File(...)):
             # Importar el procesador
             try:
                 from data_processor import process_immermex_file_advanced
-                logger.info("✅ Módulo data_processor importado correctamente")
+                logger.info("Módulo data_processor importado correctamente")
             except ImportError as e:
                 logger.error(f"❌ Error importando data_processor: {e}")
                 raise
             
             # Procesar archivo
-            logger.info("🔄 Llamando a process_immermex_file_advanced...")
+            logger.info("Llamando a process_immermex_file_advanced...")
             processed_data_dict, kpis = process_immermex_file_advanced(temp_file_path)
-            logger.info(f"✅ Procesamiento completado. KPIs: {kpis}")
+            logger.info(f"Procesamiento completado. KPIs: {kpis}")
             
             # Debug: verificar qué datos se obtuvieron
             logger.info("=== DEBUG: Datos procesados ===")

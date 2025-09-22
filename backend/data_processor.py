@@ -732,7 +732,8 @@ class ImmermexDataProcessor:
         else:
             master_df['dias_vencimiento'] = 0
             
-        master_df['estado_cobro'] = master_df.apply(self._determinar_estado_cobro, axis=1)
+        if not master_df.empty:
+            master_df['estado_cobro'] = master_df.apply(self._determinar_estado_cobro, axis=1)
         master_df['margen'] = master_df['total'] - master_df.get('anticipos', 0)
         
         self.maestro_df = master_df
