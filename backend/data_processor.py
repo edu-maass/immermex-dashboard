@@ -47,14 +47,21 @@ class ImmermexDataProcessor:
             # Leer las primeras 20 filas para buscar encabezados
             preview = pd.read_excel(path, sheet_name=sheet_name, nrows=20, header=None)
             
+            # Buscar la fila que contenga más palabras clave
+            best_match = (0, 0)  # (fila, número_de_coincidencias)
+            
             for idx, row in preview.iterrows():
                 row_str = ' '.join(row.astype(str).fillna(''))
-                if any(keyword.lower() in row_str.lower() for keyword in keywords):
-                    logger.info(f"Encabezados encontrados en fila {idx} para hoja '{sheet_name}'")
-                    return idx
+                matches = sum(1 for keyword in keywords if keyword.lower() in row_str.lower())
+                if matches > best_match[1]:
+                    best_match = (idx, matches)
             
-            logger.warning(f"No se encontraron encabezados en hoja '{sheet_name}', usando fila 0")
-            return 0
+            if best_match[1] >= 3:  # Al menos 3 coincidencias
+                logger.info(f"Encabezados encontrados en fila {best_match[0]} para hoja '{sheet_name}' ({best_match[1]} coincidencias)")
+                return best_match[0]
+            else:
+                logger.warning(f"No se encontraron encabezados en hoja '{sheet_name}', usando fila 0")
+                return 0
             
         except Exception as e:
             logger.error(f"Error detectando encabezados en hoja '{sheet_name}': {str(e)}")
