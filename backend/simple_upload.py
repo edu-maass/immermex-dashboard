@@ -71,6 +71,9 @@ async def get_kpis():
     cobranza_sin_iva = cobranza_total * 0.84  # Aproximación: 84% del total (sin IVA 16%)
     porcentaje_cobrado = (cobranza_total / facturacion_total * 100) if facturacion_total > 0 else 0.0
     
+    # KPIs de anticipos
+    anticipos_total = sum(abs(a.get("importe_relacion", 0)) for a in anticipos)
+    
     # Ajustar anticipos totales incluyendo los ya aplicados
     anticipos_total_ajustado = anticipos_total + anticipos_aplicados
     
