@@ -73,7 +73,13 @@ export const Filters: FC<FiltersProps> = ({ onFiltersChange, onClearFilters }) =
       }
     };
 
+    // Cargar datos inicialmente
     loadFilterData();
+    
+    // Recargar datos cada 5 segundos para actualizar después de subir archivo
+    const interval = setInterval(loadFilterData, 5000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   return (

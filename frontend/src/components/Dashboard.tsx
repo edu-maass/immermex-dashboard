@@ -250,32 +250,23 @@ export const Dashboard: React.FC = () => {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Aging de Cartera */}
-        {agingData && agingData.data && agingData.data.length > 0 && (
+        {kpis && kpis.aging_cartera && Object.keys(kpis.aging_cartera).length > 0 && (
           <AgingChart 
-            data={formatAgingData(agingData.data.reduce((acc, value, index) => {
-              acc[agingData.labels[index]] = value;
-              return acc;
-            }, {} as Record<string, number>))}
+            data={formatAgingData(kpis.aging_cartera)}
           />
         )}
 
         {/* Top Clientes */}
-        {topClientesData && topClientesData.data && topClientesData.data.length > 0 && (
+        {kpis && kpis.top_clientes && Object.keys(kpis.top_clientes).length > 0 && (
           <TopClientesChart 
-            data={formatTopClientesData(topClientesData.data.reduce((acc, value, index) => {
-              acc[topClientesData.labels[index]] = value;
-              return acc;
-            }, {} as Record<string, number>))}
+            data={formatTopClientesData(kpis.top_clientes)}
           />
         )}
 
         {/* Consumo por Material */}
-        {consumoMaterialData && consumoMaterialData.data && consumoMaterialData.data.length > 0 && (
+        {kpis && kpis.consumo_material && Object.keys(kpis.consumo_material).length > 0 && (
           <ConsumoMaterialChart 
-            data={formatConsumoMaterialData(consumoMaterialData.data.reduce((acc, value, index) => {
-              acc[consumoMaterialData.labels[index]] = value;
-              return acc;
-            }, {} as Record<string, number>))}
+            data={formatConsumoMaterialData(kpis.consumo_material)}
           />
         )}
       </div>
