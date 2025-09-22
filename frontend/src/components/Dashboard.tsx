@@ -114,6 +114,7 @@ export const Dashboard: React.FC = () => {
   };
 
   const formatExpectativaCobranzaData = (expectativa: Record<string, {cobranza_esperada: number, cobranza_real: number}>) => {
+    // Convertir a array y ordenar por semana (ya viene ordenado del backend)
     return Object.entries(expectativa).map(([semana, datos]) => ({
       semana,
       cobranza_esperada: datos.cobranza_esperada,

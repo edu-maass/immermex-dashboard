@@ -199,17 +199,28 @@ async def get_kpis():
                     logger.warning(f"Error procesando fecha de cobro: {e}")
                     continue
             
-            # Convertir a formato para la gráfica
+            # Convertir a formato para la gráfica y ordenar por fecha
             expectativa_cobranza = {}
+            semanas_ordenadas = []
+            
             for semana, datos in cobranza_por_semana.items():
                 if datos["esperada"] > 0 or datos["real"] > 0:
-                    # Formatear semana como "Semana del DD/MM"
                     fecha_semana = datetime.strptime(semana, "%Y-%m-%d")
-                    semana_formateada = f"Semana del {fecha_semana.strftime('%d/%m')}"
-                    expectativa_cobranza[semana_formateada] = {
-                        "cobranza_esperada": datos["esperada"],
-                        "cobranza_real": datos["real"]
-                    }
+                    # Calcular número de semana del año
+                    numero_semana = fecha_semana.isocalendar()[1]
+                    # Formatear como "S34 29/09"
+                    semana_formateada = f"S{numero_semana:02d} {fecha_semana.strftime('%d/%m')}"
+                    
+                    semanas_ordenadas.append((fecha_semana, semana_formateada, datos))
+            
+            # Ordenar por fecha (más antigua a más nueva)
+            semanas_ordenadas.sort(key=lambda x: x[0])
+            
+            for _, semana_formateada, datos in semanas_ordenadas:
+                expectativa_cobranza[semana_formateada] = {
+                    "cobranza_esperada": datos["esperada"],
+                    "cobranza_real": datos["real"]
+                }
             
             logger.info(f"Expectativa de cobranza calculada - {len(expectativa_cobranza)} semanas")
             if expectativa_cobranza:

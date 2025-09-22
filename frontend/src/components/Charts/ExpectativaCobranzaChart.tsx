@@ -43,7 +43,7 @@ export const ExpectativaCobranzaChart: FC<ExpectativaCobranzaChartProps> = ({ da
               <Tooltip 
                 formatter={(value: number, name: string) => [
                   formatCurrency(value), 
-                  name === 'cobranza_esperada' ? 'Esperada' : 'Real'
+                  name === 'cobranza_esperada' ? 'Esperada' : name === 'cobranza_real' ? 'Real' : name
                 ]}
                 labelStyle={{ color: '#374151' }}
                 contentStyle={{ 
