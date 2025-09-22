@@ -384,6 +384,19 @@ async def upload_file(file: UploadFile = File(...)):
             # Usar el procesador avanzado integrado
             processed_data_dict, kpis = process_immermex_file_advanced(temp_file_path)
             
+            # Debug: verificar qué datos se obtuvieron
+            logger.info("=== DEBUG: Datos procesados ===")
+            for key, df in processed_data_dict.items():
+                logger.info(f"{key}: {df.shape[0]} registros")
+                if not df.empty:
+                    logger.info(f"  Columnas: {list(df.columns)}")
+                    logger.info(f"  Primeras 3 filas:")
+                    for i in range(min(3, len(df))):
+                        logger.info(f"    Fila {i}: {df.iloc[i].to_dict()}")
+                else:
+                    logger.info(f"  DataFrame vacío")
+            logger.info("=== FIN DEBUG ===")
+            
             # Convertir DataFrames a formato compatible con el backend existente
             global processed_data
             processed_data = {
