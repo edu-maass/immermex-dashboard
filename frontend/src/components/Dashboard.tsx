@@ -158,42 +158,81 @@ export const Dashboard: React.FC = () => {
       {/* KPIs Grid */}
       {kpis && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          <KPICard
-            title="Facturación Total"
-            value={kpis.facturacion_total}
-            icon={DollarSign}
-            description="Total facturado en el período"
-          />
-          <KPICard
-            title="Cobranza Total"
-            value={kpis.cobranza_total}
-            icon={TrendingUp}
-            description="Total cobrado en el período"
-          />
+          {/* Facturación con sin IVA */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <DollarSign className="h-5 w-5 text-blue-600" />
+                <h3 className="text-sm font-medium text-gray-500">Facturación Total</h3>
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl font-bold text-gray-900">${kpis.facturacion_total?.toLocaleString()}</p>
+              <p className="text-sm text-gray-500 mt-1">Sin IVA: ${kpis.facturacion_sin_iva?.toLocaleString()}</p>
+            </div>
+          </div>
+
+          {/* Cobranza con sin IVA */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="h-5 w-5 text-green-600" />
+                <h3 className="text-sm font-medium text-gray-500">Cobranza Total</h3>
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl font-bold text-gray-900">${kpis.cobranza_total?.toLocaleString()}</p>
+              <p className="text-sm text-gray-500 mt-1">Sin IVA: ${kpis.cobranza_sin_iva?.toLocaleString()}</p>
+            </div>
+          </div>
+
           <KPICard
             title="% Cobrado"
             value={`${kpis.porcentaje_cobrado}%`}
             icon={Percent}
             description="Porcentaje de cobranza"
           />
+
+          {/* Anticipos con porcentaje */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Package className="h-5 w-5 text-purple-600" />
+                <h3 className="text-sm font-medium text-gray-500">Anticipos</h3>
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl font-bold text-gray-900">${kpis.anticipos_total?.toLocaleString()}</p>
+              <p className="text-sm text-gray-500 mt-1">{kpis.anticipos_porcentaje?.toFixed(1)}% sobre facturación</p>
+            </div>
+          </div>
+
+          {/* KPIs de Pedidos */}
           <KPICard
-            title="Anticipos"
-            value={kpis.anticipos_total}
+            title="Total Pedidos"
+            value={kpis.total_pedidos}
             icon={Package}
-            description="Total de anticipos recibidos"
+            description="Valor total de pedidos"
           />
           <KPICard
-            title="Total Facturas"
-            value={kpis.total_facturas}
+            title="Cantidad Pedidos"
+            value={kpis.total_pedidos_count}
             icon={FileText}
-            description="Número de facturas emitidas"
+            description="Número de pedidos procesados"
             raw
           />
           <KPICard
-            title="Clientes Únicos"
-            value={kpis.clientes_unicos}
+            title="KGS Total"
+            value={kpis.cantidad_total_pedidos}
+            icon={Package}
+            description="Cantidad total en KGS"
+            raw
+          />
+          <KPICard
+            title="Clientes Pedidos"
+            value={kpis.clientes_pedidos}
             icon={Users}
-            description="Clientes únicos en el período"
+            description="Clientes únicos en pedidos"
             raw
           />
           <KPICard

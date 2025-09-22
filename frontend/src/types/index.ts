@@ -1,15 +1,33 @@
 // Tipos para el dashboard de Immermex
 
 export interface KPIs {
+  // Facturación
   facturacion_total: number;
+  facturacion_sin_iva: number;
+  total_facturas: number;
+  clientes_unicos: number;
+  
+  // Cobranza
   cobranza_total: number;
-  anticipos_total: number;
+  cobranza_sin_iva: number;
   porcentaje_cobrado: number;
+  
+  // Anticipos
+  anticipos_total: number;
+  anticipos_porcentaje: number;
+  
+  // Pedidos
+  total_pedidos: number;
+  total_pedidos_count: number;
+  cantidad_total_pedidos: number;
+  clientes_pedidos: number;
+  
+  // Inventario
   rotacion_inventario: number;
   dias_cxc_ajustado: number;
   ciclo_efectivo: number;
-  total_facturas: number;
-  clientes_unicos: number;
+  
+  // Gráficos
   aging_cartera: Record<string, number>;
   top_clientes: Record<string, number>;
   consumo_material: Record<string, number>;
