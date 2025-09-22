@@ -476,9 +476,9 @@ async def upload_file(file: UploadFile = File(...)):
                         # Mapeo directo por posición de columna (índice 0-based)
                         column_mapping_pedidos = {
                             'Unnamed: 0': 'indice',           # Columna A (índice)
-                            'Unnamed: 1': 'numero_factura',   # Columna B (factura)
+                            'Hora: 15:59:28:697': 'fecha_pedido',  # Columna B (fecha)
                             'Unnamed: 2': 'vacio',            # Columna C (vacía)
-                            'Unnamed: 3': 'numero_pedido',    # Columna D (pedido)
+                            'FACTURADO': 'estado',            # Columna D (estado)
                             'Unnamed: 4': 'cantidad',         # Columna E (KGS)
                             'Unnamed: 5': 'precio_unitario',  # Columna F (precio unitario)
                             'Unnamed: 6': 'total',            # Columna G (importe)
@@ -506,6 +506,10 @@ async def upload_file(file: UploadFile = File(...)):
                                 elif col == 'cantidad':
                                     df_pedidos[col] = 0.0
                         
+                        # Si no hay columna cliente, usar índice como identificador
+                        if 'cliente' not in df_pedidos.columns or df_pedidos['cliente'].isna().all():
+                            df_pedidos['cliente'] = 'Cliente_' + df_pedidos.index.astype(str)
+                        
                         # Limpiar datos (más flexible para la estructura real)
                         # Convertir columnas numéricas
                         df_pedidos['total'] = pd.to_numeric(df_pedidos['total'], errors='coerce')
@@ -516,19 +520,14 @@ async def upload_file(file: UploadFile = File(...)):
                         df_pedidos = df_pedidos.dropna(subset=['total'])  # Requerir total
                         df_pedidos = df_pedidos[df_pedidos['total'] > 0]  # Solo pedidos con total > 0
                         
-                        # Si no hay columna cliente, usar número de factura como identificador
-                        if 'cliente' not in df_pedidos.columns or df_pedidos['cliente'].isna().all():
-                            if 'numero_factura' in df_pedidos.columns:
-                                df_pedidos['cliente'] = df_pedidos['numero_factura'].astype(str)
-                            else:
-                                df_pedidos['cliente'] = 'Cliente_' + df_pedidos.index.astype(str)
+                        # Cliente ya se maneja arriba
                         
                         # Convertir a formato esperado
                         for _, row in df_pedidos.iterrows():
                             try:
                                 pedido = {
                                     "fecha_pedido": row.get("fecha_pedido", "").strftime("%Y-%m-%d") if pd.notna(row.get("fecha_pedido")) and hasattr(row.get("fecha_pedido"), 'strftime') else "",
-                                    "numero_pedido": str(row.get("numero_pedido", "")),
+                                    "numero_pedido": str(row.get("indice", "")),
                                     "cliente": str(row.get("cliente", "")),
                                     "producto": str(row.get("producto", "Sin producto")),
                                     "cantidad": float(row.get("cantidad", 0)) if pd.notna(row.get("cantidad", 0)) else 0.0,
