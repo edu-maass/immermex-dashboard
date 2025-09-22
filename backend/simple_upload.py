@@ -25,6 +25,15 @@ app.add_middleware(
 )
 
 # Datos globales
+# Datos originales (persistentes hasta nuevo upload)
+original_data = {
+    "facturas": [],
+    "cobranzas": [],
+    "anticipos": [],
+    "pedidos": []
+}
+
+# Datos filtrados (para visualización)
 processed_data = {
     "facturas": [],
     "cobranzas": [],
@@ -37,12 +46,19 @@ async def root():
     return {"message": "Immermex Upload API funcionando"}
 
 @app.get("/api/kpis")
-async def get_kpis():
+async def get_kpis(mes: int = None, año: int = None):
     """Obtener KPIs actuales con todos los datos procesados"""
-    facturas = processed_data["facturas"]
-    cobranzas = processed_data["cobranzas"]
-    anticipos = processed_data["anticipos"]
-    pedidos = processed_data["pedidos"]
+    # Usar datos filtrados si hay filtros, sino usar datos originales
+    if mes is not None and año is not None:
+        facturas = processed_data["facturas"]
+        cobranzas = processed_data["cobranzas"]
+        anticipos = processed_data["anticipos"]
+        pedidos = processed_data["pedidos"]
+    else:
+        facturas = original_data["facturas"]
+        cobranzas = original_data["cobranzas"]
+        anticipos = original_data["anticipos"]
+        pedidos = original_data["pedidos"]
     
     if not facturas:
         return {
@@ -768,12 +784,18 @@ async def upload_file(file: UploadFile = File(...)):
                         continue
             
             # Actualizar datos globales
-            global processed_data
-            processed_data = {
+            global processed_data, original_data
+            original_data = {
                 "facturas": facturas,
                 "cobranzas": cobranzas,
                 "anticipos": anticipos,
                 "pedidos": pedidos
+            }
+            processed_data = {
+                "facturas": facturas.copy(),
+                "cobranzas": cobranzas.copy(),
+                "anticipos": anticipos.copy(),
+                "pedidos": pedidos.copy()
             }
             
             logger.info(f"Datos procesados - Facturas: {len(facturas)}, Cobranzas: {len(cobranzas)}, Anticipos: {len(anticipos)}, Pedidos: {len(pedidos)}")
@@ -828,10 +850,80 @@ async def get_materiales_filtro():
 @app.get("/api/filtros/pedidos")
 async def get_pedidos_filtro():
     """Obtener lista de números de pedido para filtros"""
-    pedidos = processed_data["pedidos"]
+    pedidos = original_data["pedidos"]  # Usar datos originales
     numeros_pedido = list(set(str(p.get("numero_pedido", "")) for p in pedidos if p.get("numero_pedido") and str(p.get("numero_pedido")) != "nan" and str(p.get("numero_pedido")).strip()))
     logger.info(f"Pedidos para filtro: {len(numeros_pedido)} - {numeros_pedido[:5]}")
     return sorted([p for p in numeros_pedido if p])
+
+@app.post("/api/filtros/aplicar")
+async def aplicar_filtros(mes: int = None, año: int = None):
+    """Aplicar filtros de mes y año sin limpiar datos originales"""
+    global processed_data
+    
+    if mes is None or año is None:
+        # Sin filtros, usar datos originales
+        processed_data = {
+            "facturas": original_data["facturas"].copy(),
+            "cobranzas": original_data["cobranzas"].copy(),
+            "anticipos": original_data["anticipos"].copy(),
+            "pedidos": original_data["pedidos"].copy()
+        }
+    else:
+        # Aplicar filtros por mes y año
+        from datetime import datetime
+        
+        facturas_filtradas = []
+        for factura in original_data["facturas"]:
+            try:
+                fecha_factura = datetime.strptime(factura.get("fecha_factura", ""), "%Y-%m-%d")
+                if fecha_factura.month == mes and fecha_factura.year == año:
+                    facturas_filtradas.append(factura)
+            except (ValueError, TypeError):
+                continue
+        
+        cobranzas_filtradas = []
+        for cobranza in original_data["cobranzas"]:
+            try:
+                fecha_cobro = datetime.strptime(cobranza.get("fecha_cobro", ""), "%Y-%m-%d")
+                if fecha_cobro.month == mes and fecha_cobro.year == año:
+                    cobranzas_filtradas.append(cobranza)
+            except (ValueError, TypeError):
+                continue
+        
+        anticipos_filtrados = []
+        for anticipo in original_data["anticipos"]:
+            try:
+                fecha_cfdi = datetime.strptime(anticipo.get("fecha_cfdi", ""), "%Y-%m-%d")
+                if fecha_cfdi.month == mes and fecha_cfdi.year == año:
+                    anticipos_filtrados.append(anticipo)
+            except (ValueError, TypeError):
+                continue
+        
+        pedidos_filtrados = []
+        for pedido in original_data["pedidos"]:
+            try:
+                fecha_pedido = datetime.strptime(pedido.get("fecha_pedido", ""), "%Y-%m-%d")
+                if fecha_pedido.month == mes and fecha_pedido.year == año:
+                    pedidos_filtrados.append(pedido)
+            except (ValueError, TypeError):
+                continue
+        
+        processed_data = {
+            "facturas": facturas_filtradas,
+            "cobranzas": cobranzas_filtradas,
+            "anticipos": anticipos_filtrados,
+            "pedidos": pedidos_filtrados
+        }
+    
+    logger.info(f"Filtros aplicados - Mes: {mes}, Año: {año}")
+    logger.info(f"Datos filtrados - Facturas: {len(processed_data['facturas'])}, Cobranzas: {len(processed_data['cobranzas'])}, Anticipos: {len(processed_data['anticipos'])}, Pedidos: {len(processed_data['pedidos'])}")
+    
+    return {"message": "Filtros aplicados correctamente", "datos_filtrados": {
+        "facturas": len(processed_data["facturas"]),
+        "cobranzas": len(processed_data["cobranzas"]),
+        "anticipos": len(processed_data["anticipos"]),
+        "pedidos": len(processed_data["pedidos"])
+    }}
 
 if __name__ == "__main__":
     import uvicorn

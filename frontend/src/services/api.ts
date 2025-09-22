@@ -175,6 +175,16 @@ class ApiService {
     return this.request<string[]>('/filtros/pedidos');
   }
 
+  async aplicarFiltros(filtros: { mes?: number; año?: number }) {
+    const params = new URLSearchParams();
+    if (filtros.mes) params.append('mes', filtros.mes.toString());
+    if (filtros.año) params.append('año', filtros.año.toString());
+    
+    return this.request<{ message: string; datos_filtrados: any }>(`/filtros/aplicar?${params.toString()}`, {
+      method: 'POST'
+    });
+  }
+
   // Health check
   async healthCheck() {
     return this.request('/health');

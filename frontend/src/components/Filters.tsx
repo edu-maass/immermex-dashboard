@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { FiltrosDashboard } from '../types';
 import { Search, X } from 'lucide-react';
+import { apiService } from '../services/api';
 
 interface FiltersProps {
   onFiltersChange: (filtros: FiltrosDashboard) => void;
@@ -18,8 +19,19 @@ export const Filters: FC<FiltersProps> = ({ onFiltersChange, onClearFilters }) =
     setFiltros(newFiltros);
   };
 
-  const handleApplyFilters = () => {
-    onFiltersChange(filtros);
+  const handleApplyFilters = async () => {
+    try {
+      // Aplicar filtros en el backend
+      const response = await apiService.aplicarFiltros(filtros);
+      console.log('Filtros aplicados:', response);
+      
+      // Notificar al componente padre
+      onFiltersChange(filtros);
+    } catch (error) {
+      console.error('Error aplicando filtros:', error);
+      // Aún así notificar al componente padre para que recargue
+      onFiltersChange(filtros);
+    }
   };
 
   const handleClearFilters = () => {

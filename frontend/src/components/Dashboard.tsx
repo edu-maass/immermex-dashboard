@@ -88,9 +88,16 @@ export const Dashboard: React.FC = () => {
     loadData(nuevosFiltros);
   };
 
-  const handleClearFilters = () => {
+  const handleClearFilters = async () => {
     setFiltros({});
-    loadData({});
+    // Aplicar filtros vacíos en el backend para mostrar todos los datos
+    try {
+      await apiService.aplicarFiltros({});
+      loadData({});
+    } catch (error) {
+      console.error('Error limpiando filtros:', error);
+      loadData({});
+    }
   };
 
   const handleUploadSuccess = () => {
