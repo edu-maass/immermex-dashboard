@@ -136,34 +136,41 @@ class ImmermexDataProcessor:
                 'fecha': 'fecha_factura',
                 'fecha de factura': 'fecha_factura',
                 'fecha_factura': 'fecha_factura',
+                'todos los documentos': 'fecha_factura',  # Columna específica del archivo
                 
                 # Serie y Folio
                 'serie': 'serie_factura',
                 'serie factura': 'serie_factura',
                 'serie_factura': 'serie_factura',
+                'unnamed: 1': 'serie_factura',  # Columna específica del archivo
                 'folio': 'folio_factura',
                 'folio factura': 'folio_factura',
                 'folio_factura': 'folio_factura',
+                'unnamed: 2': 'folio_factura',  # Columna específica del archivo
                 
                 # Cliente
                 'cliente': 'cliente',
                 'razón social': 'cliente',
                 'razon social': 'cliente',
                 'nombre cliente': 'cliente',
+                'unnamed: 3': 'cliente',  # Columna específica del archivo
                 
                 # Montos
                 'neto': 'monto_neto',
                 'monto neto': 'monto_neto',
                 'monto_neto': 'monto_neto',
                 'subtotal': 'monto_neto',
+                'unnamed: 4': 'monto_neto',  # Columna específica del archivo
                 'total': 'monto_total',
                 'monto total': 'monto_total',
                 'monto_total': 'monto_total',
                 'importe total': 'monto_total',
+                'unnamed: 5': 'monto_total',  # Columna específica del archivo
                 'pendiente': 'saldo_pendiente',
                 'saldo pendiente': 'saldo_pendiente',
                 'saldo_pendiente': 'saldo_pendiente',
                 'pendiente de pago': 'saldo_pendiente',
+                'unnamed: 6': 'saldo_pendiente',  # Columna específica del archivo
                 
                 # Condiciones
                 'referencia': 'condiciones_pago',
@@ -182,7 +189,8 @@ class ImmermexDataProcessor:
                 'uuid': 'uuid_factura',
                 'uuid factura': 'uuid_factura',
                 'uuid_factura': 'uuid_factura',
-                'folio fiscal': 'uuid_factura'
+                'folio fiscal': 'uuid_factura',
+                'unnamed: 13': 'uuid_factura'  # Columna específica del archivo
             }
             
             # Renombrar columnas
