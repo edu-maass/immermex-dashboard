@@ -77,7 +77,6 @@ async def get_kpis():
     total_pedidos = sum(p.get("total", 0) for p in pedidos)
     cantidad_total_pedidos = sum(p.get("cantidad", 0) for p in pedidos)
     total_pedidos_count = len(pedidos)
-    clientes_pedidos = len(set(p.get("cliente", "") for p in pedidos if p.get("cliente") and p.get("cliente") != "nan"))
     
     # KPIs de inventario (mejorado)
     rotacion_inventario = 0.0
@@ -91,6 +90,21 @@ async def get_kpis():
         logger.info(f"Cálculo rotación - Total pedidos: {total_pedidos}, Cantidad total: {cantidad_total_pedidos}, Inventario promedio: {inventario_promedio}")
     else:
         logger.info("No hay pedidos para calcular rotación de inventario")
+    
+    # Calcular días CxC ajustados
+    dias_cxc_ajustado = 0.0
+    if facturas and cobranza_total > 0:
+        # Días CxC = (Facturación pendiente / Facturación diaria promedio) * 30
+        facturacion_pendiente = facturacion_total - cobranza_total
+        facturacion_diaria = facturacion_total / 30  # Asumiendo 30 días
+        dias_cxc_ajustado = (facturacion_pendiente / facturacion_diaria) if facturacion_diaria > 0 else 0.0
+    
+    # Calcular ciclo de efectivo
+    ciclo_efectivo = 0.0
+    if dias_cxc_ajustado > 0 and rotacion_inventario > 0:
+        # Ciclo de efectivo = Días CxC + (365 / Rotación inventario)
+        dias_inventario = 365 / rotacion_inventario if rotacion_inventario > 0 else 0
+        ciclo_efectivo = dias_cxc_ajustado + dias_inventario
     
     # Calcular aging de cartera
     aging_cartera = {}
@@ -136,32 +150,38 @@ async def get_kpis():
         if top_clientes:
             logger.info(f"Cliente top: {list(top_clientes.items())[0]}")
     
-    # Calcular consumo de material (mejorado)
+    # Calcular consumo de material usando columna G (material)
     consumo_material = {}
     if pedidos:
-        productos = {}
+        materiales = {}
         for pedido in pedidos:
-            producto = pedido.get("producto", "Sin nombre")
+            material_codigo = pedido.get("material", "")
             cantidad = pedido.get("cantidad", 0)
-            total = pedido.get("total", 0)
             
-            # Filtrar productos válidos y valores positivos
-            if producto and producto != "Sin nombre" and producto != "nan" and (cantidad > 0 or total > 0):
-                # Usar cantidad si está disponible, sino usar total como proxy
-                valor_consumo = cantidad if cantidad > 0 else total / 100  # Aproximación
-                
-                if producto in productos:
-                    productos[producto] += valor_consumo
+            # Transformar código de material: tomar solo caracteres alfanuméricos del inicio
+            if material_codigo and str(material_codigo) != "nan" and str(material_codigo).strip():
+                # Extraer solo caracteres alfanuméricos del inicio del código
+                import re
+                material_limpio = re.match(r'^[A-Za-z0-9]+', str(material_codigo).strip())
+                if material_limpio:
+                    material_limpio = material_limpio.group(0)
                 else:
-                    productos[producto] = valor_consumo
+                    material_limpio = str(material_codigo).strip()[:10]  # Primeros 10 caracteres si no hay alfanuméricos
+                
+                # Solo procesar si hay cantidad válida
+                if cantidad > 0:
+                    if material_limpio in materiales:
+                        materiales[material_limpio] += cantidad
+                    else:
+                        materiales[material_limpio] = cantidad
         
         # Ordenar y tomar los primeros 10
-        sorted_productos = sorted(productos.items(), key=lambda x: x[1], reverse=True)[:10]
-        consumo_material = dict(sorted_productos)
+        sorted_materiales = sorted(materiales.items(), key=lambda x: x[1], reverse=True)[:10]
+        consumo_material = dict(sorted_materiales)
         
-        logger.info(f"Consumo material calculado - {len(consumo_material)} productos únicos")
+        logger.info(f"Consumo material calculado - {len(consumo_material)} materiales únicos")
         if consumo_material:
-            logger.info(f"Producto top: {list(consumo_material.items())[0]}")
+            logger.info(f"Material top: {list(consumo_material.items())[0]}")
     else:
         logger.info("No hay pedidos para calcular consumo de material")
     
@@ -187,10 +207,11 @@ async def get_kpis():
         "total_pedidos": total_pedidos,
         "total_pedidos_count": total_pedidos_count,
         "cantidad_total_pedidos": round(cantidad_total_pedidos, 2),
-        "clientes_pedidos": clientes_pedidos,
         
         # Inventario
         "rotacion_inventario": round(rotacion_inventario, 2),
+        "dias_cxc_ajustado": round(dias_cxc_ajustado, 2),
+        "ciclo_efectivo": round(ciclo_efectivo, 2),
         
         # Gráficos
         "aging_cartera": aging_cartera,
@@ -514,8 +535,8 @@ async def upload_file(file: UploadFile = File(...)):
                             'FACTURADO': 'total',             # Columna D (total - tiene datos numéricos)
                             'Unnamed: 4': 'cantidad',         # Columna E (KGS)
                             'Unnamed: 5': 'precio_unitario',  # Columna F (precio unitario)
-                            'Unnamed: 6': 'vacio',            # Columna G (vacía)
-                            'Unnamed: 7': 'producto',         # Columna H (material)
+                            'Unnamed: 6': 'material',         # Columna G (material - para consumo)
+                            'Unnamed: 7': 'producto',         # Columna H (producto)
                             'Unnamed: 8': 'cliente'           # Columna I (cliente)
                         }
                         

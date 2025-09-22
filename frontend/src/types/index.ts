@@ -20,7 +20,6 @@ export interface KPIs {
   total_pedidos: number;
   total_pedidos_count: number;
   cantidad_total_pedidos: number;
-  clientes_pedidos: number;
   
   // Inventario
   rotacion_inventario: number;

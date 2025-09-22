@@ -207,34 +207,19 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* KPIs de Pedidos */}
-          <KPICard
-            title="Total Pedidos"
-            value={kpis.total_pedidos}
-            icon={Package}
-            description="Valor total de pedidos"
-          />
-          <KPICard
-            title="Cantidad Pedidos"
-            value={kpis.total_pedidos_count}
-            icon={FileText}
-            description="Número de pedidos procesados"
-            raw
-          />
-          <KPICard
-            title="KGS Total"
-            value={kpis.cantidad_total_pedidos}
-            icon={Package}
-            description="Cantidad total en KGS"
-            raw
-          />
-          <KPICard
-            title="Clientes Pedidos"
-            value={kpis.clientes_pedidos}
-            icon={Users}
-            description="Clientes únicos en pedidos"
-            raw
-          />
+          {/* KPIs de Pedidos - Combinados */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Package className="h-5 w-5 text-orange-600" />
+                <h3 className="text-sm font-medium text-gray-500">Pedidos</h3>
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl font-bold text-gray-900">${kpis.total_pedidos?.toLocaleString()}</p>
+              <p className="text-sm text-gray-500 mt-1">{kpis.total_pedidos_count} pedidos • {kpis.cantidad_total_pedidos?.toLocaleString()} KGS</p>
+            </div>
+          </div>
           <KPICard
             title="Rotación Inventario"
             value={kpis.rotacion_inventario}
