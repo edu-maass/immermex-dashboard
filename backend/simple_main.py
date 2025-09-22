@@ -69,11 +69,15 @@ def calculate_kpis():
     inventario = processed_data["inventario"]
     pedidos = processed_data["pedidos"]
     
+    logger.info(f"Calculando KPIs - Facturas: {len(facturas)}, Cobranzas: {len(cobranzas)}, Anticipos: {len(anticipos)}")
+    
     if not facturas:
+        logger.warning("No hay facturas para calcular KPIs")
         return default_kpis
     
     # 1. FACTURACIÓN TOTAL (periodo)
     facturacion_total = sum(f.get("monto_total", 0) for f in facturas)
+    logger.info(f"Facturación total calculada: {facturacion_total}")
     
     # 2. COBRANZA TOTAL (periodo) - cruce con facturación usando folio/UUID
     cobranza_total = 0
@@ -90,8 +94,11 @@ def calculate_kpis():
                 cobranza_total += cobranza.get("importe_pagado", 0)
                 break
     
+    logger.info(f"Cobranza total calculada: {cobranza_total}")
+    
     # 3. % COBRANZA SOBRE FACTURACIÓN
     porcentaje_cobrado = (cobranza_total / facturacion_total * 100) if facturacion_total > 0 else 0
+    logger.info(f"Porcentaje cobrado: {porcentaje_cobrado}%")
     
     # 4. ANTICIPOS RECIBIDOS
     anticipos_total = sum(a.get("importe_relacion", 0) for a in anticipos)
@@ -380,9 +387,17 @@ async def upload_file(file: UploadFile = File(...)):
             
             # Convertir facturación
             if not processed_data_dict["facturacion_clean"].empty:
+                logger.info(f"Convirtiendo {len(processed_data_dict['facturacion_clean'])} registros de facturación")
                 for _, row in processed_data_dict["facturacion_clean"].iterrows():
+                    # Convertir fecha a string si es datetime
+                    fecha_factura = row.get("fecha_factura", "")
+                    if hasattr(fecha_factura, 'strftime'):
+                        fecha_factura = fecha_factura.strftime("%Y-%m-%d")
+                    else:
+                        fecha_factura = str(fecha_factura)
+                    
                     factura = {
-                        "fecha_factura": str(row.get("fecha_factura", "")),
+                        "fecha_factura": fecha_factura,
                         "serie": str(row.get("serie_factura", "")),
                         "folio": str(row.get("folio_factura", "")),
                         "cliente": str(row.get("cliente", "")),
@@ -394,12 +409,24 @@ async def upload_file(file: UploadFile = File(...)):
                         "uuid": str(row.get("uuid_factura", ""))
                     }
                     processed_data["facturas"].append(factura)
+                
+                logger.info(f"Facturación convertida: {len(processed_data['facturas'])} registros")
+                if processed_data["facturas"]:
+                    logger.info(f"Primera factura: {processed_data['facturas'][0]}")
             
             # Convertir cobranza
             if not processed_data_dict["cobranza_clean"].empty:
+                logger.info(f"Convirtiendo {len(processed_data_dict['cobranza_clean'])} registros de cobranza")
                 for _, row in processed_data_dict["cobranza_clean"].iterrows():
+                    # Convertir fecha a string si es datetime
+                    fecha_pago = row.get("fecha_pago", "")
+                    if hasattr(fecha_pago, 'strftime'):
+                        fecha_pago = fecha_pago.strftime("%Y-%m-%d")
+                    else:
+                        fecha_pago = str(fecha_pago)
+                    
                     cobranza = {
-                        "fecha_pago": str(row.get("fecha_pago", "")),
+                        "fecha_pago": fecha_pago,
                         "serie_pago": str(row.get("serie_pago", "")),
                         "folio_pago": str(row.get("folio_pago", "")),
                         "concepto_pago": str(row.get("forma_pago", "")),
@@ -411,13 +438,15 @@ async def upload_file(file: UploadFile = File(...)):
                         "no_parcialidad": int(row.get("parcialidad", 1)),
                         "importe_pagado": float(row.get("importe_pagado", 0)),
                         "numero_operacion": "",
-                        "fecha_emision_pago": str(row.get("fecha_pago", "")),
+                        "fecha_emision_pago": fecha_pago,
                         "fecha_factura_relacionada": "",
                         "serie_factura_relacionada": "",
                         "folio_factura_relacionada": "",
                         "uuid_factura_relacionada": str(row.get("uuid_factura_relacionada", ""))
                     }
                     processed_data["cobranzas"].append(cobranza)
+                
+                logger.info(f"Cobranza convertida: {len(processed_data['cobranzas'])} registros")
             
             # Convertir CFDI (anticipos)
             if not processed_data_dict["cfdi_clean"].empty:
@@ -489,6 +518,25 @@ async def upload_file(file: UploadFile = File(...)):
         
     except Exception as e:
         logger.error(f"Error procesando archivo con algoritmo avanzado: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/debug/data")
+async def get_debug_data():
+    """Endpoint de debug para verificar datos procesados"""
+    try:
+        return {
+            "processed_data_summary": {
+                "facturas": len(processed_data["facturas"]),
+                "cobranzas": len(processed_data["cobranzas"]),
+                "anticipos": len(processed_data["anticipos"]),
+                "pedidos": len(processed_data["pedidos"])
+            },
+            "sample_factura": processed_data["facturas"][0] if processed_data["facturas"] else None,
+            "sample_cobranza": processed_data["cobranzas"][0] if processed_data["cobranzas"] else None,
+            "kpis": calculate_kpis()
+        }
+    except Exception as e:
+        logger.error(f"Error en debug data: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/analisis/pedidos")
