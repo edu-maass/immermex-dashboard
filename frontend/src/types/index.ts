@@ -32,6 +32,7 @@ export interface KPIs {
   aging_cartera: Record<string, number>;
   top_clientes: Record<string, number>;
   consumo_material: Record<string, number>;
+  expectativa_cobranza: Record<string, {cobranza_esperada: number, cobranza_real: number}>;
   analisis_pedidos: PedidoAnalisis[];
   clientes_analisis: Record<string, ClienteAnalisis>;
 }

@@ -6,6 +6,7 @@ import { Filters } from './Filters';
 import { AgingChart } from './Charts/AgingChart';
 import { TopClientesChart } from './Charts/TopClientesChart';
 import { ConsumoMaterialChart } from './Charts/ConsumoMaterialChart';
+import { ExpectativaCobranzaChart } from './Charts/ExpectativaCobranzaChart';
 import { apiService } from '../services/api';
 import { KPIs, FiltrosDashboard, GraficoDatos } from '../types';
 import { 
@@ -110,6 +111,14 @@ export const Dashboard: React.FC = () => {
 
   const formatConsumoMaterialData = (materiales: Record<string, number>) => {
     return Object.entries(materiales).map(([name, value]) => ({ name, value }));
+  };
+
+  const formatExpectativaCobranzaData = (expectativa: Record<string, {cobranza_esperada: number, cobranza_real: number}>) => {
+    return Object.entries(expectativa).map(([semana, datos]) => ({
+      semana,
+      cobranza_esperada: datos.cobranza_esperada,
+      cobranza_real: datos.cobranza_real
+    }));
   };
 
   if (loading && !kpis) {
@@ -264,6 +273,13 @@ export const Dashboard: React.FC = () => {
         {kpis && kpis.consumo_material && Object.keys(kpis.consumo_material).length > 0 && (
           <ConsumoMaterialChart 
             data={formatConsumoMaterialData(kpis.consumo_material)}
+          />
+        )}
+
+        {/* Expectativa de Cobranza */}
+        {kpis && kpis.expectativa_cobranza && Object.keys(kpis.expectativa_cobranza).length > 0 && (
+          <ExpectativaCobranzaChart 
+            data={formatExpectativaCobranzaData(kpis.expectativa_cobranza)}
           />
         )}
       </div>

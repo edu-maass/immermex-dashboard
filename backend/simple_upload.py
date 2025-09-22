@@ -146,6 +146,74 @@ async def get_kpis():
                 aging_data["Más de 90 días"] += saldo * 0.1
         
         aging_cartera = aging_data
+
+        # Calcular expectativa de cobranza por semana
+        expectativa_cobranza = {}
+        if facturas:
+            from datetime import datetime, timedelta
+            from collections import defaultdict
+            
+            # Agrupar por semana
+            cobranza_por_semana = defaultdict(lambda: {"esperada": 0, "real": 0})
+            
+            for factura in facturas:
+                try:
+                    fecha_factura = datetime.strptime(factura.get("fecha_factura", ""), "%Y-%m-%d")
+                    dias_credito = factura.get("dias_credito", 30)
+                    monto_total = factura.get("monto_total", 0)
+                    saldo_pendiente = factura.get("saldo_pendiente", 0)
+                    
+                    # Calcular fecha de vencimiento
+                    fecha_vencimiento = fecha_factura + timedelta(days=dias_credito)
+                    
+                    # Calcular semana de vencimiento (lunes de esa semana)
+                    dias_hasta_lunes = fecha_vencimiento.weekday()
+                    lunes_semana = fecha_vencimiento - timedelta(days=dias_hasta_lunes)
+                    semana_key = lunes_semana.strftime("%Y-%m-%d")
+                    
+                    # Monto esperado a cobrar (total - anticipos ya pagados)
+                    monto_esperado = monto_total - (monto_total - saldo_pendiente)
+                    
+                    if monto_esperado > 0:
+                        cobranza_por_semana[semana_key]["esperada"] += monto_esperado
+                        
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Error procesando fecha de factura: {e}")
+                    continue
+            
+            # Agregar cobranza real por semana
+            for cobranza in cobranzas:
+                try:
+                    fecha_cobro = datetime.strptime(cobranza.get("fecha_cobro", ""), "%Y-%m-%d")
+                    importe_cobrado = cobranza.get("importe_cobrado", 0)
+                    
+                    if importe_cobrado > 0:
+                        # Calcular semana de cobro
+                        dias_hasta_lunes = fecha_cobro.weekday()
+                        lunes_semana = fecha_cobro - timedelta(days=dias_hasta_lunes)
+                        semana_key = lunes_semana.strftime("%Y-%m-%d")
+                        
+                        cobranza_por_semana[semana_key]["real"] += importe_cobrado
+                        
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Error procesando fecha de cobro: {e}")
+                    continue
+            
+            # Convertir a formato para la gráfica
+            expectativa_cobranza = {}
+            for semana, datos in cobranza_por_semana.items():
+                if datos["esperada"] > 0 or datos["real"] > 0:
+                    # Formatear semana como "Semana del DD/MM"
+                    fecha_semana = datetime.strptime(semana, "%Y-%m-%d")
+                    semana_formateada = f"Semana del {fecha_semana.strftime('%d/%m')}"
+                    expectativa_cobranza[semana_formateada] = {
+                        "cobranza_esperada": datos["esperada"],
+                        "cobranza_real": datos["real"]
+                    }
+            
+            logger.info(f"Expectativa de cobranza calculada - {len(expectativa_cobranza)} semanas")
+            if expectativa_cobranza:
+                logger.info(f"Primera semana: {list(expectativa_cobranza.items())[0]}")
     
         # Calcular top clientes
         top_clientes = {}
@@ -236,7 +304,8 @@ async def get_kpis():
         # Gráficos
         "aging_cartera": aging_cartera,
         "top_clientes": top_clientes,
-        "consumo_material": consumo_material
+        "consumo_material": consumo_material,
+        "expectativa_cobranza": expectativa_cobranza
     }
 
 @app.get("/api/graficos/aging")

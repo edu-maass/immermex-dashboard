@@ -2,11 +2,11 @@ import { FC } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
-interface TopClientesChartProps {
-  data: Array<{ name: string; value: number }>;
+interface ExpectativaCobranzaChartProps {
+  data: Array<{ semana: string; cobranza_esperada: number; cobranza_real: number }>;
 }
 
-export const TopClientesChart: FC<TopClientesChartProps> = ({ data }) => {
+export const ExpectativaCobranzaChart: FC<ExpectativaCobranzaChartProps> = ({ data }) => {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
@@ -16,39 +16,35 @@ export const TopClientesChart: FC<TopClientesChartProps> = ({ data }) => {
     }).format(value);
   };
 
-  // Limitar a 10 clientes y truncar nombres a 20 caracteres
-  const limitedData = data.slice(0, 10).map(item => ({
-    ...item,
-    name: item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name
-  }));
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Top 10 Clientes por Facturación</CardTitle>
+        <CardTitle>Expectativa de Cobranza por Semana</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart 
-              data={limitedData} 
-              layout="horizontal"
+              data={data} 
               margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
-                type="number"
+                dataKey="semana"
+                tick={{ fontSize: 12 }}
+                angle={-45}
+                textAnchor="end"
+                height={80}
+              />
+              <YAxis 
                 tick={{ fontSize: 12 }}
                 tickFormatter={formatCurrency}
               />
-              <YAxis 
-                type="category"
-                dataKey="name"
-                tick={{ fontSize: 12 }}
-                width={150}
-              />
               <Tooltip 
-                formatter={(value: number) => [formatCurrency(value), 'Facturación']}
+                formatter={(value: number, name: string) => [
+                  formatCurrency(value), 
+                  name === 'cobranza_esperada' ? 'Esperada' : 'Real'
+                ]}
                 labelStyle={{ color: '#374151' }}
                 contentStyle={{ 
                   backgroundColor: '#fff', 
@@ -57,9 +53,16 @@ export const TopClientesChart: FC<TopClientesChartProps> = ({ data }) => {
                 }}
               />
               <Bar 
-                dataKey="value" 
+                dataKey="cobranza_esperada" 
                 fill="#3b82f6"
-                radius={[0, 4, 4, 0]}
+                name="Esperada"
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar 
+                dataKey="cobranza_real" 
+                fill="#10b981"
+                name="Real"
+                radius={[4, 4, 0, 0]}
               />
             </BarChart>
           </ResponsiveContainer>
