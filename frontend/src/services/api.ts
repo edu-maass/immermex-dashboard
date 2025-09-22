@@ -27,10 +27,20 @@ class ApiService {
     if (!isFormData && !('Content-Type' in (mergedHeaders || {}))) {
       mergedHeaders['Content-Type'] = 'application/json';
     }
-    const config: RequestInit = { ...options, headers: mergedHeaders };
+    
+    // Agregar timeout de 30 segundos
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    const config: RequestInit = { 
+      ...options, 
+      headers: mergedHeaders,
+      signal: controller.signal
+    };
 
     try {
       let response = await fetch(url, config);
+      clearTimeout(timeoutId);
       
       // Auto-detect API prefix: if 404 without '/api', retry with prefix once
       if (response.status === 404 && apiPrefix === '') {
@@ -46,11 +56,15 @@ class ApiService {
       }
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
       }
 
       return await response.json();
     } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout - El servidor tardó demasiado en responder');
+      }
       console.error('API request failed:', error);
       throw error;
     }

@@ -3,7 +3,7 @@ Modelos Pydantic para la API de Immermex Dashboard
 """
 
 from pydantic import BaseModel
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 from datetime import datetime
 
 # Modelos de respuesta para KPIs

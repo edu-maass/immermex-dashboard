@@ -11,10 +11,10 @@ from datetime import datetime
 import logging
 import pandas as pd
 import io
+from logging_config import setup_logging, log_api_request, log_file_processing, log_error
 
 # Configurar logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = setup_logging()
 
 # Crear aplicación FastAPI
 app = FastAPI(
@@ -117,7 +117,8 @@ def calculate_kpis():
                     aging_cartera["61-90 días"] += 1
                 else:
                     aging_cartera["90+ días"] += 1
-            except:
+            except Exception as e:
+                logger.warning(f"Error procesando fecha de factura: {str(e)}")
                 pass
     
     # 6. DÍAS DE CUENTAS POR COBRAR (ajustado por anticipos)
@@ -141,7 +142,8 @@ def calculate_kpis():
                     dias = (factura - corte).days
                     total_dias += dias
                     count += 1
-                except:
+                except Exception as e:
+                    logger.warning(f"Error calculando rotación de inventario: {str(e)}")
                     pass
         rotacion_inventario = total_dias / count if count > 0 else 0
     
@@ -216,7 +218,8 @@ def calculate_kpis():
                 dias_transcurridos = (datetime.now() - fecha_fact).days
                 if dias_transcurridos > pedido.get("dias_credito", 30):
                     estado_cobro = "Vencido"
-            except:
+            except Exception as e:
+                logger.warning(f"Error calculando estado de cobro: {str(e)}")
                 pass
         
         analisis_pedidos.append({
@@ -343,13 +346,17 @@ async def upload_file(file: UploadFile = File(...)):
     """Endpoint para subir archivos Excel según especificaciones Immermex"""
     try:
         # Validar tipo de archivo
-        if not file.filename.endswith(('.xlsx', '.xls')):
+        if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
             raise HTTPException(status_code=400, detail="Solo se permiten archivos Excel (.xlsx, .xls)")
         
         logger.info(f"Procesando archivo Immermex: {file.filename}")
         
         # Leer contenido del archivo
         contents = await file.read()
+        
+        # Validar tamaño del archivo (máximo 10MB)
+        if len(contents) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="El archivo es demasiado grande. Máximo 10MB permitido.")
         
         # Leer todas las hojas del Excel
         excel_file = pd.ExcelFile(io.BytesIO(contents))
@@ -384,6 +391,20 @@ async def upload_file(file: UploadFile = File(...)):
                     registros_procesados += 1
                 except Exception as e:
                     logger.warning(f"Error procesando factura {index}: {str(e)}")
+                    # Agregar factura con datos por defecto para evitar pérdida de datos
+                    factura = {
+                        "fecha_factura": "",
+                        "serie": "",
+                        "folio": "",
+                        "cliente": "",
+                        "monto_neto": 0.0,
+                        "monto_total": 0.0,
+                        "saldo_pendiente": 0.0,
+                        "dias_credito": 30,
+                        "agente": "",
+                        "uuid": ""
+                    }
+                    processed_data["facturas"].append(factura)
                     continue
         
         # 2. PROCESAR HOJA 'cobranza'

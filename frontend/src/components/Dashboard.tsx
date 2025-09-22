@@ -38,16 +38,37 @@ export const Dashboard: React.FC = () => {
       const kpisData = await apiService.getKPIs(filtrosAplicados);
       setKpis(kpisData as KPIs);
 
-      // Cargar gráficos
-      const [aging, topClientes, consumoMaterial] = await Promise.all([
-        apiService.getGraficoAging(filtrosAplicados),
-        apiService.getGraficoTopClientes(10, filtrosAplicados),
-        apiService.getGraficoConsumoMaterial(10, filtrosAplicados)
-      ]);
+      // Cargar gráficos con manejo individual de errores
+      try {
+        const [aging, topClientes, consumoMaterial] = await Promise.allSettled([
+          apiService.getGraficoAging(filtrosAplicados),
+          apiService.getGraficoTopClientes(10, filtrosAplicados),
+          apiService.getGraficoConsumoMaterial(10, filtrosAplicados)
+        ]);
 
-      setAgingData(aging as GraficoDatos);
-      setTopClientesData(topClientes as GraficoDatos);
-      setConsumoMaterialData(consumoMaterial as GraficoDatos);
+        // Procesar resultados de gráficos
+        if (aging.status === 'fulfilled') {
+          setAgingData(aging.value as GraficoDatos);
+        } else {
+          console.warn('Error cargando aging:', aging.reason);
+        }
+
+        if (topClientes.status === 'fulfilled') {
+          setTopClientesData(topClientes.value as GraficoDatos);
+        } else {
+          console.warn('Error cargando top clientes:', topClientes.reason);
+        }
+
+        if (consumoMaterial.status === 'fulfilled') {
+          setConsumoMaterialData(consumoMaterial.value as GraficoDatos);
+        } else {
+          console.warn('Error cargando consumo material:', consumoMaterial.reason);
+        }
+
+      } catch (chartError) {
+        console.warn('Error cargando gráficos:', chartError);
+        // No establecer error global para gráficos, solo KPIs son críticos
+      }
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error cargando datos');
@@ -202,7 +223,7 @@ export const Dashboard: React.FC = () => {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Aging de Cartera */}
-        {agingData && (
+        {agingData && agingData.data && agingData.data.length > 0 && (
           <AgingChart 
             data={formatAgingData(agingData.data.reduce((acc, value, index) => {
               acc[agingData.labels[index]] = value;
@@ -212,7 +233,7 @@ export const Dashboard: React.FC = () => {
         )}
 
         {/* Top Clientes */}
-        {topClientesData && (
+        {topClientesData && topClientesData.data && topClientesData.data.length > 0 && (
           <TopClientesChart 
             data={formatTopClientesData(topClientesData.data.reduce((acc, value, index) => {
               acc[topClientesData.labels[index]] = value;
@@ -222,7 +243,7 @@ export const Dashboard: React.FC = () => {
         )}
 
         {/* Consumo por Material */}
-        {consumoMaterialData && (
+        {consumoMaterialData && consumoMaterialData.data && consumoMaterialData.data.length > 0 && (
           <ConsumoMaterialChart 
             data={formatConsumoMaterialData(consumoMaterialData.data.reduce((acc, value, index) => {
               acc[consumoMaterialData.labels[index]] = value;
