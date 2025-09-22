@@ -253,8 +253,9 @@ class ImmermexDataProcessor:
             clean_df['uuid_factura'] = self.clean_uuid(uuid_col)
             
             # Campos calculados
-            clean_df['mes'] = clean_df['fecha_factura'].dt.month
-            clean_df['año'] = clean_df['fecha_factura'].dt.year
+            if not clean_df.empty and 'fecha_factura' in clean_df.columns:
+                clean_df['mes'] = clean_df['fecha_factura'].dt.month
+                clean_df['año'] = clean_df['fecha_factura'].dt.year
             
             # Eliminar filas completamente vacías
             clean_df = clean_df.dropna(how='all')
@@ -726,7 +727,11 @@ class ImmermexDataProcessor:
             master_df = master_df.merge(cfdi_anticipos, on='uuid', how='left')
         
         # Agregar métricas calculadas
-        master_df['dias_vencimiento'] = (master_df['fecha_cobro'] - master_df['fecha_factura']).dt.days
+        if 'fecha_cobro' in master_df.columns and 'fecha_factura' in master_df.columns:
+            master_df['dias_vencimiento'] = (master_df['fecha_cobro'] - master_df['fecha_factura']).dt.days
+        else:
+            master_df['dias_vencimiento'] = 0
+            
         master_df['estado_cobro'] = master_df.apply(self._determinar_estado_cobro, axis=1)
         master_df['margen'] = master_df['total'] - master_df.get('anticipos', 0)
         
