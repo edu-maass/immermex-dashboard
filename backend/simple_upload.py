@@ -516,14 +516,25 @@ async def upload_file(file: UploadFile = File(...)):
                         df_pedidos['cantidad'] = pd.to_numeric(df_pedidos['cantidad'], errors='coerce')
                         df_pedidos['precio_unitario'] = pd.to_numeric(df_pedidos['precio_unitario'], errors='coerce')
                         
+                        logger.info(f"Después de conversión numérica - Total filas: {len(df_pedidos)}")
+                        logger.info(f"Valores únicos en 'total': {df_pedidos['total'].nunique()}")
+                        logger.info(f"Valores únicos en 'cantidad': {df_pedidos['cantidad'].nunique()}")
+                        logger.info(f"Valores únicos en 'cliente': {df_pedidos['cliente'].nunique()}")
+                        logger.info(f"Primeros 5 valores de 'total': {df_pedidos['total'].head().tolist()}")
+                        logger.info(f"Primeros 5 valores de 'cliente': {df_pedidos['cliente'].head().tolist()}")
+                        
                         # Filtrar datos válidos
                         df_pedidos = df_pedidos.dropna(subset=['total'])  # Requerir total
+                        logger.info(f"Después de dropna total - Total filas: {len(df_pedidos)}")
+                        
                         df_pedidos = df_pedidos[df_pedidos['total'] > 0]  # Solo pedidos con total > 0
+                        logger.info(f"Después de filtrar total > 0 - Total filas: {len(df_pedidos)}")
                         
                         # Cliente ya se maneja arriba
                         
                         # Convertir a formato esperado
-                        for _, row in df_pedidos.iterrows():
+                        logger.info(f"Iniciando conversión de {len(df_pedidos)} filas a objetos pedido")
+                        for i, (_, row) in enumerate(df_pedidos.iterrows()):
                             try:
                                 pedido = {
                                     "fecha_pedido": row.get("fecha_pedido", "").strftime("%Y-%m-%d") if pd.notna(row.get("fecha_pedido")) and hasattr(row.get("fecha_pedido"), 'strftime') else "",
@@ -538,9 +549,11 @@ async def upload_file(file: UploadFile = File(...)):
                                 # Solo agregar si tiene datos válidos
                                 if pedido["cliente"] and pedido["cliente"] != "Sin nombre" and pedido["total"] > 0:
                                     pedidos.append(pedido)
+                                    if len(pedidos) <= 3:  # Log solo los primeros 3
+                                        logger.info(f"Pedido {len(pedidos)}: {pedido}")
                                     
                             except Exception as row_error:
-                                logger.warning(f"Error procesando fila de pedido: {row_error}")
+                                logger.warning(f"Error procesando fila {i} de pedido: {row_error}")
                                 continue
                         
                         logger.info(f"Pedidos procesados: {len(pedidos)}")
