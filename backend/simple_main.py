@@ -79,6 +79,15 @@ def calculate_kpis():
     facturacion_total = sum(f.get("monto_total", 0) for f in facturas)
     logger.info(f"Facturación total calculada: {facturacion_total}")
     
+    # Debug: verificar valores de monto_total
+    montos = [f.get("monto_total", 0) for f in facturas[:5]]  # Primeros 5
+    logger.info(f"Primeros 5 montos_total: {montos}")
+    
+    # Debug: verificar estructura de facturas
+    if facturas:
+        logger.info(f"Estructura de primera factura: {list(facturas[0].keys())}")
+        logger.info(f"Valores de primera factura: {facturas[0]}")
+    
     # 2. COBRANZA TOTAL (periodo) - cruce con facturación usando folio/UUID
     cobranza_total = 0
     for cobranza in cobranzas:
@@ -396,15 +405,42 @@ async def upload_file(file: UploadFile = File(...)):
                     else:
                         fecha_factura = str(fecha_factura)
                     
+                    # Convertir valores numéricos de forma segura
+                    monto_neto = row.get("monto_neto", 0)
+                    monto_total = row.get("monto_total", 0)
+                    saldo_pendiente = row.get("saldo_pendiente", 0)
+                    dias_credito = row.get("dias_credito", 30)
+                    
+                    # Convertir a float de forma segura
+                    try:
+                        monto_neto = float(monto_neto) if pd.notna(monto_neto) else 0.0
+                    except (ValueError, TypeError):
+                        monto_neto = 0.0
+                        
+                    try:
+                        monto_total = float(monto_total) if pd.notna(monto_total) else 0.0
+                    except (ValueError, TypeError):
+                        monto_total = 0.0
+                        
+                    try:
+                        saldo_pendiente = float(saldo_pendiente) if pd.notna(saldo_pendiente) else 0.0
+                    except (ValueError, TypeError):
+                        saldo_pendiente = 0.0
+                        
+                    try:
+                        dias_credito = int(dias_credito) if pd.notna(dias_credito) else 30
+                    except (ValueError, TypeError):
+                        dias_credito = 30
+                    
                     factura = {
                         "fecha_factura": fecha_factura,
                         "serie": str(row.get("serie_factura", "")),
                         "folio": str(row.get("folio_factura", "")),
                         "cliente": str(row.get("cliente", "")),
-                        "monto_neto": float(row.get("monto_neto", 0)),
-                        "monto_total": float(row.get("monto_total", 0)),
-                        "saldo_pendiente": float(row.get("saldo_pendiente", 0)),
-                        "dias_credito": int(row.get("dias_credito", 30)),
+                        "monto_neto": monto_neto,
+                        "monto_total": monto_total,
+                        "saldo_pendiente": saldo_pendiente,
+                        "dias_credito": dias_credito,
                         "agente": str(row.get("agente", "")),
                         "uuid": str(row.get("uuid_factura", ""))
                     }
@@ -413,6 +449,9 @@ async def upload_file(file: UploadFile = File(...)):
                 logger.info(f"Facturación convertida: {len(processed_data['facturas'])} registros")
                 if processed_data["facturas"]:
                     logger.info(f"Primera factura: {processed_data['facturas'][0]}")
+                    # Verificar que los montos no sean cero
+                    total_montos = sum(f.get("monto_total", 0) for f in processed_data["facturas"][:10])
+                    logger.info(f"Suma de primeros 10 montos_total: {total_montos}")
             
             # Convertir cobranza
             if not processed_data_dict["cobranza_clean"].empty:
@@ -425,6 +464,26 @@ async def upload_file(file: UploadFile = File(...)):
                     else:
                         fecha_pago = str(fecha_pago)
                     
+                    # Convertir valores numéricos de forma segura
+                    tipo_cambio = row.get("tipo_cambio", 1)
+                    parcialidad = row.get("parcialidad", 1)
+                    importe_pagado = row.get("importe_pagado", 0)
+                    
+                    try:
+                        tipo_cambio = float(tipo_cambio) if pd.notna(tipo_cambio) else 1.0
+                    except (ValueError, TypeError):
+                        tipo_cambio = 1.0
+                        
+                    try:
+                        parcialidad = int(parcialidad) if pd.notna(parcialidad) else 1
+                    except (ValueError, TypeError):
+                        parcialidad = 1
+                        
+                    try:
+                        importe_pagado = float(importe_pagado) if pd.notna(importe_pagado) else 0.0
+                    except (ValueError, TypeError):
+                        importe_pagado = 0.0
+                    
                     cobranza = {
                         "fecha_pago": fecha_pago,
                         "serie_pago": str(row.get("serie_pago", "")),
@@ -433,10 +492,10 @@ async def upload_file(file: UploadFile = File(...)):
                         "uuid_pago": str(row.get("uuid_factura_relacionada", "")),
                         "cliente": str(row.get("cliente", "")),
                         "moneda": str(row.get("moneda", "MXN")),
-                        "tipo_cambio": float(row.get("tipo_cambio", 1)),
+                        "tipo_cambio": tipo_cambio,
                         "forma_pago": str(row.get("forma_pago", "")),
-                        "no_parcialidad": int(row.get("parcialidad", 1)),
-                        "importe_pagado": float(row.get("importe_pagado", 0)),
+                        "no_parcialidad": parcialidad,
+                        "importe_pagado": importe_pagado,
                         "numero_operacion": "",
                         "fecha_emision_pago": fecha_pago,
                         "fecha_factura_relacionada": "",
@@ -450,16 +509,26 @@ async def upload_file(file: UploadFile = File(...)):
             
             # Convertir CFDI (anticipos)
             if not processed_data_dict["cfdi_clean"].empty:
+                logger.info(f"Convirtiendo {len(processed_data_dict['cfdi_clean'])} registros de CFDI")
                 for _, row in processed_data_dict["cfdi_clean"].iterrows():
+                    # Convertir importe de forma segura
+                    importe_relacion = row.get("importe_relacion", 0)
+                    try:
+                        importe_relacion = float(importe_relacion) if pd.notna(importe_relacion) else 0.0
+                    except (ValueError, TypeError):
+                        importe_relacion = 0.0
+                    
                     anticipo = {
                         "uuid_cfdi": str(row.get("xml", "")),
                         "cliente_receptor": str(row.get("cliente_receptor", "")),
                         "fecha_emision": "",
                         "tipo_relacion": str(row.get("tipo_relacion", "")),
-                        "importe_relacion": float(row.get("importe_relacion", 0)),
+                        "importe_relacion": importe_relacion,
                         "uuid_factura_relacionada": str(row.get("uuid_factura_relacionada", ""))
                     }
                     processed_data["anticipos"].append(anticipo)
+                
+                logger.info(f"CFDI convertido: {len(processed_data['anticipos'])} registros")
             
             # Convertir pedidos
             if not processed_data_dict["pedidos_clean"].empty:
