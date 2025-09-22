@@ -73,14 +73,16 @@ export const Filters: FC<FiltersProps> = ({ onFiltersChange, onClearFilters }) =
       }
     };
 
-    // Cargar datos inicialmente
-    loadFilterData();
-    
-    // Recargar datos cada 5 segundos para actualizar después de subir archivo
-    const interval = setInterval(loadFilterData, 5000);
+    // Solo cargar datos si hay datos disponibles (después de subir archivo)
+    const interval = setInterval(() => {
+      // Solo intentar cargar si no hay datos aún
+      if (clientes.length === 0 || materiales.length === 0 || pedidos.length === 0) {
+        loadFilterData();
+      }
+    }, 3000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [clientes.length, materiales.length, pedidos.length]);
 
   return (
     <Card>

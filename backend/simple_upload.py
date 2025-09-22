@@ -86,7 +86,13 @@ async def get_kpis():
     total_pedidos_count = len(pedidos)
     
     # Pedidos únicos (basado en número de pedido)
-    pedidos_unicos = len(set(p.get("numero_pedido", "") for p in pedidos if p.get("numero_pedido") and str(p.get("numero_pedido")) != "nan" and str(p.get("numero_pedido")).strip() and p.get("numero_pedido") != ""))
+    pedidos_unicos_set = set()
+    for p in pedidos:
+        numero_pedido = p.get("numero_pedido", "")
+        if numero_pedido and str(numero_pedido) != "nan" and str(numero_pedido).strip() and numero_pedido != "":
+            pedidos_unicos_set.add(str(numero_pedido))
+    pedidos_unicos = len(pedidos_unicos_set)
+    logger.info(f"Pedidos únicos calculados: {pedidos_unicos} - {list(pedidos_unicos_set)[:5]}")
     
     # Convertir KGS a toneladas
     toneladas_total = cantidad_total_pedidos / 1000
@@ -141,27 +147,28 @@ async def get_kpis():
         
         aging_cartera = aging_data
     
-    # Calcular top clientes
-    top_clientes = {}
-    if facturas:
-        clientes = {}
-        for factura in facturas:
-            cliente = factura.get("cliente", "Sin nombre")
-            monto = factura.get("monto_total", 0)
-            # Filtrar clientes válidos y montos positivos
-            if cliente and cliente != "Sin nombre" and cliente != "nan" and monto > 0:
-                if cliente in clientes:
-                    clientes[cliente] += monto
-                else:
-                    clientes[cliente] = monto
-        
-        # Ordenar y tomar los primeros 10
-        sorted_clientes = sorted(clientes.items(), key=lambda x: x[1], reverse=True)[:10]
-        top_clientes = dict(sorted_clientes)
-        
-        logger.info(f"Top clientes calculado - {len(top_clientes)} clientes únicos")
-        if top_clientes:
-            logger.info(f"Cliente top: {list(top_clientes.items())[0]}")
+        # Calcular top clientes
+        top_clientes = {}
+        if facturas:
+            clientes = {}
+            for factura in facturas:
+                cliente = factura.get("cliente", "Sin nombre")
+                monto = factura.get("monto_total", 0)
+                # Filtrar clientes válidos y montos positivos
+                if cliente and cliente != "Sin nombre" and cliente != "nan" and monto > 0:
+                    if cliente in clientes:
+                        clientes[cliente] += monto
+                    else:
+                        clientes[cliente] = monto
+            
+            # Ordenar y tomar los primeros 10
+            sorted_clientes = sorted(clientes.items(), key=lambda x: x[1], reverse=True)[:10]
+            top_clientes = dict(sorted_clientes)
+            
+            logger.info(f"Top clientes calculado - {len(top_clientes)} clientes únicos")
+            if top_clientes:
+                logger.info(f"Cliente top: {list(top_clientes.items())[0]}")
+                logger.info(f"Todos los top clientes: {list(top_clientes.items())}")
     
     # Calcular consumo de material usando columna G (material)
     consumo_material = {}
