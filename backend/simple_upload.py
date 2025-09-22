@@ -475,13 +475,13 @@ async def upload_file(file: UploadFile = File(...)):
                         
                         # Mapeo directo por posición de columna (índice 0-based)
                         column_mapping_pedidos = {
-                            'Unnamed: 0': 'indice',           # Columna A (índice)
+                            'Unnamed: 0': 'numero_factura',   # Columna A (número de factura)
                             'Hora: 15:59:28:697': 'fecha_pedido',  # Columna B (fecha)
-                            'Unnamed: 2': 'vacio',            # Columna C (vacía)
-                            'FACTURADO': 'estado',            # Columna D (estado)
+                            'Unnamed: 2': 'numero_pedido',    # Columna C (número de pedido)
+                            'FACTURADO': 'total',             # Columna D (total - tiene datos numéricos)
                             'Unnamed: 4': 'cantidad',         # Columna E (KGS)
                             'Unnamed: 5': 'precio_unitario',  # Columna F (precio unitario)
-                            'Unnamed: 6': 'total',            # Columna G (importe)
+                            'Unnamed: 6': 'vacio',            # Columna G (vacía)
                             'Unnamed: 7': 'producto',         # Columna H (material)
                             'Unnamed: 8': 'cliente'           # Columna I (cliente)
                         }
@@ -506,9 +506,12 @@ async def upload_file(file: UploadFile = File(...)):
                                 elif col == 'cantidad':
                                     df_pedidos[col] = 0.0
                         
-                        # Si no hay columna cliente, usar índice como identificador
+                        # Si no hay columna cliente, usar número de factura como identificador
                         if 'cliente' not in df_pedidos.columns or df_pedidos['cliente'].isna().all():
-                            df_pedidos['cliente'] = 'Cliente_' + df_pedidos.index.astype(str)
+                            if 'numero_factura' in df_pedidos.columns:
+                                df_pedidos['cliente'] = 'Cliente_' + df_pedidos['numero_factura'].astype(str)
+                            else:
+                                df_pedidos['cliente'] = 'Cliente_' + df_pedidos.index.astype(str)
                         
                         # Limpiar datos (más flexible para la estructura real)
                         # Convertir columnas numéricas
