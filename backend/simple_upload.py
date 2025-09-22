@@ -1,7 +1,7 @@
 """
 Versión simplificada del upload para Vercel
 """
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 import pandas as pd
@@ -932,9 +932,11 @@ async def aplicar_filtros(mes: int = None, año: int = None):
     }}
 
 @app.post("/api/filtros/pedidos/aplicar")
-async def aplicar_filtros_pedido(pedidos: List[str] = []):
+async def aplicar_filtros_pedido(pedidos: List[str] = Query([])):
     """Aplicar filtros por número de pedido sin limpiar datos originales"""
     global processed_data
+    
+    logger.info(f"Recibiendo filtros de pedido: {pedidos}")
     
     if not pedidos or len(pedidos) == 0:
         # Sin filtros de pedido, usar datos originales
@@ -951,12 +953,16 @@ async def aplicar_filtros_pedido(pedidos: List[str] = []):
             if str(pedido.get("numero_pedido", "")) in pedidos:
                 pedidos_filtrados.append(pedido)
         
+        logger.info(f"Pedidos filtrados: {len(pedidos_filtrados)} de {len(original_data['pedidos'])}")
+        
         # 2. Obtener números de factura de los pedidos filtrados
         numeros_factura_pedidos = set()
         for pedido in pedidos_filtrados:
             numero_factura = pedido.get("numero_factura", "")
             if numero_factura:
                 numeros_factura_pedidos.add(str(numero_factura))
+        
+        logger.info(f"Números de factura de pedidos: {list(numeros_factura_pedidos)[:5]}")
         
         # 3. Filtrar facturas por folio que coincida con números de factura de pedidos
         facturas_filtradas = []
@@ -965,12 +971,16 @@ async def aplicar_filtros_pedido(pedidos: List[str] = []):
             if folio_factura in numeros_factura_pedidos:
                 facturas_filtradas.append(factura)
         
+        logger.info(f"Facturas filtradas: {len(facturas_filtradas)} de {len(original_data['facturas'])}")
+        
         # 4. Obtener UUIDs de las facturas filtradas
         uuids_facturas = set()
         for factura in facturas_filtradas:
             uuid_factura = factura.get("uuid_factura", "")
             if uuid_factura:
                 uuids_facturas.add(uuid_factura)
+        
+        logger.info(f"UUIDs de facturas: {len(uuids_facturas)}")
         
         # 5. Filtrar cobranzas por UUID de factura
         cobranzas_filtradas = []
@@ -979,12 +989,16 @@ async def aplicar_filtros_pedido(pedidos: List[str] = []):
             if uuid_factura in uuids_facturas:
                 cobranzas_filtradas.append(cobranza)
         
+        logger.info(f"Cobranzas filtradas: {len(cobranzas_filtradas)} de {len(original_data['cobranzas'])}")
+        
         # 6. Filtrar anticipos por UUID relacionado
         anticipos_filtrados = []
         for anticipo in original_data["anticipos"]:
             uuid_relacionado = anticipo.get("uuid_relacionado", "")
             if uuid_relacionado in uuids_facturas:
                 anticipos_filtrados.append(anticipo)
+        
+        logger.info(f"Anticipos filtrados: {len(anticipos_filtrados)} de {len(original_data['anticipos'])}")
         
         processed_data = {
             "facturas": facturas_filtradas,

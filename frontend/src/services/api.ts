@@ -186,12 +186,11 @@ class ApiService {
   }
 
   async aplicarFiltrosPedido(pedidos: string[]) {
-    return this.request<{ message: string; datos_filtrados: any }>('/filtros/pedidos/aplicar', {
-      method: 'POST',
-      body: JSON.stringify(pedidos),
-      headers: {
-        'Content-Type': 'application/json'
-      }
+    const params = new URLSearchParams();
+    pedidos.forEach(pedido => params.append('pedidos', pedido));
+    
+    return this.request<{ message: string; datos_filtrados: any }>(`/filtros/pedidos/aplicar?${params.toString()}`, {
+      method: 'POST'
     });
   }
 
