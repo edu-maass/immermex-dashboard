@@ -20,6 +20,14 @@ Esta carpeta contiene toda la documentación técnica del sistema Immermex Dashb
 - Archivos esenciales mantenidos
 - Estado actual del proyecto
 
+### [PROCESADOR_EXCEL.md](./PROCESADOR_EXCEL.md)
+**Documentación del procesador de Excel especializado**
+- Funcionalidades del procesador
+- Estructura de datos procesados
+- Guía de uso y configuración
+- Integración con el backend
+- Validaciones y manejo de errores
+
 ### Archivos PDF
 - **Diccionario_Extraccion_Immermex.pdf** - Diccionario de extracción de datos
 - **Documentacion_Dashboard_Immermex.pdf** - Documentación original del dashboard

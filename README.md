@@ -42,6 +42,7 @@ immermex-dashboard/
 ├── backend/               # API FastAPI
 │   ├── simple_main.py     # Servidor principal
 │   ├── data_processor.py  # Procesador de datos
+│   ├── excel_processor.py # Procesador especializado de Excel
 │   ├── models.py          # Modelos Pydantic
 │   └── requirements.txt   # Dependencias Python
 ├── docs/                  # Documentación técnica
@@ -57,6 +58,23 @@ El sistema procesa archivos Excel con las siguientes hojas:
 2. **'cobranza'** - Datos de cobranza
 3. **'cfdi relacionados'** - Anticipos y notas de crédito
 4. **Hoja de pedidos** (ej: '1-14 sep') - Datos de pedidos por período
+
+### 🔧 Procesador de Excel Avanzado
+
+El sistema incluye un procesador especializado (`excel_processor.py`) que:
+
+- ✅ **Detección automática** de filas de encabezados
+- ✅ **Mapeo flexible** de nombres de columnas
+- ✅ **Limpieza robusta** de datos y validación de tipos
+- ✅ **Normalización** de fechas, montos y UUIDs
+- ✅ **Cálculo automático** de relaciones entre tablas
+- ✅ **Manejo de errores** con logging detallado
+
+**Columnas estándar procesadas:**
+- **Facturación**: fecha_factura, cliente, monto_total, saldo_pendiente, uuid_factura
+- **Cobranza**: fecha_pago, importe_pagado, uuid_factura_relacionada
+- **CFDI**: tipo_relacion, importe_relacion (filtra anticipos y notas de crédito)
+- **Pedidos**: folio_factura, pedido, kg, material, dias_credito
 
 ## 🔧 Para Desarrolladores
 
