@@ -60,30 +60,35 @@ async def get_kpis():
     
     # KPIs básicos de facturación
     facturacion_total = sum(f.get("monto_total", 0) for f in facturas)
+    facturacion_sin_iva = sum(f.get("monto_neto", 0) for f in facturas)  # Columna Neto
     total_facturas = len(facturas)
     clientes_unicos = len(set(f.get("cliente", "") for f in facturas))
     
     # KPIs de cobranza
     cobranza_total = sum(c.get("importe_cobrado", 0) for c in cobranzas)
+    cobranza_sin_iva = cobranza_total * 0.84  # Aproximación: 84% del total (sin IVA 16%)
     porcentaje_cobrado = (cobranza_total / facturacion_total * 100) if facturacion_total > 0 else 0.0
     
     # KPIs de anticipos
     anticipos_total = sum(abs(a.get("importe_relacion", 0)) for a in anticipos)
+    anticipos_porcentaje = (anticipos_total / facturacion_total * 100) if facturacion_total > 0 else 0.0
+    
+    # KPIs de pedidos
+    total_pedidos = sum(p.get("total", 0) for p in pedidos)
+    cantidad_total_pedidos = sum(p.get("cantidad", 0) for p in pedidos)
+    total_pedidos_count = len(pedidos)
+    clientes_pedidos = len(set(p.get("cliente", "") for p in pedidos if p.get("cliente") and p.get("cliente") != "nan"))
     
     # KPIs de inventario (mejorado)
     rotacion_inventario = 0.0
     if pedidos:
-        # Calcular rotación basada en pedidos reales
-        total_pedidos = sum(p.get("total", 0) for p in pedidos)
-        cantidad_total = sum(p.get("cantidad", 0) for p in pedidos)
-        
         # Inventario promedio estimado (30% de facturación o 20% de pedidos)
         inventario_promedio = max(facturacion_total * 0.3, total_pedidos * 0.2)
         
         # Rotación = Total de pedidos / Inventario promedio
         rotacion_inventario = (total_pedidos / inventario_promedio) if inventario_promedio > 0 else 0.0
         
-        logger.info(f"Cálculo rotación - Total pedidos: {total_pedidos}, Cantidad total: {cantidad_total}, Inventario promedio: {inventario_promedio}")
+        logger.info(f"Cálculo rotación - Total pedidos: {total_pedidos}, Cantidad total: {cantidad_total_pedidos}, Inventario promedio: {inventario_promedio}")
     else:
         logger.info("No hay pedidos para calcular rotación de inventario")
     
@@ -116,14 +121,20 @@ async def get_kpis():
         for factura in facturas:
             cliente = factura.get("cliente", "Sin nombre")
             monto = factura.get("monto_total", 0)
-            if cliente in clientes:
-                clientes[cliente] += monto
-            else:
-                clientes[cliente] = monto
+            # Filtrar clientes válidos y montos positivos
+            if cliente and cliente != "Sin nombre" and cliente != "nan" and monto > 0:
+                if cliente in clientes:
+                    clientes[cliente] += monto
+                else:
+                    clientes[cliente] = monto
         
         # Ordenar y tomar los primeros 10
         sorted_clientes = sorted(clientes.items(), key=lambda x: x[1], reverse=True)[:10]
         top_clientes = dict(sorted_clientes)
+        
+        logger.info(f"Top clientes calculado - {len(top_clientes)} clientes únicos")
+        if top_clientes:
+            logger.info(f"Cliente top: {list(top_clientes.items())[0]}")
     
     # Calcular consumo de material (mejorado)
     consumo_material = {}
@@ -134,32 +145,54 @@ async def get_kpis():
             cantidad = pedido.get("cantidad", 0)
             total = pedido.get("total", 0)
             
-            # Usar cantidad si está disponible, sino usar total como proxy
-            valor_consumo = cantidad if cantidad > 0 else total / 100  # Aproximación
-            
-            if producto in productos:
-                productos[producto] += valor_consumo
-            else:
-                productos[producto] = valor_consumo
+            # Filtrar productos válidos y valores positivos
+            if producto and producto != "Sin nombre" and producto != "nan" and (cantidad > 0 or total > 0):
+                # Usar cantidad si está disponible, sino usar total como proxy
+                valor_consumo = cantidad if cantidad > 0 else total / 100  # Aproximación
+                
+                if producto in productos:
+                    productos[producto] += valor_consumo
+                else:
+                    productos[producto] = valor_consumo
         
         # Ordenar y tomar los primeros 10
         sorted_productos = sorted(productos.items(), key=lambda x: x[1], reverse=True)[:10]
         consumo_material = dict(sorted_productos)
         
         logger.info(f"Consumo material calculado - {len(consumo_material)} productos únicos")
+        if consumo_material:
+            logger.info(f"Producto top: {list(consumo_material.items())[0]}")
     else:
         logger.info("No hay pedidos para calcular consumo de material")
     
     logger.info(f"KPIs calculados - Facturación: {facturacion_total}, Cobranza: {cobranza_total}, Anticipos: {anticipos_total}")
     
     return {
+        # Facturación
         "facturacion_total": facturacion_total,
-        "cobranza_total": cobranza_total,
-        "anticipos_total": anticipos_total,
-        "porcentaje_cobrado": round(porcentaje_cobrado, 2),
-        "rotacion_inventario": round(rotacion_inventario, 2),
+        "facturacion_sin_iva": round(facturacion_sin_iva, 2),
         "total_facturas": total_facturas,
         "clientes_unicos": clientes_unicos,
+        
+        # Cobranza
+        "cobranza_total": cobranza_total,
+        "cobranza_sin_iva": round(cobranza_sin_iva, 2),
+        "porcentaje_cobrado": round(porcentaje_cobrado, 2),
+        
+        # Anticipos
+        "anticipos_total": anticipos_total,
+        "anticipos_porcentaje": round(anticipos_porcentaje, 2),
+        
+        # Pedidos
+        "total_pedidos": total_pedidos,
+        "total_pedidos_count": total_pedidos_count,
+        "cantidad_total_pedidos": round(cantidad_total_pedidos, 2),
+        "clientes_pedidos": clientes_pedidos,
+        
+        # Inventario
+        "rotacion_inventario": round(rotacion_inventario, 2),
+        
+        # Gráficos
         "aging_cartera": aging_cartera,
         "top_clientes": top_clientes,
         "consumo_material": consumo_material
