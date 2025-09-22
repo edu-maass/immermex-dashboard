@@ -86,7 +86,7 @@ async def get_kpis():
     total_pedidos_count = len(pedidos)
     
     # Pedidos únicos (basado en número de pedido)
-    pedidos_unicos = len(set(p.get("numero_pedido", "") for p in pedidos if p.get("numero_pedido") and str(p.get("numero_pedido")) != "nan" and str(p.get("numero_pedido")).strip()))
+    pedidos_unicos = len(set(p.get("numero_pedido", "") for p in pedidos if p.get("numero_pedido") and str(p.get("numero_pedido")) != "nan" and str(p.get("numero_pedido")).strip() and p.get("numero_pedido") != ""))
     
     # Convertir KGS a toneladas
     toneladas_total = cantidad_total_pedidos / 1000
@@ -171,15 +171,10 @@ async def get_kpis():
             material_codigo = pedido.get("material", "")
             cantidad = pedido.get("cantidad", 0)
             
-            # Transformar código de material: tomar solo caracteres alfanuméricos del inicio
+            # Transformar código de material: tomar solo los primeros 7 caracteres
             if material_codigo and str(material_codigo) != "nan" and str(material_codigo).strip() and str(material_codigo) != "Matertial":
-                # Extraer solo caracteres alfanuméricos del inicio del código
-                import re
-                material_limpio = re.match(r'^[A-Za-z0-9]+', str(material_codigo).strip())
-                if material_limpio:
-                    material_limpio = material_limpio.group(0)
-                else:
-                    material_limpio = str(material_codigo).strip()[:10]  # Primeros 10 caracteres si no hay alfanuméricos
+                # Tomar solo los primeros 7 caracteres del código
+                material_limpio = str(material_codigo).strip()[:7]
                 
                 # Solo procesar si hay cantidad válida y material no es solo texto de encabezado
                 if cantidad > 0 and material_limpio and len(material_limpio) > 2:

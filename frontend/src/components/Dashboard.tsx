@@ -102,7 +102,10 @@ export const Dashboard: React.FC = () => {
   };
 
   const formatTopClientesData = (clientes: Record<string, number>) => {
-    return Object.entries(clientes).map(([name, value]) => ({ name, value }));
+    console.log('Top clientes data:', clientes);
+    const formatted = Object.entries(clientes).map(([name, value]) => ({ name, value }));
+    console.log('Formatted top clientes:', formatted);
+    return formatted;
   };
 
   const formatConsumoMaterialData = (materiales: Record<string, number>) => {
@@ -172,7 +175,7 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Cobranza con sin IVA */}
+          {/* Cobranza con sin IVA y % cobrado */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -183,15 +186,9 @@ export const Dashboard: React.FC = () => {
             <div className="mt-2">
               <p className="text-2xl font-bold text-gray-900">${kpis.cobranza_total?.toLocaleString()}</p>
               <p className="text-sm text-gray-500 mt-1">Sin IVA: ${kpis.cobranza_sin_iva?.toLocaleString()}</p>
+              <p className="text-sm text-green-600 mt-1 font-medium">% Cobrado: {kpis.porcentaje_cobrado}%</p>
             </div>
           </div>
-
-          <KPICard
-            title="% Cobrado"
-            value={`${kpis.porcentaje_cobrado}%`}
-            icon={Percent}
-            description="Porcentaje de cobranza"
-          />
 
           {/* Anticipos con porcentaje */}
           <div className="bg-white rounded-lg shadow p-6">
@@ -212,7 +209,7 @@ export const Dashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Package className="h-5 w-5 text-orange-600" />
-                <h3 className="text-sm font-medium text-gray-500">Pedidos</h3>
+                <h3 className="text-sm font-medium text-gray-500">Pedidos Utilizados</h3>
               </div>
             </div>
             <div className="mt-2">
