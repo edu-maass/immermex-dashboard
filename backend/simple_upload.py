@@ -468,33 +468,23 @@ async def upload_file(file: UploadFile = File(...)):
                         logger.info(f"Pedidos leídos: {len(df_pedidos)} filas, {len(df_pedidos.columns)} columnas")
                         logger.info(f"Columnas de pedidos: {list(df_pedidos.columns)}")
                         
-                        # Mapeo de columnas para pedidos (más flexible)
-                        column_mapping_pedidos = {
-                            'Fecha': 'fecha_pedido',
-                            'Folio': 'numero_pedido',
-                            'Cliente': 'cliente',
-                            'Producto': 'producto',
-                            'Cantidad': 'cantidad',
-                            'Precio': 'precio_unitario',
-                            'Total': 'total',
-                            'Descripción': 'producto',
-                            'Razón Social': 'cliente',
-                            'FACTURADO': 'estado'  # Columna específica del archivo
-                        }
+                        # Mapeo basado en la estructura real de la hoja de pedidos
+                        # Columna 1 (A): Índice - Columna 2 (B): Factura - Columna 3 (C): Vacía
+                        # Columna 4 (D): Pedido - Columna 5 (E): KGS - Columna 6 (F): Precio unitario
+                        # Columna 7 (G): Importe - Columna 8 (H): Material - Columna 9 (I): Cliente
                         
-                        # Mapeo adicional para columnas Unnamed (basado en posición)
-                        if 'Unnamed: 0' in df_pedidos.columns:
-                            df_pedidos = df_pedidos.rename(columns={'Unnamed: 0': 'fecha_pedido'})
-                        if 'Unnamed: 2' in df_pedidos.columns:
-                            df_pedidos = df_pedidos.rename(columns={'Unnamed: 2': 'cliente'})
-                        if 'Unnamed: 4' in df_pedidos.columns:
-                            df_pedidos = df_pedidos.rename(columns={'Unnamed: 4': 'producto'})
-                        if 'Unnamed: 5' in df_pedidos.columns:
-                            df_pedidos = df_pedidos.rename(columns={'Unnamed: 5': 'cantidad'})
-                        if 'Unnamed: 6' in df_pedidos.columns:
-                            df_pedidos = df_pedidos.rename(columns={'Unnamed: 6': 'precio_unitario'})
-                        if 'Unnamed: 7' in df_pedidos.columns:
-                            df_pedidos = df_pedidos.rename(columns={'Unnamed: 7': 'total'})
+                        # Mapeo directo por posición de columna (índice 0-based)
+                        column_mapping_pedidos = {
+                            'Unnamed: 0': 'indice',           # Columna A (índice)
+                            'Unnamed: 1': 'numero_factura',   # Columna B (factura)
+                            'Unnamed: 2': 'vacio',            # Columna C (vacía)
+                            'Unnamed: 3': 'numero_pedido',    # Columna D (pedido)
+                            'Unnamed: 4': 'cantidad',         # Columna E (KGS)
+                            'Unnamed: 5': 'precio_unitario',  # Columna F (precio unitario)
+                            'Unnamed: 6': 'total',            # Columna G (importe)
+                            'Unnamed: 7': 'producto',         # Columna H (material)
+                            'Unnamed: 8': 'cliente'           # Columna I (cliente)
+                        }
                         
                         # Renombrar columnas
                         for old_col, new_col in column_mapping_pedidos.items():
@@ -503,8 +493,8 @@ async def upload_file(file: UploadFile = File(...)):
                         
                         logger.info(f"Columnas pedidos después del mapeo: {list(df_pedidos.columns)}")
                         
-                        # Verificar columnas necesarias
-                        required_cols = ['cliente', 'total']
+                        # Verificar columnas necesarias (ajustadas según estructura real)
+                        required_cols = ['cliente', 'total', 'cantidad']
                         missing_cols = [col for col in required_cols if col not in df_pedidos.columns]
                         if missing_cols:
                             logger.warning(f"Columnas faltantes en pedidos: {missing_cols}")
@@ -513,10 +503,25 @@ async def upload_file(file: UploadFile = File(...)):
                                     df_pedidos[col] = 'Sin nombre'
                                 elif col == 'total':
                                     df_pedidos[col] = 0.0
+                                elif col == 'cantidad':
+                                    df_pedidos[col] = 0.0
                         
-                        # Limpiar datos
-                        df_pedidos = df_pedidos.dropna(subset=['cliente', 'total'])
+                        # Limpiar datos (más flexible para la estructura real)
+                        # Convertir columnas numéricas
+                        df_pedidos['total'] = pd.to_numeric(df_pedidos['total'], errors='coerce')
+                        df_pedidos['cantidad'] = pd.to_numeric(df_pedidos['cantidad'], errors='coerce')
+                        df_pedidos['precio_unitario'] = pd.to_numeric(df_pedidos['precio_unitario'], errors='coerce')
+                        
+                        # Filtrar datos válidos
+                        df_pedidos = df_pedidos.dropna(subset=['total'])  # Requerir total
                         df_pedidos = df_pedidos[df_pedidos['total'] > 0]  # Solo pedidos con total > 0
+                        
+                        # Si no hay columna cliente, usar número de factura como identificador
+                        if 'cliente' not in df_pedidos.columns or df_pedidos['cliente'].isna().all():
+                            if 'numero_factura' in df_pedidos.columns:
+                                df_pedidos['cliente'] = df_pedidos['numero_factura'].astype(str)
+                            else:
+                                df_pedidos['cliente'] = 'Cliente_' + df_pedidos.index.astype(str)
                         
                         # Convertir a formato esperado
                         for _, row in df_pedidos.iterrows():
