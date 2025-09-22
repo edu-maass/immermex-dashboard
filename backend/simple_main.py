@@ -382,7 +382,9 @@ async def upload_file(file: UploadFile = File(...)):
         
         try:
             # Usar el procesador avanzado integrado
+            logger.info(f"Iniciando procesamiento del archivo: {temp_file_path}")
             processed_data_dict, kpis = process_immermex_file_advanced(temp_file_path)
+            logger.info(f"Procesamiento completado. KPIs: {kpis}")
             
             # Debug: verificar qué datos se obtuvieron
             logger.info("=== DEBUG: Datos procesados ===")
@@ -600,6 +602,8 @@ async def upload_file(file: UploadFile = File(...)):
         
     except Exception as e:
         logger.error(f"Error procesando archivo con algoritmo avanzado: {str(e)}")
+        import traceback
+        logger.error(f"Traceback completo: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/debug/data")
