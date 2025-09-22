@@ -85,6 +85,12 @@ async def get_kpis():
     cantidad_total_pedidos = sum(p.get("cantidad", 0) for p in pedidos)
     total_pedidos_count = len(pedidos)
     
+    # Pedidos únicos (basado en número de pedido)
+    pedidos_unicos = len(set(p.get("numero_pedido", "") for p in pedidos if p.get("numero_pedido") and str(p.get("numero_pedido")) != "nan"))
+    
+    # Convertir KGS a toneladas
+    toneladas_total = cantidad_total_pedidos / 1000
+    
     # KPIs de inventario (mejorado)
     rotacion_inventario = 0.0
     if pedidos:
@@ -189,6 +195,9 @@ async def get_kpis():
         logger.info(f"Consumo material calculado - {len(consumo_material)} materiales únicos")
         if consumo_material:
             logger.info(f"Material top: {list(consumo_material.items())[0]}")
+            logger.info(f"Todos los materiales: {list(consumo_material.items())[:5]}")
+        else:
+            logger.warning("No se encontraron materiales válidos para consumo")
     else:
         logger.info("No hay pedidos para calcular consumo de material")
     
@@ -213,7 +222,9 @@ async def get_kpis():
         # Pedidos
         "total_pedidos": total_pedidos,
         "total_pedidos_count": total_pedidos_count,
+        "pedidos_unicos": pedidos_unicos,
         "cantidad_total_pedidos": round(cantidad_total_pedidos, 2),
+        "toneladas_total": round(toneladas_total, 2),
         
         # Inventario
         "rotacion_inventario": round(rotacion_inventario, 2),
@@ -553,6 +564,13 @@ async def upload_file(file: UploadFile = File(...)):
                                 df_pedidos = df_pedidos.rename(columns={old_col: new_col})
                         
                         logger.info(f"Columnas pedidos después del mapeo: {list(df_pedidos.columns)}")
+                        
+                        # Verificar datos de material
+                        if 'material' in df_pedidos.columns:
+                            logger.info(f"Valores únicos en 'material': {df_pedidos['material'].nunique()}")
+                            logger.info(f"Primeros 5 valores de 'material': {df_pedidos['material'].head().tolist()}")
+                        else:
+                            logger.warning("Columna 'material' no encontrada en pedidos")
                         
                         # Verificar columnas necesarias (ajustadas según estructura real)
                         required_cols = ['cliente', 'total', 'cantidad']

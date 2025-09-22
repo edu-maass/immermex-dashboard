@@ -217,7 +217,10 @@ export const Dashboard: React.FC = () => {
             </div>
             <div className="mt-2">
               <p className="text-2xl font-bold text-gray-900">${kpis.total_pedidos?.toLocaleString()}</p>
-              <p className="text-sm text-gray-500 mt-1">{kpis.total_pedidos_count} pedidos • {kpis.cantidad_total_pedidos?.toLocaleString()} KGS</p>
+              <div className="mt-2 space-y-1">
+                <p className="text-lg font-semibold text-gray-700">{kpis.toneladas_total?.toFixed(1)} toneladas</p>
+                <p className="text-sm text-gray-500">{kpis.pedidos_unicos} pedidos únicos</p>
+              </div>
             </div>
           </div>
           <KPICard

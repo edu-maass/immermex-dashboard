@@ -19,7 +19,9 @@ export interface KPIs {
   // Pedidos
   total_pedidos: number;
   total_pedidos_count: number;
+  pedidos_unicos: number;
   cantidad_total_pedidos: number;
+  toneladas_total: number;
   
   // Inventario
   rotacion_inventario: number;

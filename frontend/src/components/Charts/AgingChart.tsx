@@ -36,9 +36,12 @@ export const AgingChart: FC<AgingChartProps> = ({ data }) => {
                 textAnchor="end"
                 height={80}
               />
-              <YAxis tick={{ fontSize: 12 }} />
+              <YAxis 
+                tick={{ fontSize: 12 }}
+                tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`}
+              />
               <Tooltip 
-                formatter={(value: number) => [`${value} facturas`, 'Cantidad']}
+                formatter={(value: number) => [`$${value.toLocaleString('es-MX', { maximumFractionDigits: 0 })}`, 'Monto']}
                 labelStyle={{ color: '#374151' }}
                 contentStyle={{ 
                   backgroundColor: '#fff', 
