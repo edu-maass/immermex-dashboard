@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "backend/simple_main.py",
+      "src": "backend/simple_upload.py",
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "50mb"
@@ -12,7 +12,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "backend/simple_main.py"
+      "dest": "backend/simple_upload.py"
     }
   ],
   "env": {
