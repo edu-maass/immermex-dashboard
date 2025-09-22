@@ -523,6 +523,19 @@ async def upload_file(file: UploadFile = File(...)):
                         logger.info(f"Primeros 5 valores de 'total': {df_pedidos['total'].head().tolist()}")
                         logger.info(f"Primeros 5 valores de 'cliente': {df_pedidos['cliente'].head().tolist()}")
                         
+                        # Verificar columnas adicionales que podrían contener datos
+                        logger.info(f"Valores únicos en 'Unnamed: 9': {df_pedidos['Unnamed: 9'].nunique()}")
+                        logger.info(f"Valores únicos en 'Unnamed: 10': {df_pedidos['Unnamed: 10'].nunique()}")
+                        logger.info(f"Primeros 5 valores de 'Unnamed: 9': {df_pedidos['Unnamed: 9'].head().tolist()}")
+                        logger.info(f"Primeros 5 valores de 'Unnamed: 10': {df_pedidos['Unnamed: 10'].head().tolist()}")
+                        
+                        # Verificar todas las columnas para encontrar datos numéricos
+                        for col in df_pedidos.columns:
+                            if df_pedidos[col].dtype == 'object':
+                                numeric_values = pd.to_numeric(df_pedidos[col], errors='coerce').dropna()
+                                if len(numeric_values) > 0:
+                                    logger.info(f"Columna '{col}' tiene {len(numeric_values)} valores numéricos: {numeric_values.head().tolist()}")
+                        
                         # Filtrar datos válidos
                         df_pedidos = df_pedidos.dropna(subset=['total'])  # Requerir total
                         logger.info(f"Después de dropna total - Total filas: {len(df_pedidos)}")
