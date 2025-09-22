@@ -3,6 +3,7 @@ Versión simplificada del upload para Vercel
 """
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from typing import List
 import pandas as pd
 import io
 import logging
@@ -18,7 +19,12 @@ app = FastAPI(title="Immermex Upload API")
 # Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://edu-maass.github.io",
+        "https://immermex-dashboard.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5173"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -926,7 +932,7 @@ async def aplicar_filtros(mes: int = None, año: int = None):
     }}
 
 @app.post("/api/filtros/pedidos/aplicar")
-async def aplicar_filtros_pedido(pedidos: List[str] = None):
+async def aplicar_filtros_pedido(pedidos: List[str] = []):
     """Aplicar filtros por número de pedido sin limpiar datos originales"""
     global processed_data
     
