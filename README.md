@@ -8,132 +8,81 @@ Dashboard financiero y operacional moderno para Immermex, construido con React, 
 **Backend API**: https://immermex-dashboard.vercel.app
 **Documentación API**: https://immermex-dashboard.vercel.app/docs
 
-## 🚀 Inicio Rápido
+## 🎯 Características Principales
 
-### Windows
-```bash
-# Clonar el repositorio
-git clone https://github.com/edu-maass/immermex-dashboard.git
-cd immermex-dashboard
+- ✅ **KPIs Financieros**: Facturación, cobranza, inventario, anticipos
+- ✅ **Gráficos Interactivos**: Aging de cartera, top clientes, consumo por material
+- ✅ **Filtros Dinámicos**: Por fecha, cliente, agente, material
+- ✅ **Subida de Archivos**: Drag & drop para archivos Excel mensuales
+- ✅ **Diseño Responsivo**: Funciona en desktop y móvil
+- ✅ **API REST**: Documentación automática con Swagger
+- ✅ **Análisis en Tiempo Real**: Cálculo automático de métricas
 
-# Ejecutar el sistema completo
-start.bat
-```
+## 🚀 Acceso al Sistema
 
-### Linux/Mac
-```bash
-# Clonar el repositorio
-git clone https://github.com/edu-maass/immermex-dashboard.git
-cd immermex-dashboard
+El sistema está desplegado en la nube y no requiere instalación local:
 
-# Dar permisos de ejecución
-chmod +x start.sh
-
-# Ejecutar el sistema completo
-./start.sh
-```
-
-## 📋 Requisitos Previos
-
-- **Python 3.8+** con pip
-- **Node.js 16+** con npm
-- **Git** para clonar el repositorio
-
-## 🛠️ Instalación Manual
-
-### Backend (FastAPI)
-```bash
-cd backend
-pip install -r requirements.txt
-python simple_main.py
-```
-
-### Frontend (React + Vite)
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-## 🌐 URLs del Sistema
-
-- **📊 Dashboard**: http://localhost:3000
-- **🔧 Backend API**: http://localhost:8000
-- **📚 Documentación API**: http://localhost:8000/docs
+1. **Accede al Dashboard**: https://edu-maass.github.io/immermex-dashboard/
+2. **Sube tu archivo Excel** mensual con los datos
+3. **Explora los KPIs y gráficos** generados automáticamente
+4. **Usa los filtros** para análisis específicos
 
 ## 📁 Estructura del Proyecto
 
 ```
 immermex-dashboard/
-├── backend/                 # API FastAPI
-│   ├── simple_main.py      # Servidor principal
-│   ├── requirements.txt    # Dependencias Python
-│   └── data/              # Archivos de datos
 ├── frontend/               # Aplicación React
 │   ├── src/
 │   │   ├── components/    # Componentes React
+│   │   │   ├── Charts/    # Gráficos especializados
+│   │   │   └── ui/        # Componentes UI base
 │   │   ├── services/      # Servicios API
 │   │   └── types/         # Tipos TypeScript
-│   ├── package.json       # Dependencias Node.js
-│   └── tailwind.config.js # Configuración Tailwind
-├── start.bat              # Script de inicio Windows
-├── start.sh               # Script de inicio Linux/Mac
+│   └── package.json       # Dependencias Node.js
+├── backend/               # API FastAPI
+│   ├── simple_main.py     # Servidor principal
+│   ├── data_processor.py  # Procesador de datos
+│   ├── models.py          # Modelos Pydantic
+│   └── requirements.txt   # Dependencias Python
+├── docs/                  # Documentación técnica
+│   └── SISTEMA_IMMERMEX_DASHBOARD.md
 └── README.md              # Este archivo
 ```
 
-## 🎯 Características
+## 📊 Formato de Datos Requerido
 
-- ✅ **KPIs Financieros**: Facturación, cobranza, inventario
-- ✅ **Gráficos Interactivos**: Aging, top clientes, consumo material
-- ✅ **Filtros Dinámicos**: Por fecha, cliente, producto
-- ✅ **Subida de Archivos**: Drag & drop para Excel/CSV
-- ✅ **Diseño Responsivo**: Funciona en desktop y móvil
-- ✅ **API REST**: Documentación automática con Swagger
+El sistema procesa archivos Excel con las siguientes hojas:
 
-## 🔧 Desarrollo
+1. **'facturacion'** - Datos de facturación
+2. **'cobranza'** - Datos de cobranza
+3. **'cfdi relacionados'** - Anticipos y notas de crédito
+4. **Hoja de pedidos** (ej: '1-14 sep') - Datos de pedidos por período
 
-### Agregar Nuevos KPIs
-1. Modificar `backend/simple_main.py` para agregar endpoints
-2. Actualizar `frontend/src/types/index.ts` con nuevos tipos
-3. Crear componentes en `frontend/src/components/`
+## 🔧 Para Desarrolladores
 
-### Personalizar Estilos
-1. Modificar `frontend/tailwind.config.js` para colores/temas
-2. Actualizar `frontend/src/index.css` para estilos globales
+### Documentación Técnica
+Consulta la [documentación técnica completa](./docs/SISTEMA_IMMERMEX_DASHBOARD.md) para:
+- Arquitectura detallada del sistema
+- API endpoints y especificaciones
+- Guías de desarrollo y mantenimiento
+- Configuración de despliegue
 
-## 📊 Datos de Ejemplo
+### Agregar Nuevas Funcionalidades
+1. **Nuevos KPIs**: Modificar `backend/simple_main.py`
+2. **Nuevos Gráficos**: Crear componentes en `frontend/src/components/Charts/`
+3. **Nuevos Filtros**: Actualizar `frontend/src/components/Filters.tsx`
 
-El sistema incluye datos de ejemplo para:
-- Facturación mensual
-- Estados de cobranza
-- CFDI relacionados
-- Inventario de materiales
+## 📞 Soporte y Contacto
 
-## 🚀 Despliegue
-
-### Desarrollo Local
-```bash
-npm run dev
-```
-
-### Producción
-```bash
-npm run build
-# Servir archivos estáticos desde frontend/dist
-```
+- **Desarrollador**: Eduardo Maass
+- **Repositorio**: https://github.com/edu-maass/immermex-dashboard
+- **Dashboard**: https://edu-maass.github.io/immermex-dashboard/
+- **Documentación Técnica**: [docs/SISTEMA_IMMERMEX_DASHBOARD.md](./docs/SISTEMA_IMMERMEX_DASHBOARD.md)
 
 ## 📝 Licencia
 
 MIT License - Ver archivo LICENSE para más detalles.
 
-## 🤝 Contribución
+---
 
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## 📞 Soporte
-
-Para soporte técnico, contacta al equipo de desarrollo de Immermex.
+*Sistema Immermex Dashboard v1.0.0 - Dashboard financiero y operacional moderno*
