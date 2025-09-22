@@ -185,6 +185,16 @@ class ApiService {
     });
   }
 
+  async aplicarFiltrosPedido(pedidos: string[]) {
+    return this.request<{ message: string; datos_filtrados: any }>('/filtros/pedidos/aplicar', {
+      method: 'POST',
+      body: JSON.stringify(pedidos),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+  }
+
   // Health check
   async healthCheck() {
     return this.request('/health');

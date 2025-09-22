@@ -925,6 +925,78 @@ async def aplicar_filtros(mes: int = None, año: int = None):
         "pedidos": len(processed_data["pedidos"])
     }}
 
+@app.post("/api/filtros/pedidos/aplicar")
+async def aplicar_filtros_pedido(pedidos: List[str] = None):
+    """Aplicar filtros por número de pedido sin limpiar datos originales"""
+    global processed_data
+    
+    if not pedidos or len(pedidos) == 0:
+        # Sin filtros de pedido, usar datos originales
+        processed_data = {
+            "facturas": original_data["facturas"].copy(),
+            "cobranzas": original_data["cobranzas"].copy(),
+            "anticipos": original_data["anticipos"].copy(),
+            "pedidos": original_data["pedidos"].copy()
+        }
+    else:
+        # 1. Filtrar pedidos por números seleccionados
+        pedidos_filtrados = []
+        for pedido in original_data["pedidos"]:
+            if str(pedido.get("numero_pedido", "")) in pedidos:
+                pedidos_filtrados.append(pedido)
+        
+        # 2. Obtener números de factura de los pedidos filtrados
+        numeros_factura_pedidos = set()
+        for pedido in pedidos_filtrados:
+            numero_factura = pedido.get("numero_factura", "")
+            if numero_factura:
+                numeros_factura_pedidos.add(str(numero_factura))
+        
+        # 3. Filtrar facturas por folio que coincida con números de factura de pedidos
+        facturas_filtradas = []
+        for factura in original_data["facturas"]:
+            folio_factura = str(factura.get("folio_factura", ""))
+            if folio_factura in numeros_factura_pedidos:
+                facturas_filtradas.append(factura)
+        
+        # 4. Obtener UUIDs de las facturas filtradas
+        uuids_facturas = set()
+        for factura in facturas_filtradas:
+            uuid_factura = factura.get("uuid_factura", "")
+            if uuid_factura:
+                uuids_facturas.add(uuid_factura)
+        
+        # 5. Filtrar cobranzas por UUID de factura
+        cobranzas_filtradas = []
+        for cobranza in original_data["cobranzas"]:
+            uuid_factura = cobranza.get("uuid_factura", "")
+            if uuid_factura in uuids_facturas:
+                cobranzas_filtradas.append(cobranza)
+        
+        # 6. Filtrar anticipos por UUID relacionado
+        anticipos_filtrados = []
+        for anticipo in original_data["anticipos"]:
+            uuid_relacionado = anticipo.get("uuid_relacionado", "")
+            if uuid_relacionado in uuids_facturas:
+                anticipos_filtrados.append(anticipo)
+        
+        processed_data = {
+            "facturas": facturas_filtradas,
+            "cobranzas": cobranzas_filtradas,
+            "anticipos": anticipos_filtrados,
+            "pedidos": pedidos_filtrados
+        }
+    
+    logger.info(f"Filtros de pedido aplicados - Pedidos: {pedidos}")
+    logger.info(f"Datos filtrados - Facturas: {len(processed_data['facturas'])}, Cobranzas: {len(processed_data['cobranzas'])}, Anticipos: {len(processed_data['anticipos'])}, Pedidos: {len(processed_data['pedidos'])}")
+    
+    return {"message": "Filtros de pedido aplicados correctamente", "datos_filtrados": {
+        "facturas": len(processed_data["facturas"]),
+        "cobranzas": len(processed_data["cobranzas"]),
+        "anticipos": len(processed_data["anticipos"]),
+        "pedidos": len(processed_data["pedidos"])
+    }}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
