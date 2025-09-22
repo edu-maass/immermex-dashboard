@@ -21,20 +21,25 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
   const [pedidosSeleccionados, setPedidosSeleccionados] = useState<string[]>([]);
 
   const loadData = async (pedidosAplicar?: string[]) => {
+    console.log('loadData llamado con pedidos:', pedidosAplicar);
     setLoading(true);
     setError(null);
     
     try {
       // Aplicar filtros de pedido si existen
       if (pedidosAplicar && pedidosAplicar.length > 0) {
+        console.log('Aplicando filtros de pedido:', pedidosAplicar);
         await apiService.aplicarFiltrosPedido(pedidosAplicar);
       } else {
+        console.log('Limpiando filtros de pedido');
         // Si no hay pedidos seleccionados, limpiar filtros
         await apiService.aplicarFiltrosPedido([]);
       }
       
       // Obtener KPIs
+      console.log('Obteniendo KPIs...');
       const kpisData = await apiService.getKPIs();
+      console.log('KPIs obtenidos:', kpisData);
       setKpis(kpisData);
       
     } catch (err) {
@@ -50,11 +55,13 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
   }, []);
 
   const handlePedidosChange = (pedidos: string[]) => {
+    console.log('DashboardFiltrado recibiendo pedidos:', pedidos);
     setPedidosSeleccionados(pedidos);
     loadData(pedidos);
   };
 
   const handleClearPedidos = async () => {
+    console.log('DashboardFiltrado limpiando pedidos');
     setPedidosSeleccionados([]);
     try {
       await apiService.aplicarFiltrosPedido([]);

@@ -33,6 +33,7 @@ export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPe
     if (pedidoSeleccionado && !pedidosSeleccionados.includes(pedidoSeleccionado)) {
       const nuevosPedidos = [...pedidosSeleccionados, pedidoSeleccionado];
       setPedidosSeleccionados(nuevosPedidos);
+      console.log('Agregando pedido:', pedidoSeleccionado, 'Lista actual:', nuevosPedidos);
       onPedidosChange(nuevosPedidos);
       setPedidoSeleccionado('');
     }
@@ -41,11 +42,13 @@ export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPe
   const handleRemoverPedido = (pedido: string) => {
     const nuevosPedidos = pedidosSeleccionados.filter(p => p !== pedido);
     setPedidosSeleccionados(nuevosPedidos);
+    console.log('Removiendo pedido:', pedido, 'Lista actual:', nuevosPedidos);
     onPedidosChange(nuevosPedidos);
   };
 
   const handleLimpiarPedidos = () => {
     setPedidosSeleccionados([]);
+    console.log('Limpiando pedidos, lista vacía:', []);
     onClearPedidos();
   };
 
