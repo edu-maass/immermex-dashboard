@@ -71,6 +71,68 @@ async def get_kpis():
         "consumo_material": {}
     }
 
+@app.get("/api/graficos/aging")
+async def get_aging_chart():
+    """Obtener datos para gráfico de aging"""
+    facturas = processed_data["facturas"]
+    
+    if not facturas:
+        return {"labels": [], "data": []}
+    
+    # Calcular aging básico
+    aging_data = {
+        "0-30 días": 0,
+        "31-60 días": 0,
+        "61-90 días": 0,
+        "Más de 90 días": 0
+    }
+    
+    for factura in facturas:
+        saldo = factura.get("saldo_pendiente", 0)
+        if saldo > 0:
+            # Simulación simple de aging (en producción se calcularía con fechas reales)
+            aging_data["0-30 días"] += saldo * 0.4
+            aging_data["31-60 días"] += saldo * 0.3
+            aging_data["61-90 días"] += saldo * 0.2
+            aging_data["Más de 90 días"] += saldo * 0.1
+    
+    return {
+        "labels": list(aging_data.keys()),
+        "data": list(aging_data.values())
+    }
+
+@app.get("/api/graficos/top-clientes")
+async def get_top_clientes_chart(limite: int = 10):
+    """Obtener datos para gráfico de top clientes"""
+    facturas = processed_data["facturas"]
+    
+    if not facturas:
+        return {"labels": [], "data": []}
+    
+    # Agrupar por cliente
+    clientes = {}
+    for factura in facturas:
+        cliente = factura.get("cliente", "Sin nombre")
+        monto = factura.get("monto_total", 0)
+        if cliente in clientes:
+            clientes[cliente] += monto
+        else:
+            clientes[cliente] = monto
+    
+    # Ordenar y tomar los primeros
+    sorted_clientes = sorted(clientes.items(), key=lambda x: x[1], reverse=True)[:limite]
+    
+    return {
+        "labels": [cliente for cliente, _ in sorted_clientes],
+        "data": [monto for _, monto in sorted_clientes]
+    }
+
+@app.get("/api/graficos/consumo-material")
+async def get_consumo_material_chart(limite: int = 10):
+    """Obtener datos para gráfico de consumo de material"""
+    # Por ahora retornamos datos vacíos ya que no procesamos pedidos aún
+    return {"labels": [], "data": []}
+
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
     """Endpoint simplificado para subir archivos Excel"""
