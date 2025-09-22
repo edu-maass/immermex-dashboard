@@ -964,6 +964,13 @@ async def aplicar_filtros_pedido(pedidos: List[str] = Query([])):
         
         logger.info(f"Números de factura de pedidos: {list(numeros_factura_pedidos)[:5]}")
         
+        # Debug: mostrar algunos pedidos filtrados
+        logger.info(f"Primeros 3 pedidos filtrados: {[{'numero_pedido': p.get('numero_pedido'), 'numero_factura': p.get('numero_factura')} for p in pedidos_filtrados[:3]]}")
+        
+        # Debug: mostrar algunos folios de facturas originales
+        folios_facturas_originales = [str(f.get("folio_factura", "")) for f in original_data["facturas"][:5]]
+        logger.info(f"Primeros 5 folios de facturas originales: {folios_facturas_originales}")
+        
         # 3. Filtrar facturas por folio que coincida con números de factura de pedidos
         facturas_filtradas = []
         for factura in original_data["facturas"]:
