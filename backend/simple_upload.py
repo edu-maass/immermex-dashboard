@@ -337,13 +337,13 @@ async def upload_file(file: UploadFile = File(...)):
                     logger.info(f"Cobranza leída: {len(df_cobranza)} filas, {len(df_cobranza.columns)} columnas")
                     logger.info(f"Columnas de cobranza: {list(df_cobranza.columns)}")
                     
-                    # Mapeo de columnas para cobranza (ajustar según estructura real)
+                    # Mapeo de columnas para cobranza (ajustado según estructura real)
                     column_mapping_cob = {
-                        'Fecha': 'fecha_cobro',
+                        'Fecha Pago': 'fecha_cobro',
                         'UUID': 'uuid_factura',
-                        'Importe': 'importe_cobrado',
-                        'Método': 'metodo_pago',
-                        'Referencia': 'referencia'
+                        'Importe Pagado': 'importe_cobrado',
+                        'Forma Pago': 'metodo_pago',
+                        'Número Operación': 'referencia'
                     }
                     
                     # Renombrar columnas
@@ -451,9 +451,17 @@ async def upload_file(file: UploadFile = File(...)):
                     logger.error(f"Traceback CFDI: {traceback.format_exc()}")
                     # Continuar sin anticipos si hay error
             
-            # 4. PROCESAR PEDIDOS (buscar hojas que contengan "pedido" o fechas)
+            # 4. PROCESAR PEDIDOS (buscar hojas que contengan "pedido", fechas, o patrones de inventario)
             for sheet_name in excel_file.sheet_names:
-                if 'pedido' in sheet_name.lower() or any(month in sheet_name for month in ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']):
+                # Detectar hojas de pedidos/inventario por varios patrones
+                is_pedidos_sheet = (
+                    'pedido' in sheet_name.lower() or 
+                    any(month in sheet_name for month in ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']) or
+                    any(pattern in sheet_name.lower() for pattern in ['inventario', 'movimiento', 'stock']) or
+                    '0925' in sheet_name  # Patrón específico del archivo actual
+                )
+                
+                if is_pedidos_sheet:
                     try:
                         logger.info(f"Procesando hoja de pedidos: {sheet_name}")
                         df_pedidos = pd.read_excel(io.BytesIO(contents), sheet_name=sheet_name, header=2)
@@ -470,8 +478,23 @@ async def upload_file(file: UploadFile = File(...)):
                             'Precio': 'precio_unitario',
                             'Total': 'total',
                             'Descripción': 'producto',
-                            'Razón Social': 'cliente'
+                            'Razón Social': 'cliente',
+                            'FACTURADO': 'estado'  # Columna específica del archivo
                         }
+                        
+                        # Mapeo adicional para columnas Unnamed (basado en posición)
+                        if 'Unnamed: 0' in df_pedidos.columns:
+                            df_pedidos = df_pedidos.rename(columns={'Unnamed: 0': 'fecha_pedido'})
+                        if 'Unnamed: 2' in df_pedidos.columns:
+                            df_pedidos = df_pedidos.rename(columns={'Unnamed: 2': 'cliente'})
+                        if 'Unnamed: 4' in df_pedidos.columns:
+                            df_pedidos = df_pedidos.rename(columns={'Unnamed: 4': 'producto'})
+                        if 'Unnamed: 5' in df_pedidos.columns:
+                            df_pedidos = df_pedidos.rename(columns={'Unnamed: 5': 'cantidad'})
+                        if 'Unnamed: 6' in df_pedidos.columns:
+                            df_pedidos = df_pedidos.rename(columns={'Unnamed: 6': 'precio_unitario'})
+                        if 'Unnamed: 7' in df_pedidos.columns:
+                            df_pedidos = df_pedidos.rename(columns={'Unnamed: 7': 'total'})
                         
                         # Renombrar columnas
                         for old_col, new_col in column_mapping_pedidos.items():
