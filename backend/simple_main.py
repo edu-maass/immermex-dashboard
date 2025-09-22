@@ -358,6 +358,11 @@ async def get_archivos_procesados():
         logger.error(f"Error obteniendo archivos: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/test-upload")
+async def test_upload():
+    """Endpoint de prueba para verificar que el backend funciona"""
+    return {"message": "Backend funcionando correctamente", "status": "ok"}
+
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
     """Endpoint para subir archivos Excel con procesamiento avanzado integrado"""
