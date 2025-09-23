@@ -251,15 +251,19 @@ async def upload_file(
         if len(contents) > 10 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="El archivo es demasiado grande. Máximo 10MB permitido.")
         
-        # Guardar archivo temporalmente para procesamiento
-        temp_file_path = f"temp_{file.filename}"
-        with open(temp_file_path, "wb") as temp_file:
-            temp_file.write(contents)
-        
+        # Procesar archivo directamente desde memoria (compatible con Vercel)
         try:
-            # Procesar archivo con algoritmo avanzado
-            logger.info(f"Procesando archivo: {temp_file_path}")
-            processed_data_dict, kpis = process_immermex_file_advanced(temp_file_path)
+            import io
+            from data_processor import ImmermexDataProcessor
+            
+            logger.info(f"Procesando archivo desde memoria: {file.filename}")
+            
+            # Crear un objeto BytesIO para simular un archivo
+            file_like = io.BytesIO(contents)
+            
+            # Procesar usando la nueva función desde bytes
+            from data_processor import process_excel_from_bytes
+            processed_data_dict, kpis = process_excel_from_bytes(contents, file.filename)
             
             # Preparar información del archivo
             archivo_info = {
@@ -283,7 +287,7 @@ async def upload_file(
                     "registros_procesados": result["registros_procesados"],
                     "fecha_procesamiento": datetime.now().isoformat(),
                     "estado": "procesado",
-                    "algoritmo": "advanced_cleaning_with_persistence",
+                    "algoritmo": "memory_processing_with_persistence",
                     "desglose": result["desglose"],
                     "caracteristicas": {
                         "deteccion_automatica_encabezados": True,
@@ -299,9 +303,8 @@ async def upload_file(
                 raise HTTPException(status_code=500, detail=f"Error guardando datos: {result.get('error', 'Error desconocido')}")
             
         finally:
-            # Limpiar archivo temporal
-            if os.path.exists(temp_file_path):
-                os.remove(temp_file_path)
+            # No hay archivos temporales que limpiar (procesamiento en memoria)
+            pass
         
     except HTTPException:
         raise

@@ -897,6 +897,69 @@ def process_immermex_file(file_path: str, output_path: str = None) -> Tuple[pd.D
     
     return master_df, kpis
 
+def process_excel_from_bytes(file_bytes: bytes, filename: str) -> Tuple[Dict[str, pd.DataFrame], Dict]:
+    """
+    Procesa archivo Excel desde bytes en memoria (compatible con Vercel)
+    """
+    logger.info(f"Procesando archivo desde bytes: {filename}")
+    
+    try:
+        import io
+        
+        # Crear un objeto BytesIO para simular un archivo
+        file_like = io.BytesIO(file_bytes)
+        
+        # Leer todas las hojas del Excel
+        excel_file = pd.ExcelFile(file_like)
+        processed_data = {
+            "facturacion_clean": pd.DataFrame(),
+            "cobranza_clean": pd.DataFrame(),
+            "cfdi_clean": pd.DataFrame(),
+            "pedidos_clean": pd.DataFrame()
+        }
+        
+        logger.info(f"Hojas encontradas: {excel_file.sheet_names}")
+        
+        # Crear instancia del procesador
+        processor = ImmermexDataProcessor()
+        
+        # Procesar cada hoja
+        for sheet_name in excel_file.sheet_names:
+            logger.info(f"Procesando hoja: {sheet_name}")
+            
+            # Leer hoja desde bytes
+            df = pd.read_excel(file_like, sheet_name=sheet_name)
+            
+            if not df.empty:
+                # Normalizar según el tipo de hoja
+                if 'facturacion' in sheet_name.lower():
+                    df_clean = processor.normalize_facturacion(df, None)
+                    processed_data["facturacion_clean"] = pd.concat([processed_data["facturacion_clean"], df_clean], ignore_index=True)
+                elif 'cobranza' in sheet_name.lower():
+                    df_clean = processor.normalize_cobranza(df, None)
+                    processed_data["cobranza_clean"] = pd.concat([processed_data["cobranza_clean"], df_clean], ignore_index=True)
+                elif 'cfdi' in sheet_name.lower() or 'relacionado' in sheet_name.lower():
+                    df_clean = processor.normalize_cfdi_relacionado(df, None)
+                    processed_data["cfdi_clean"] = pd.concat([processed_data["cfdi_clean"], df_clean], ignore_index=True)
+                else:
+                    # Asumir que es una hoja de pedidos por mes
+                    df_clean = processor.normalize_pedidos(df, None, sheet_name)
+                    processed_data["pedidos_clean"] = pd.concat([processed_data["pedidos_clean"], df_clean], ignore_index=True)
+                
+                # Agregar información de la hoja
+                df_clean['hoja_origen'] = sheet_name
+                df_clean['archivo_origen'] = filename
+        
+        # Calcular KPIs
+        kpis = processor.calculate_kpis()
+        
+        logger.info(f"Procesamiento desde bytes completado")
+        return processed_data, kpis
+        
+    except Exception as e:
+        logger.error(f"Error procesando archivo desde bytes: {str(e)}")
+        raise
+
 def load_and_clean_excel(file_path: str) -> Dict[str, pd.DataFrame]:
     """
     Función de conveniencia que integra el procesador avanzado
