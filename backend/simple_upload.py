@@ -47,6 +47,30 @@ processed_data = {
     "pedidos": []
 }
 
+def obtener_pedidos_unicos():
+    """Función auxiliar para obtener pedidos únicos de cualquier fuente de datos"""
+    # Intentar obtener de datos originales primero
+    pedidos = original_data.get("pedidos", [])
+    
+    # Si no hay datos originales, intentar con datos procesados
+    if not pedidos:
+        pedidos = processed_data.get("pedidos", [])
+    
+    # Si aún no hay datos, intentar obtener de la última carga
+    if not pedidos:
+        logger.warning("No se encontraron pedidos en ninguna fuente de datos")
+        return []
+    
+    # Extraer números de pedido únicos
+    numeros_pedido = set()
+    for pedido in pedidos:
+        numero_pedido = pedido.get("numero_pedido", "")
+        if numero_pedido and str(numero_pedido) != "nan" and str(numero_pedido).strip():
+            numeros_pedido.add(str(numero_pedido).strip())
+    
+    logger.info(f"Pedidos únicos encontrados: {len(numeros_pedido)} - {list(numeros_pedido)[:5]}")
+    return sorted(list(numeros_pedido))
+
 @app.get("/")
 async def root():
     return {"message": "Immermex Upload API funcionando"}
@@ -54,17 +78,27 @@ async def root():
 @app.get("/api/kpis")
 async def get_kpis(mes: int = None, año: int = None):
     """Obtener KPIs actuales con todos los datos procesados"""
-    # Usar datos filtrados si hay filtros, sino usar datos originales
-    if mes is not None and año is not None:
+    # Usar datos filtrados si hay filtros aplicados, sino usar datos originales
+    # Verificar si hay datos filtrados (filtros de pedidos o mes/año)
+    has_filters = (mes is not None and año is not None) or (
+        len(processed_data["facturas"]) > 0 or 
+        len(processed_data["cobranzas"]) > 0 or 
+        len(processed_data["anticipos"]) > 0 or 
+        len(processed_data["pedidos"]) > 0
+    )
+    
+    if has_filters:
         facturas = processed_data["facturas"]
         cobranzas = processed_data["cobranzas"]
         anticipos = processed_data["anticipos"]
         pedidos = processed_data["pedidos"]
+        logger.info(f"Usando datos filtrados - Facturas: {len(facturas)}, Cobranzas: {len(cobranzas)}, Anticipos: {len(anticipos)}, Pedidos: {len(pedidos)}")
     else:
         facturas = original_data["facturas"]
         cobranzas = original_data["cobranzas"]
         anticipos = original_data["anticipos"]
         pedidos = original_data["pedidos"]
+        logger.info(f"Usando datos originales - Facturas: {len(facturas)}, Cobranzas: {len(cobranzas)}, Anticipos: {len(anticipos)}, Pedidos: {len(pedidos)}")
     
     if not facturas:
         return {
@@ -878,6 +912,27 @@ async def get_pedidos_filtro():
     numeros_pedido = list(set(str(p.get("numero_pedido", "")) for p in pedidos if p.get("numero_pedido") and str(p.get("numero_pedido")) != "nan" and str(p.get("numero_pedido")).strip()))
     logger.info(f"Pedidos para filtro: {len(numeros_pedido)} - {numeros_pedido[:5]}")
     return sorted([p for p in numeros_pedido if p])
+
+@app.get("/api/debug/datos")
+async def debug_datos():
+    """Endpoint de debug para verificar el estado de los datos"""
+    return {
+        "original_data": {
+            "facturas": len(original_data["facturas"]),
+            "cobranzas": len(original_data["cobranzas"]),
+            "anticipos": len(original_data["anticipos"]),
+            "pedidos": len(original_data["pedidos"])
+        },
+        "processed_data": {
+            "facturas": len(processed_data["facturas"]),
+            "cobranzas": len(processed_data["cobranzas"]),
+            "anticipos": len(processed_data["anticipos"]),
+            "pedidos": len(processed_data["pedidos"])
+        },
+        "pedidos_unicos": obtener_pedidos_unicos(),
+        "sample_original_pedidos": [{"numero_pedido": p.get("numero_pedido"), "numero_factura": p.get("numero_factura")} for p in original_data["pedidos"][:3]],
+        "sample_processed_pedidos": [{"numero_pedido": p.get("numero_pedido"), "numero_factura": p.get("numero_factura")} for p in processed_data["pedidos"][:3]]
+    }
 
 @app.post("/api/filtros/aplicar")
 async def aplicar_filtros(mes: int = None, año: int = None):
