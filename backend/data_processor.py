@@ -900,94 +900,71 @@ def process_immermex_file(file_path: str, output_path: str = None) -> Tuple[pd.D
 def process_excel_from_bytes(file_bytes: bytes, filename: str) -> Tuple[Dict[str, pd.DataFrame], Dict]:
     """
     Procesa archivo Excel desde bytes en memoria (compatible con Vercel)
+    Versión simplificada que evita errores de normalización
     """
     logger.info(f"Procesando archivo desde bytes: {filename}")
     
     try:
         import io
-        import tempfile
         
         # Crear archivo temporal en memoria usando BytesIO
         file_like = io.BytesIO(file_bytes)
         
-        # Usar el procesador existente pero con un enfoque más simple
-        processor = ImmermexDataProcessor()
-        
         # Leer Excel directamente desde bytes
-        try:
-            # Intentar leer todas las hojas
-            excel_data = pd.read_excel(file_like, sheet_name=None, engine='openpyxl')
-            logger.info(f"Hojas encontradas: {list(excel_data.keys())}")
+        excel_data = pd.read_excel(file_like, sheet_name=None, engine='openpyxl')
+        logger.info(f"Hojas encontradas: {list(excel_data.keys())}")
+        
+        processed_data = {
+            "facturacion_clean": pd.DataFrame(),
+            "cobranza_clean": pd.DataFrame(), 
+            "cfdi_clean": pd.DataFrame(),
+            "pedidos_clean": pd.DataFrame()
+        }
+        
+        # Procesar cada hoja de forma básica (sin normalización compleja)
+        for sheet_name, df in excel_data.items():
+            logger.info(f"Procesando hoja: {sheet_name} con {len(df)} filas")
             
-            processed_data = {
-                "facturacion_clean": pd.DataFrame(),
-                "cobranza_clean": pd.DataFrame(), 
-                "cfdi_clean": pd.DataFrame(),
-                "pedidos_clean": pd.DataFrame()
-            }
+            if df.empty:
+                continue
             
-            # Procesar cada hoja
-            for sheet_name, df in excel_data.items():
-                logger.info(f"Procesando hoja: {sheet_name} con {len(df)} filas")
-                
-                if df.empty:
-                    continue
-                    
-                # Normalizar según el tipo de hoja
-                if 'facturacion' in sheet_name.lower():
-                    df_clean = processor.normalize_facturacion(df, None)
-                    processed_data["facturacion_clean"] = pd.concat([processed_data["facturacion_clean"], df_clean], ignore_index=True)
-                elif 'cobranza' in sheet_name.lower():
-                    df_clean = processor.normalize_cobranza(df, None)
-                    processed_data["cobranza_clean"] = pd.concat([processed_data["cobranza_clean"], df_clean], ignore_index=True)
-                elif 'cfdi' in sheet_name.lower() or 'relacionado' in sheet_name.lower():
-                    df_clean = processor.normalize_cfdi_relacionado(df, None)
-                    processed_data["cfdi_clean"] = pd.concat([processed_data["cfdi_clean"], df_clean], ignore_index=True)
-                else:
-                    # Asumir que es una hoja de pedidos por mes
-                    df_clean = processor.normalize_pedidos(df, None, sheet_name)
-                    processed_data["pedidos_clean"] = pd.concat([processed_data["pedidos_clean"], df_clean], ignore_index=True)
-                
-                # Agregar información de la hoja
-                if not df_clean.empty:
-                    df_clean['hoja_origen'] = sheet_name
-                    df_clean['archivo_origen'] = filename
+            # Limpiar datos básicos
+            df_clean = df.copy()
             
-            # Calcular KPIs básicos
-            kpis = {
-                "total_facturas": len(processed_data["facturacion_clean"]),
-                "total_cobranzas": len(processed_data["cobranza_clean"]),
-                "total_cfdi": len(processed_data["cfdi_clean"]),
-                "total_pedidos": len(processed_data["pedidos_clean"]),
-                "fecha_procesamiento": datetime.now().isoformat(),
-                "archivo": filename
-            }
+            # Eliminar filas completamente vacías
+            df_clean = df_clean.dropna(how='all')
             
-            logger.info(f"Procesamiento desde bytes completado - Facturas: {kpis['total_facturas']}, Pedidos: {kpis['total_pedidos']}")
-            return processed_data, kpis
+            # Eliminar columnas completamente vacías
+            df_clean = df_clean.dropna(axis=1, how='all')
             
-        except Exception as excel_error:
-            logger.error(f"Error leyendo Excel desde bytes: {str(excel_error)}")
-            # Fallback: crear archivo temporal en /tmp (si está disponible)
-            try:
-                with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as temp_file:
-                    temp_file.write(file_bytes)
-                    temp_file.flush()
-                    
-                # Procesar usando el método original
-                master_df, kpis = processor.process_file(temp_file.name)
-                processed_data = processor.get_processed_data()
-                
-                # Limpiar archivo temporal
-                import os
-                os.unlink(temp_file.name)
-                
-                logger.info(f"Procesamiento con archivo temporal completado")
-                return processed_data, kpis
-                
-            except Exception as fallback_error:
-                logger.error(f"Error en fallback: {str(fallback_error)}")
-                raise excel_error
+            # Agregar información de la hoja
+            df_clean['hoja_origen'] = sheet_name
+            df_clean['archivo_origen'] = filename
+            
+            # Clasificar según el tipo de hoja
+            if 'facturacion' in sheet_name.lower():
+                processed_data["facturacion_clean"] = pd.concat([processed_data["facturacion_clean"], df_clean], ignore_index=True)
+            elif 'cobranza' in sheet_name.lower():
+                processed_data["cobranza_clean"] = pd.concat([processed_data["cobranza_clean"], df_clean], ignore_index=True)
+            elif 'cfdi' in sheet_name.lower() or 'relacionado' in sheet_name.lower():
+                processed_data["cfdi_clean"] = pd.concat([processed_data["cfdi_clean"], df_clean], ignore_index=True)
+            else:
+                # Asumir que es una hoja de pedidos por mes
+                processed_data["pedidos_clean"] = pd.concat([processed_data["pedidos_clean"], df_clean], ignore_index=True)
+        
+        # Calcular KPIs básicos
+        kpis = {
+            "total_facturas": len(processed_data["facturacion_clean"]),
+            "total_cobranzas": len(processed_data["cobranza_clean"]),
+            "total_cfdi": len(processed_data["cfdi_clean"]),
+            "total_pedidos": len(processed_data["pedidos_clean"]),
+            "fecha_procesamiento": datetime.now().isoformat(),
+            "archivo": filename,
+            "hojas_procesadas": list(excel_data.keys())
+        }
+        
+        logger.info(f"Procesamiento desde bytes completado - Facturas: {kpis['total_facturas']}, Pedidos: {kpis['total_pedidos']}")
+        return processed_data, kpis
         
     except Exception as e:
         logger.error(f"Error procesando archivo desde bytes: {str(e)}")
