@@ -1,0 +1,76 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Excel files (except documentation)
+*.xlsx
+*.xls
+!docs/*.xlsx
+
+# CSV files (except documentation)
+*.csv
+!docs/*.csv
+
+# PDF files (except documentation)
+*.pdf
+!docs/*.pdf
+
+# Text files (except documentation)
+*.txt
+!docs/*.txt
+!README.txt
+!LICENSE.txt
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Test files
+test_*.py
+*_test.py
+test/
+tests/
+
+# Local development
+uploads/
+data/
