@@ -905,32 +905,34 @@ def process_excel_from_bytes(file_bytes: bytes, filename: str) -> Tuple[Dict[str
     
     try:
         import io
+        import tempfile
         
-        # Crear un objeto BytesIO para simular un archivo
+        # Crear archivo temporal en memoria usando BytesIO
         file_like = io.BytesIO(file_bytes)
         
-        # Leer todas las hojas del Excel
-        excel_file = pd.ExcelFile(file_like)
-        processed_data = {
-            "facturacion_clean": pd.DataFrame(),
-            "cobranza_clean": pd.DataFrame(),
-            "cfdi_clean": pd.DataFrame(),
-            "pedidos_clean": pd.DataFrame()
-        }
-        
-        logger.info(f"Hojas encontradas: {excel_file.sheet_names}")
-        
-        # Crear instancia del procesador
+        # Usar el procesador existente pero con un enfoque más simple
         processor = ImmermexDataProcessor()
         
-        # Procesar cada hoja
-        for sheet_name in excel_file.sheet_names:
-            logger.info(f"Procesando hoja: {sheet_name}")
+        # Leer Excel directamente desde bytes
+        try:
+            # Intentar leer todas las hojas
+            excel_data = pd.read_excel(file_like, sheet_name=None, engine='openpyxl')
+            logger.info(f"Hojas encontradas: {list(excel_data.keys())}")
             
-            # Leer hoja desde bytes
-            df = pd.read_excel(file_like, sheet_name=sheet_name)
+            processed_data = {
+                "facturacion_clean": pd.DataFrame(),
+                "cobranza_clean": pd.DataFrame(), 
+                "cfdi_clean": pd.DataFrame(),
+                "pedidos_clean": pd.DataFrame()
+            }
             
-            if not df.empty:
+            # Procesar cada hoja
+            for sheet_name, df in excel_data.items():
+                logger.info(f"Procesando hoja: {sheet_name} con {len(df)} filas")
+                
+                if df.empty:
+                    continue
+                    
                 # Normalizar según el tipo de hoja
                 if 'facturacion' in sheet_name.lower():
                     df_clean = processor.normalize_facturacion(df, None)
@@ -947,17 +949,50 @@ def process_excel_from_bytes(file_bytes: bytes, filename: str) -> Tuple[Dict[str
                     processed_data["pedidos_clean"] = pd.concat([processed_data["pedidos_clean"], df_clean], ignore_index=True)
                 
                 # Agregar información de la hoja
-                df_clean['hoja_origen'] = sheet_name
-                df_clean['archivo_origen'] = filename
-        
-        # Calcular KPIs
-        kpis = processor.calculate_kpis()
-        
-        logger.info(f"Procesamiento desde bytes completado")
-        return processed_data, kpis
+                if not df_clean.empty:
+                    df_clean['hoja_origen'] = sheet_name
+                    df_clean['archivo_origen'] = filename
+            
+            # Calcular KPIs básicos
+            kpis = {
+                "total_facturas": len(processed_data["facturacion_clean"]),
+                "total_cobranzas": len(processed_data["cobranza_clean"]),
+                "total_cfdi": len(processed_data["cfdi_clean"]),
+                "total_pedidos": len(processed_data["pedidos_clean"]),
+                "fecha_procesamiento": datetime.now().isoformat(),
+                "archivo": filename
+            }
+            
+            logger.info(f"Procesamiento desde bytes completado - Facturas: {kpis['total_facturas']}, Pedidos: {kpis['total_pedidos']}")
+            return processed_data, kpis
+            
+        except Exception as excel_error:
+            logger.error(f"Error leyendo Excel desde bytes: {str(excel_error)}")
+            # Fallback: crear archivo temporal en /tmp (si está disponible)
+            try:
+                with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as temp_file:
+                    temp_file.write(file_bytes)
+                    temp_file.flush()
+                    
+                # Procesar usando el método original
+                master_df, kpis = processor.process_file(temp_file.name)
+                processed_data = processor.get_processed_data()
+                
+                # Limpiar archivo temporal
+                import os
+                os.unlink(temp_file.name)
+                
+                logger.info(f"Procesamiento con archivo temporal completado")
+                return processed_data, kpis
+                
+            except Exception as fallback_error:
+                logger.error(f"Error en fallback: {str(fallback_error)}")
+                raise excel_error
         
     except Exception as e:
         logger.error(f"Error procesando archivo desde bytes: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise
 
 def load_and_clean_excel(file_path: str) -> Dict[str, pd.DataFrame]:
