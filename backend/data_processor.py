@@ -939,13 +939,13 @@ def process_excel_from_bytes(file_bytes: bytes, filename: str) -> Tuple[Dict[str
             
             # Mapear columnas según el tipo de hoja
             if 'facturacion' in sheet_name.lower():
-                df_clean = self._map_facturacion_columns(df_clean)
+                df_clean = _map_facturacion_columns(df_clean)
             elif 'cobranza' in sheet_name.lower():
-                df_clean = self._map_cobranza_columns(df_clean)
+                df_clean = _map_cobranza_columns(df_clean)
             elif 'cfdi' in sheet_name.lower() or 'relacionado' in sheet_name.lower():
-                df_clean = self._map_cfdi_columns(df_clean)
+                df_clean = _map_cfdi_columns(df_clean)
             else:
-                df_clean = self._map_pedidos_columns(df_clean)
+                df_clean = _map_pedidos_columns(df_clean)
             
             # Agregar información de la hoja
             df_clean['hoja_origen'] = sheet_name
