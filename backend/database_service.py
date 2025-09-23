@@ -422,7 +422,12 @@ class DatabaseService:
             
             # Calcular KPIs
             facturacion_total = sum(f.monto_total for f in facturas)
-            cobranza_total = sum(c.importe_pagado for c in cobranzas)
+            
+            # Solo considerar cobranzas relacionadas con las facturas del mismo período
+            facturas_uuids = {f.uuid_factura for f in facturas if f.uuid_factura}
+            cobranzas_relacionadas = [c for c in cobranzas if c.uuid_factura_relacionada in facturas_uuids]
+            cobranza_total = sum(c.importe_pagado for c in cobranzas_relacionadas)
+            
             anticipos_total = sum(a.importe_relacion for a in anticipos)
             
             porcentaje_cobrado = (cobranza_total / facturacion_total * 100) if facturacion_total > 0 else 0
