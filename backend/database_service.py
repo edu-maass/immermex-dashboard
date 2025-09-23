@@ -97,10 +97,17 @@ class DatabaseService:
         count = 0
         for factura_data in facturas_data:
             try:
-                # Convertir fecha si es necesario
+                # Convertir fecha si es necesario y válida
                 fecha_factura = factura_data.get('fecha_factura')
-                if isinstance(fecha_factura, str):
-                    fecha_factura = datetime.strptime(fecha_factura, '%Y-%m-%d')
+                if isinstance(fecha_factura, str) and fecha_factura and fecha_factura.strip():
+                    try:
+                        # Solo convertir si parece una fecha válida (formato YYYY-MM-DD)
+                        if len(fecha_factura) == 10 and fecha_factura.count('-') == 2:
+                            fecha_factura = datetime.strptime(fecha_factura, '%Y-%m-%d')
+                        else:
+                            fecha_factura = None
+                    except ValueError:
+                        fecha_factura = None
                 
                 factura = Facturacion(
                     serie_factura=str(factura_data.get('serie_factura', '')),
@@ -131,10 +138,17 @@ class DatabaseService:
         count = 0
         for cobranza_data in cobranzas_data:
             try:
-                # Convertir fecha si es necesario
+                # Convertir fecha si es necesario y válida
                 fecha_pago = cobranza_data.get('fecha_pago')
-                if isinstance(fecha_pago, str):
-                    fecha_pago = datetime.strptime(fecha_pago, '%Y-%m-%d')
+                if isinstance(fecha_pago, str) and fecha_pago and fecha_pago.strip():
+                    try:
+                        # Solo convertir si parece una fecha válida (formato YYYY-MM-DD)
+                        if len(fecha_pago) == 10 and fecha_pago.count('-') == 2:
+                            fecha_pago = datetime.strptime(fecha_pago, '%Y-%m-%d')
+                        else:
+                            fecha_pago = None
+                    except ValueError:
+                        fecha_pago = None
                 
                 cobranza = Cobranza(
                     fecha_pago=fecha_pago,
@@ -185,14 +199,26 @@ class DatabaseService:
         count = 0
         for pedido_data in pedidos_data:
             try:
-                # Convertir fechas si es necesario
+                # Convertir fechas si es necesario y válidas
                 fecha_factura = pedido_data.get('fecha_factura')
-                if isinstance(fecha_factura, str):
-                    fecha_factura = datetime.strptime(fecha_factura, '%Y-%m-%d')
+                if isinstance(fecha_factura, str) and fecha_factura and fecha_factura.strip():
+                    try:
+                        if len(fecha_factura) == 10 and fecha_factura.count('-') == 2:
+                            fecha_factura = datetime.strptime(fecha_factura, '%Y-%m-%d')
+                        else:
+                            fecha_factura = None
+                    except ValueError:
+                        fecha_factura = None
                 
                 fecha_pago = pedido_data.get('fecha_pago')
-                if isinstance(fecha_pago, str):
-                    fecha_pago = datetime.strptime(fecha_pago, '%Y-%m-%d')
+                if isinstance(fecha_pago, str) and fecha_pago and fecha_pago.strip():
+                    try:
+                        if len(fecha_pago) == 10 and fecha_pago.count('-') == 2:
+                            fecha_pago = datetime.strptime(fecha_pago, '%Y-%m-%d')
+                        else:
+                            fecha_pago = None
+                    except ValueError:
+                        fecha_pago = None
                 
                 pedido = Pedido(
                     folio_factura=str(pedido_data.get('folio_factura', '')),
