@@ -388,6 +388,9 @@ class ImmermexDataProcessor:
             # Eliminar filas completamente vacías
             clean_df = clean_df.dropna(how='all')
             
+            # Eliminar duplicados por UUID de factura relacionada
+            clean_df = clean_df.drop_duplicates(subset=['uuid_factura_relacionada'], keep='first')
+            
             self.cobranza_df = clean_df
             logger.info(f"Cobranza normalizada: {clean_df.shape[0]} registros")
             return clean_df
