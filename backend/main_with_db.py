@@ -233,7 +233,7 @@ async def aplicar_filtros_pedido(
 @app.post("/api/upload")
 async def upload_file(
     file: UploadFile = File(...),
-    reemplazar_datos: bool = Query(False, description="Si true, reemplaza todos los datos existentes"),
+    reemplazar_datos: bool = Query(True, description="Si true, reemplaza todos los datos existentes"),
     db: Session = Depends(get_db)
 ):
     """Endpoint para subir archivos Excel con persistencia en base de datos"""
