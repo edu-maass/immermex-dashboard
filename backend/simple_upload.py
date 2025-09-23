@@ -181,10 +181,12 @@ async def get_kpis(mes: int = None, año: int = None):
         dias_inventario = 365 / rotacion_inventario if rotacion_inventario > 0 else 0
         ciclo_efectivo = dias_cxc_ajustado + dias_inventario
     
-    # Calcular aging de cartera
+    # Calcular aging de cartera basado en fechas reales
     aging_cartera = {}
     if facturas:
-        # Agrupar saldos pendientes por rangos de días
+        from datetime import datetime, timedelta
+        
+        # Agrupar saldos pendientes por rangos de días reales
         aging_data = {
             "0-30 días": 0,
             "31-60 días": 0,
@@ -192,16 +194,39 @@ async def get_kpis(mes: int = None, año: int = None):
             "Más de 90 días": 0
         }
         
+        logger.info(f"Calculando aging para {len(facturas)} facturas filtradas")
+        
         for factura in facturas:
             saldo = factura.get("saldo_pendiente", 0)
             if saldo > 0:
-                # Simulación de aging (en producción se calcularía con fechas reales)
-                aging_data["0-30 días"] += saldo * 0.4
-                aging_data["31-60 días"] += saldo * 0.3
-                aging_data["61-90 días"] += saldo * 0.2
-                aging_data["Más de 90 días"] += saldo * 0.1
+                try:
+                    # Calcular días reales de vencimiento
+                    fecha_factura_str = factura.get("fecha_factura", "")
+                    if fecha_factura_str:
+                        fecha_factura = datetime.strptime(fecha_factura_str, "%Y-%m-%d")
+                        dias_credito = factura.get("dias_credito", 30)
+                        fecha_vencimiento = fecha_factura + timedelta(days=dias_credito)
+                        dias_vencidos = (datetime.now() - fecha_vencimiento).days
+                        
+                        # Clasificar por rangos reales
+                        if dias_vencidos <= 30:
+                            aging_data["0-30 días"] += saldo
+                        elif dias_vencidos <= 60:
+                            aging_data["31-60 días"] += saldo
+                        elif dias_vencidos <= 90:
+                            aging_data["61-90 días"] += saldo
+                        else:
+                            aging_data["Más de 90 días"] += saldo
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Error calculando aging para factura: {e}")
+                    # Si hay error, distribuir proporcionalmente
+                    aging_data["0-30 días"] += saldo * 0.4
+                    aging_data["31-60 días"] += saldo * 0.3
+                    aging_data["61-90 días"] += saldo * 0.2
+                    aging_data["Más de 90 días"] += saldo * 0.1
         
         aging_cartera = aging_data
+        logger.info(f"Aging calculado: {aging_cartera}")
 
         # Calcular expectativa de cobranza por semana
         expectativa_cobranza = {}
