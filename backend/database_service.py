@@ -98,25 +98,28 @@ class DatabaseService:
         count = 0
         for factura_data in facturas_data:
             try:
-                # Convertir fecha si es necesario y válida
-                fecha_factura = factura_data.get('fecha_factura')
-                if fecha_factura is not None:
-                    # Verificar si es NaN
-                    if isinstance(fecha_factura, (int, float)) and np.isnan(fecha_factura):
-                        fecha_factura = None
-                    elif isinstance(fecha_factura, str) and fecha_factura.strip():
-                        try:
+                def safe_date(value):
+                    """Convierte valor a fecha segura, manejando NaN"""
+                    try:
+                        if value is None:
+                            return None
+                        if isinstance(value, (int, float)):
+                            if np.isnan(value):
+                                return None
+                            return None  # Los números no son fechas válidas
+                        if isinstance(value, str):
+                            value = value.strip()
+                            if not value or value.lower() in ['nan', 'none', 'null']:
+                                return None
                             # Solo convertir si parece una fecha válida (formato YYYY-MM-DD)
-                            if len(fecha_factura) == 10 and fecha_factura.count('-') == 2:
-                                fecha_factura = datetime.strptime(fecha_factura, '%Y-%m-%d')
-                            else:
-                                fecha_factura = None
-                        except ValueError:
-                            fecha_factura = None
-                    else:
-                        fecha_factura = None
-                else:
-                    fecha_factura = None
+                            if len(value) == 10 and value.count('-') == 2:
+                                return datetime.strptime(value, '%Y-%m-%d')
+                        return None
+                    except (ValueError, TypeError):
+                        return None
+                
+                # Convertir fecha de forma segura
+                fecha_factura = safe_date(factura_data.get('fecha_factura'))
                 
                 # Limpiar y validar datos numéricos
                 def safe_float(value, default=0.0):
@@ -191,25 +194,28 @@ class DatabaseService:
         count = 0
         for cobranza_data in cobranzas_data:
             try:
-                # Convertir fecha si es necesario y válida
-                fecha_pago = cobranza_data.get('fecha_pago')
-                if fecha_pago is not None:
-                    # Verificar si es NaN
-                    if isinstance(fecha_pago, (int, float)) and np.isnan(fecha_pago):
-                        fecha_pago = None
-                    elif isinstance(fecha_pago, str) and fecha_pago.strip():
-                        try:
+                def safe_date(value):
+                    """Convierte valor a fecha segura, manejando NaN"""
+                    try:
+                        if value is None:
+                            return None
+                        if isinstance(value, (int, float)):
+                            if np.isnan(value):
+                                return None
+                            return None  # Los números no son fechas válidas
+                        if isinstance(value, str):
+                            value = value.strip()
+                            if not value or value.lower() in ['nan', 'none', 'null']:
+                                return None
                             # Solo convertir si parece una fecha válida (formato YYYY-MM-DD)
-                            if len(fecha_pago) == 10 and fecha_pago.count('-') == 2:
-                                fecha_pago = datetime.strptime(fecha_pago, '%Y-%m-%d')
-                            else:
-                                fecha_pago = None
-                        except ValueError:
-                            fecha_pago = None
-                    else:
-                        fecha_pago = None
-                else:
-                    fecha_pago = None
+                            if len(value) == 10 and value.count('-') == 2:
+                                return datetime.strptime(value, '%Y-%m-%d')
+                        return None
+                    except (ValueError, TypeError):
+                        return None
+                
+                # Convertir fecha de forma segura
+                fecha_pago = safe_date(cobranza_data.get('fecha_pago'))
                 
                 # Limpiar y validar datos numéricos
                 def safe_float(value, default=0.0):
@@ -327,44 +333,29 @@ class DatabaseService:
         count = 0
         for pedido_data in pedidos_data:
             try:
-                # Convertir fechas si es necesario y válidas
-                fecha_factura = pedido_data.get('fecha_factura')
-                if fecha_factura is not None:
-                    # Verificar si es NaN
-                    if isinstance(fecha_factura, (int, float)) and np.isnan(fecha_factura):
-                        fecha_factura = None
-                    elif isinstance(fecha_factura, str) and fecha_factura.strip():
-                        try:
+                def safe_date(value):
+                    """Convierte valor a fecha segura, manejando NaN"""
+                    try:
+                        if value is None:
+                            return None
+                        if isinstance(value, (int, float)):
+                            if np.isnan(value):
+                                return None
+                            return None  # Los números no son fechas válidas
+                        if isinstance(value, str):
+                            value = value.strip()
+                            if not value or value.lower() in ['nan', 'none', 'null']:
+                                return None
                             # Solo convertir si parece una fecha válida (formato YYYY-MM-DD)
-                            if len(fecha_factura) == 10 and fecha_factura.count('-') == 2:
-                                fecha_factura = datetime.strptime(fecha_factura, '%Y-%m-%d')
-                            else:
-                                fecha_factura = None
-                        except ValueError:
-                            fecha_factura = None
-                    else:
-                        fecha_factura = None
-                else:
-                    fecha_factura = None
+                            if len(value) == 10 and value.count('-') == 2:
+                                return datetime.strptime(value, '%Y-%m-%d')
+                        return None
+                    except (ValueError, TypeError):
+                        return None
                 
-                fecha_pago = pedido_data.get('fecha_pago')
-                if fecha_pago is not None:
-                    # Verificar si es NaN
-                    if isinstance(fecha_pago, (int, float)) and np.isnan(fecha_pago):
-                        fecha_pago = None
-                    elif isinstance(fecha_pago, str) and fecha_pago.strip():
-                        try:
-                            # Solo convertir si parece una fecha válida (formato YYYY-MM-DD)
-                            if len(fecha_pago) == 10 and fecha_pago.count('-') == 2:
-                                fecha_pago = datetime.strptime(fecha_pago, '%Y-%m-%d')
-                            else:
-                                fecha_pago = None
-                        except ValueError:
-                            fecha_pago = None
-                    else:
-                        fecha_pago = None
-                else:
-                    fecha_pago = None
+                # Convertir fechas de forma segura
+                fecha_factura = safe_date(pedido_data.get('fecha_factura'))
+                fecha_pago = safe_date(pedido_data.get('fecha_pago'))
                 
                 # Limpiar y validar datos numéricos
                 def safe_float(value, default=0.0):
