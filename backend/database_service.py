@@ -12,6 +12,7 @@ from database import (
 from datetime import datetime, timedelta
 import logging
 import hashlib
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -99,24 +100,44 @@ class DatabaseService:
             try:
                 # Convertir fecha si es necesario y válida
                 fecha_factura = factura_data.get('fecha_factura')
-                if isinstance(fecha_factura, str) and fecha_factura and fecha_factura.strip():
-                    try:
-                        # Solo convertir si parece una fecha válida (formato YYYY-MM-DD)
-                        if len(fecha_factura) == 10 and fecha_factura.count('-') == 2:
-                            fecha_factura = datetime.strptime(fecha_factura, '%Y-%m-%d')
-                        else:
-                            fecha_factura = None
-                    except ValueError:
+                if fecha_factura is not None:
+                    # Verificar si es NaN
+                    if isinstance(fecha_factura, (int, float)) and np.isnan(fecha_factura):
                         fecha_factura = None
+                    elif isinstance(fecha_factura, str) and fecha_factura.strip():
+                        try:
+                            # Solo convertir si parece una fecha válida (formato YYYY-MM-DD)
+                            if len(fecha_factura) == 10 and fecha_factura.count('-') == 2:
+                                fecha_factura = datetime.strptime(fecha_factura, '%Y-%m-%d')
+                            else:
+                                fecha_factura = None
+                        except ValueError:
+                            fecha_factura = None
+                    else:
+                        fecha_factura = None
+                else:
+                    fecha_factura = None
                 
                 # Limpiar y validar datos numéricos
                 def safe_float(value, default=0.0):
                     try:
                         if value is None or value == '' or str(value).strip() == '':
                             return default
+                        # Verificar si es NaN usando numpy
+                        if np.isnan(float(value)) if isinstance(value, (int, float)) else False:
+                            return default
+                        # Verificar si es NaN como string
+                        if str(value).lower() in ['nan', 'none', 'null']:
+                            return default
                         # Remover caracteres no numéricos excepto punto y coma
                         clean_value = str(value).replace(',', '').replace('$', '').strip()
-                        return float(clean_value) if clean_value else default
+                        if clean_value and clean_value != 'nan':
+                            result = float(clean_value)
+                            # Verificar si el resultado es NaN
+                            if np.isnan(result):
+                                return default
+                            return result
+                        return default
                     except (ValueError, TypeError):
                         return default
                 
@@ -159,23 +180,44 @@ class DatabaseService:
             try:
                 # Convertir fecha si es necesario y válida
                 fecha_pago = cobranza_data.get('fecha_pago')
-                if isinstance(fecha_pago, str) and fecha_pago and fecha_pago.strip():
-                    try:
-                        # Solo convertir si parece una fecha válida (formato YYYY-MM-DD)
-                        if len(fecha_pago) == 10 and fecha_pago.count('-') == 2:
-                            fecha_pago = datetime.strptime(fecha_pago, '%Y-%m-%d')
-                        else:
-                            fecha_pago = None
-                    except ValueError:
+                if fecha_pago is not None:
+                    # Verificar si es NaN
+                    if isinstance(fecha_pago, (int, float)) and np.isnan(fecha_pago):
                         fecha_pago = None
+                    elif isinstance(fecha_pago, str) and fecha_pago.strip():
+                        try:
+                            # Solo convertir si parece una fecha válida (formato YYYY-MM-DD)
+                            if len(fecha_pago) == 10 and fecha_pago.count('-') == 2:
+                                fecha_pago = datetime.strptime(fecha_pago, '%Y-%m-%d')
+                            else:
+                                fecha_pago = None
+                        except ValueError:
+                            fecha_pago = None
+                    else:
+                        fecha_pago = None
+                else:
+                    fecha_pago = None
                 
                 # Limpiar y validar datos numéricos
                 def safe_float(value, default=0.0):
                     try:
                         if value is None or value == '' or str(value).strip() == '':
                             return default
+                        # Verificar si es NaN usando numpy
+                        if np.isnan(float(value)) if isinstance(value, (int, float)) else False:
+                            return default
+                        # Verificar si es NaN como string
+                        if str(value).lower() in ['nan', 'none', 'null']:
+                            return default
+                        # Remover caracteres no numéricos excepto punto y coma
                         clean_value = str(value).replace(',', '').replace('$', '').strip()
-                        return float(clean_value) if clean_value else default
+                        if clean_value and clean_value != 'nan':
+                            result = float(clean_value)
+                            # Verificar si el resultado es NaN
+                            if np.isnan(result):
+                                return default
+                            return result
+                        return default
                     except (ValueError, TypeError):
                         return default
                 
@@ -219,8 +261,21 @@ class DatabaseService:
                     try:
                         if value is None or value == '' or str(value).strip() == '':
                             return default
+                        # Verificar si es NaN usando numpy
+                        if np.isnan(float(value)) if isinstance(value, (int, float)) else False:
+                            return default
+                        # Verificar si es NaN como string
+                        if str(value).lower() in ['nan', 'none', 'null']:
+                            return default
+                        # Remover caracteres no numéricos excepto punto y coma
                         clean_value = str(value).replace(',', '').replace('$', '').strip()
-                        return float(clean_value) if clean_value else default
+                        if clean_value and clean_value != 'nan':
+                            result = float(clean_value)
+                            # Verificar si el resultado es NaN
+                            if np.isnan(result):
+                                return default
+                            return result
+                        return default
                     except (ValueError, TypeError):
                         return default
                 
@@ -272,8 +327,21 @@ class DatabaseService:
                     try:
                         if value is None or value == '' or str(value).strip() == '':
                             return default
+                        # Verificar si es NaN usando numpy
+                        if np.isnan(float(value)) if isinstance(value, (int, float)) else False:
+                            return default
+                        # Verificar si es NaN como string
+                        if str(value).lower() in ['nan', 'none', 'null']:
+                            return default
+                        # Remover caracteres no numéricos excepto punto y coma
                         clean_value = str(value).replace(',', '').replace('$', '').strip()
-                        return float(clean_value) if clean_value else default
+                        if clean_value and clean_value != 'nan':
+                            result = float(clean_value)
+                            # Verificar si el resultado es NaN
+                            if np.isnan(result):
+                                return default
+                            return result
+                        return default
                     except (ValueError, TypeError):
                         return default
                 
