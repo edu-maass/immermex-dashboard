@@ -921,9 +921,10 @@ def process_excel_from_bytes(file_bytes: bytes, filename: str) -> Tuple[Dict[str
             "pedidos_clean": pd.DataFrame()
         }
         
-        # Procesar cada hoja de forma básica (sin normalización compleja)
+            # Procesar cada hoja de forma básica (sin normalización compleja)
         for sheet_name, df in excel_data.items():
             logger.info(f"Procesando hoja: {sheet_name} con {len(df)} filas")
+            logger.info(f"Columnas en {sheet_name}: {list(df.columns)}")
             
             if df.empty:
                 continue
@@ -1006,13 +1007,40 @@ def _map_facturacion_columns(df: pd.DataFrame) -> pd.DataFrame:
         'Neto': 'monto_neto',
         'Total': 'monto_total',
         'Pendiente': 'saldo_pendiente',
-        'UUID': 'uuid_factura'
+        'UUID': 'uuid_factura',
+        # Mapeo para columnas Unnamed basado en posición
+        'Unnamed: 1': 'serie_factura',
+        'Unnamed: 2': 'folio_factura', 
+        'Unnamed: 3': 'cliente',
+        'Unnamed: 4': 'monto_neto',
+        'Unnamed: 5': 'monto_total',
+        'Unnamed: 6': 'saldo_pendiente',
+        'Unnamed: 13': 'uuid_factura'
     }
     
     # Renombrar columnas que existen
     for old_name, new_name in column_mapping.items():
         if old_name in df_mapped.columns:
             df_mapped[new_name] = df_mapped[old_name]
+    
+    # Si no hay mapeo específico, intentar mapear por posición
+    if 'fecha_factura' not in df_mapped.columns and len(df_mapped.columns) > 0:
+        df_mapped['fecha_factura'] = df_mapped.iloc[:, 0]  # Primera columna
+    
+    if 'serie_factura' not in df_mapped.columns and len(df_mapped.columns) > 1:
+        df_mapped['serie_factura'] = df_mapped.iloc[:, 1]  # Segunda columna
+        
+    if 'folio_factura' not in df_mapped.columns and len(df_mapped.columns) > 2:
+        df_mapped['folio_factura'] = df_mapped.iloc[:, 2]  # Tercera columna
+        
+    if 'cliente' not in df_mapped.columns and len(df_mapped.columns) > 3:
+        df_mapped['cliente'] = df_mapped.iloc[:, 3]  # Cuarta columna
+        
+    if 'monto_neto' not in df_mapped.columns and len(df_mapped.columns) > 4:
+        df_mapped['monto_neto'] = df_mapped.iloc[:, 4]  # Quinta columna
+        
+    if 'monto_total' not in df_mapped.columns and len(df_mapped.columns) > 5:
+        df_mapped['monto_total'] = df_mapped.iloc[:, 5]  # Sexta columna
     
     return df_mapped
 
@@ -1059,12 +1087,29 @@ def _map_pedidos_columns(df: pd.DataFrame) -> pd.DataFrame:
         'Fecha': 'fecha_factura',
         'Pedido': 'pedido',
         'Cliente': 'cliente',
-        'Total': 'monto_total'
+        'Total': 'monto_total',
+        # Mapeo para columnas Unnamed
+        'Unnamed: 0': 'pedido',
+        'CONTPAQ i': 'cliente'
     }
     
     for old_name, new_name in column_mapping.items():
         if old_name in df_mapped.columns:
             df_mapped[new_name] = df_mapped[old_name]
+    
+    # Mapeo por posición si no hay mapeo específico
+    if 'pedido' not in df_mapped.columns and len(df_mapped.columns) > 0:
+        df_mapped['pedido'] = df_mapped.iloc[:, 0]  # Primera columna
+        
+    if 'cliente' not in df_mapped.columns and len(df_mapped.columns) > 2:
+        df_mapped['cliente'] = df_mapped.iloc[:, 2]  # Tercera columna
+        
+    if 'monto_total' not in df_mapped.columns and len(df_mapped.columns) > 3:
+        # Buscar una columna que parezca contener montos
+        for col in df_mapped.columns:
+            if df_mapped[col].dtype in ['float64', 'int64']:
+                df_mapped['monto_total'] = df_mapped[col]
+                break
     
     return df_mapped
 
