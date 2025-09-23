@@ -960,7 +960,10 @@ async def aplicar_filtros_pedido(pedidos: List[str] = Query([])):
         for pedido in pedidos_filtrados:
             numero_factura = pedido.get("numero_factura", "")
             if numero_factura:
-                numeros_factura_pedidos.add(str(numero_factura))
+                # Convertir a string y limpiar
+                numero_factura_str = str(int(float(numero_factura))) if str(numero_factura) != "nan" else ""
+                if numero_factura_str:
+                    numeros_factura_pedidos.add(numero_factura_str)
         
         logger.info(f"Números de factura de pedidos: {list(numeros_factura_pedidos)[:5]}")
         
@@ -974,9 +977,15 @@ async def aplicar_filtros_pedido(pedidos: List[str] = Query([])):
         # 3. Filtrar facturas por folio que coincida con números de factura de pedidos
         facturas_filtradas = []
         for factura in original_data["facturas"]:
-            folio_factura = str(factura.get("folio_factura", ""))
-            if folio_factura in numeros_factura_pedidos:
-                facturas_filtradas.append(factura)
+            try:
+                folio_factura = str(factura.get("folio_factura", ""))
+                # Limpiar el folio de factura también
+                if folio_factura and str(folio_factura) != "nan":
+                    folio_factura_limpio = str(int(float(folio_factura)))
+                    if folio_factura_limpio in numeros_factura_pedidos:
+                        facturas_filtradas.append(factura)
+            except (ValueError, TypeError):
+                continue
         
         logger.info(f"Facturas filtradas: {len(facturas_filtradas)} de {len(original_data['facturas'])}")
         
