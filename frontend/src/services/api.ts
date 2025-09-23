@@ -1,6 +1,6 @@
 // Servicio de API para el dashboard de Immermex
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://immermex-dashboard.vercel.app';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://edu-maass.github.io';
 const STORED_PREFIX_KEY = 'immermex_api_prefix';
 function getInitialPrefix(): string {
   const stored = typeof window !== 'undefined' ? window.localStorage.getItem(STORED_PREFIX_KEY) : null;
@@ -197,6 +197,21 @@ class ApiService {
   // Health check
   async healthCheck() {
     return this.request('/health');
+  }
+
+  // Nuevos endpoints para persistencia de datos
+  async getDataSummary() {
+    return this.request('/data/summary');
+  }
+
+  async eliminarArchivo(archivoId: number) {
+    return this.request(`/archivos/${archivoId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async getFiltrosDisponibles() {
+    return this.request('/filtros/disponibles');
   }
 }
 

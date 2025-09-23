@@ -16,8 +16,6 @@
     }
   ],
   "env": {
-    "ENVIRONMENT": "production",
-    "DEBUG": "false",
-    "LOG_LEVEL": "info"
+    "DATABASE_URL": "@database_url"
   }
 }

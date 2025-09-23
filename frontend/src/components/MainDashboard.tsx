@@ -1,30 +1,63 @@
-import { FC, useState } from 'react';
+import { FC, useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 import { FileUpload } from './FileUpload';
 import { Dashboard } from './Dashboard';
 import { DashboardFiltrado } from './DashboardFiltrado';
-import { Upload, BarChart3, Package } from 'lucide-react';
+import { DataManagement } from './DataManagement';
+import { Upload, BarChart3, Package, Database } from 'lucide-react';
+import { apiService } from '../services/api';
 
 export const MainDashboard: FC = () => {
   const [activeTab, setActiveTab] = useState('upload');
   const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(() => {
-    // Verificar si hay datos cargados en localStorage
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('immermex_data_loaded') === 'true';
-    }
-    return false;
-  });
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [dataSummary, setDataSummary] = useState<any>(null);
+  const [isCheckingData, setIsCheckingData] = useState(true);
 
-  const handleUploadSuccess = () => {
+  // Verificar datos persistentes al cargar la aplicación
+  useEffect(() => {
+    const checkPersistentData = async () => {
+      try {
+        setIsCheckingData(true);
+        const summary = await apiService.getDataSummary();
+        setDataSummary(summary);
+        
+        if (summary.has_data) {
+          setDataLoaded(true);
+          // Si hay datos persistentes, ir directamente al dashboard
+          setActiveTab('dashboard');
+          console.log('Datos persistentes encontrados:', summary);
+        } else {
+          setDataLoaded(false);
+          console.log('No hay datos persistentes disponibles');
+        }
+      } catch (error) {
+        console.error('Error verificando datos persistentes:', error);
+        setDataLoaded(false);
+      } finally {
+        setIsCheckingData(false);
+      }
+    };
+
+    checkPersistentData();
+  }, []);
+
+  const handleUploadSuccess = async () => {
     setUploadSuccess(true);
-    setDataLoaded(true);
-    // Persistir en localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('immermex_data_loaded', 'true');
+    
+    // Verificar datos después del upload
+    try {
+      const summary = await apiService.getDataSummary();
+      setDataSummary(summary);
+      setDataLoaded(summary.has_data);
+      
+      if (summary.has_data) {
+        // Cambiar automáticamente a la pestaña de dashboard general
+        setActiveTab('dashboard');
+      }
+    } catch (error) {
+      console.error('Error verificando datos después del upload:', error);
     }
-    // Cambiar automáticamente a la pestaña de dashboard general
-    setActiveTab('dashboard');
   };
 
   const handleTabChange = (tab: string) => {
@@ -39,10 +72,20 @@ export const MainDashboard: FC = () => {
     // Limpiar estado anterior cuando se sube un nuevo archivo
     setUploadSuccess(false);
     setDataLoaded(false);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('immermex_data_loaded');
-    }
+    setDataSummary(null);
   };
+
+  // Mostrar loading mientras se verifican los datos
+  if (isCheckingData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verificando datos disponibles...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -57,7 +100,7 @@ export const MainDashboard: FC = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="upload" className="flex items-center gap-2">
               <Upload className="h-4 w-4" />
               Carga de Archivos
@@ -69,6 +112,10 @@ export const MainDashboard: FC = () => {
             <TabsTrigger value="pedidos" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
               Análisis por Pedido
+            </TabsTrigger>
+            <TabsTrigger value="data" className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              Gestión de Datos
             </TabsTrigger>
           </TabsList>
 
@@ -84,6 +131,10 @@ export const MainDashboard: FC = () => {
 
           <TabsContent value="pedidos" className="mt-6">
             <DashboardFiltrado onUploadSuccess={handleUploadSuccess} dataLoaded={dataLoaded} />
+          </TabsContent>
+
+          <TabsContent value="data" className="mt-6">
+            <DataManagement />
           </TabsContent>
         </Tabs>
       </div>
