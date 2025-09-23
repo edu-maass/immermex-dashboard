@@ -31,9 +31,9 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
         console.log('Aplicando filtros de pedido:', pedidosAplicar);
         await apiService.aplicarFiltrosPedido(pedidosAplicar);
       } else {
-        console.log('Limpiando filtros de pedido');
-        // Si no hay pedidos seleccionados, limpiar filtros
-        await apiService.aplicarFiltrosPedido([]);
+        console.log('Sin filtros de pedido, usando datos originales');
+        // Si no hay pedidos seleccionados, no aplicar filtros (usar datos originales)
+        // No llamar a aplicarFiltrosPedido([]) para evitar limpiar los datos
       }
       
       // Obtener KPIs
@@ -63,16 +63,15 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
   const handleClearPedidos = async () => {
     console.log('DashboardFiltrado limpiando pedidos');
     setPedidosSeleccionados([]);
-    try {
-      await apiService.aplicarFiltrosPedido([]);
-      loadData([]);
-    } catch (error) {
-      console.error('Error limpiando pedidos:', error);
-      loadData([]);
-    }
+    // No llamar a aplicarFiltrosPedido([]) para evitar limpiar los datos
+    // Solo recargar con datos originales
+    loadData();
   };
 
   const formatCurrency = (value: number) => {
+    if (value === null || value === undefined || isNaN(value)) {
+      return '$0';
+    }
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN',
@@ -162,9 +161,9 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(kpis.facturacion_total)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(kpis.facturacion_total || 0)}</div>
             <p className="text-xs text-muted-foreground">
-              {kpis.total_facturas} facturas
+              {kpis.total_facturas || 0} facturas
             </p>
           </CardContent>
         </Card>
@@ -176,9 +175,9 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(kpis.cobranza_total)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(kpis.cobranza_total || 0)}</div>
             <p className="text-xs text-muted-foreground">
-              {kpis.porcentaje_cobrado.toFixed(1)}% cobrado
+              {(kpis.porcentaje_cobrado || 0).toFixed(1)}% cobrado
             </p>
           </CardContent>
         </Card>
@@ -190,9 +189,9 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpis.pedidos_unicos}</div>
+            <div className="text-2xl font-bold">{kpis.pedidos_unicos || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {kpis.toneladas_total.toFixed(1)} toneladas
+              {(kpis.toneladas_total || 0).toFixed(1)} toneladas
             </p>
           </CardContent>
         </Card>
@@ -204,7 +203,7 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpis.clientes_unicos}</div>
+            <div className="text-2xl font-bold">{kpis.clientes_unicos || 0}</div>
             <p className="text-xs text-muted-foreground">
               clientes activos
             </p>
