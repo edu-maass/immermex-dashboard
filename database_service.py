@@ -12,7 +12,6 @@ from database import (
 from datetime import datetime, timedelta
 import logging
 import hashlib
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -98,81 +97,22 @@ class DatabaseService:
         count = 0
         for factura_data in facturas_data:
             try:
-                # Convertir fecha si es necesario y válida
+                # Convertir fecha si es necesario
                 fecha_factura = factura_data.get('fecha_factura')
-                if fecha_factura is not None:
-                    # Verificar si es NaN
-                    if isinstance(fecha_factura, (int, float)) and np.isnan(fecha_factura):
-                        fecha_factura = None
-                    elif isinstance(fecha_factura, str) and fecha_factura.strip():
-                        try:
-                            # Solo convertir si parece una fecha válida (formato YYYY-MM-DD)
-                            if len(fecha_factura) == 10 and fecha_factura.count('-') == 2:
-                                fecha_factura = datetime.strptime(fecha_factura, '%Y-%m-%d')
-                            else:
-                                fecha_factura = None
-                        except ValueError:
-                            fecha_factura = None
-                    else:
-                        fecha_factura = None
-                else:
-                    fecha_factura = None
-                
-                # Limpiar y validar datos numéricos
-                def safe_float(value, default=0.0):
-                    try:
-                        if value is None or value == '' or str(value).strip() == '':
-                            return default
-                        # Verificar si es NaN usando numpy
-                        if np.isnan(float(value)) if isinstance(value, (int, float)) else False:
-                            return default
-                        # Verificar si es NaN como string
-                        if str(value).lower() in ['nan', 'none', 'null']:
-                            return default
-                        # Remover caracteres no numéricos excepto punto y coma
-                        clean_value = str(value).replace(',', '').replace('$', '').strip()
-                        if clean_value and clean_value != 'nan':
-                            result = float(clean_value)
-                            # Verificar si el resultado es NaN
-                            if np.isnan(result):
-                                return default
-                            return result
-                        return default
-                    except (ValueError, TypeError):
-                        return default
-                
-                def safe_int(value, default=30):
-                    try:
-                        if value is None or value == '' or str(value).strip() == '':
-                            return default
-                        return int(float(str(value).replace(',', '').strip()))
-                    except (ValueError, TypeError):
-                        return default
-                
-                def safe_string(value, default=''):
-                    """Convierte valor a string seguro, manejando NaN"""
-                    try:
-                        if value is None:
-                            return default
-                        if isinstance(value, (int, float)) and np.isnan(value):
-                            return default
-                        if str(value).lower() in ['nan', 'none', 'null']:
-                            return default
-                        return str(value).strip() or default
-                    except (ValueError, TypeError):
-                        return default
+                if isinstance(fecha_factura, str):
+                    fecha_factura = datetime.strptime(fecha_factura, '%Y-%m-%d')
                 
                 factura = Facturacion(
-                    serie_factura=safe_string(factura_data.get('serie_factura', '')),
-                    folio_factura=safe_string(factura_data.get('folio_factura', '')),
+                    serie_factura=str(factura_data.get('serie_factura', '')),
+                    folio_factura=str(factura_data.get('folio_factura', '')),
                     fecha_factura=fecha_factura,
-                    cliente=safe_string(factura_data.get('cliente', '')),
-                    agente=safe_string(factura_data.get('agente', '')),
-                    monto_neto=safe_float(factura_data.get('monto_neto', 0)),
-                    monto_total=safe_float(factura_data.get('monto_total', 0)),
-                    saldo_pendiente=safe_float(factura_data.get('saldo_pendiente', 0)),
-                    dias_credito=safe_int(factura_data.get('dias_credito', 30)),
-                    uuid_factura=safe_string(factura_data.get('uuid_factura', '')),
+                    cliente=str(factura_data.get('cliente', '')),
+                    agente=str(factura_data.get('agente', '')),
+                    monto_neto=float(factura_data.get('monto_neto', 0)),
+                    monto_total=float(factura_data.get('monto_total', 0)),
+                    saldo_pendiente=float(factura_data.get('saldo_pendiente', 0)),
+                    dias_credito=int(factura_data.get('dias_credito', 30)),
+                    uuid_factura=str(factura_data.get('uuid_factura', '')),
                     archivo_id=archivo_id,
                     mes=fecha_factura.month if fecha_factura else None,
                     año=fecha_factura.year if fecha_factura else None
@@ -191,81 +131,22 @@ class DatabaseService:
         count = 0
         for cobranza_data in cobranzas_data:
             try:
-                # Convertir fecha si es necesario y válida
+                # Convertir fecha si es necesario
                 fecha_pago = cobranza_data.get('fecha_pago')
-                if fecha_pago is not None:
-                    # Verificar si es NaN
-                    if isinstance(fecha_pago, (int, float)) and np.isnan(fecha_pago):
-                        fecha_pago = None
-                    elif isinstance(fecha_pago, str) and fecha_pago.strip():
-                        try:
-                            # Solo convertir si parece una fecha válida (formato YYYY-MM-DD)
-                            if len(fecha_pago) == 10 and fecha_pago.count('-') == 2:
-                                fecha_pago = datetime.strptime(fecha_pago, '%Y-%m-%d')
-                            else:
-                                fecha_pago = None
-                        except ValueError:
-                            fecha_pago = None
-                    else:
-                        fecha_pago = None
-                else:
-                    fecha_pago = None
-                
-                # Limpiar y validar datos numéricos
-                def safe_float(value, default=0.0):
-                    try:
-                        if value is None or value == '' or str(value).strip() == '':
-                            return default
-                        # Verificar si es NaN usando numpy
-                        if np.isnan(float(value)) if isinstance(value, (int, float)) else False:
-                            return default
-                        # Verificar si es NaN como string
-                        if str(value).lower() in ['nan', 'none', 'null']:
-                            return default
-                        # Remover caracteres no numéricos excepto punto y coma
-                        clean_value = str(value).replace(',', '').replace('$', '').strip()
-                        if clean_value and clean_value != 'nan':
-                            result = float(clean_value)
-                            # Verificar si el resultado es NaN
-                            if np.isnan(result):
-                                return default
-                            return result
-                        return default
-                    except (ValueError, TypeError):
-                        return default
-                
-                def safe_int(value, default=1):
-                    try:
-                        if value is None or value == '' or str(value).strip() == '':
-                            return default
-                        return int(float(str(value).replace(',', '').strip()))
-                    except (ValueError, TypeError):
-                        return default
-                
-                def safe_string(value, default=''):
-                    """Convierte valor a string seguro, manejando NaN"""
-                    try:
-                        if value is None:
-                            return default
-                        if isinstance(value, (int, float)) and np.isnan(value):
-                            return default
-                        if str(value).lower() in ['nan', 'none', 'null']:
-                            return default
-                        return str(value).strip() or default
-                    except (ValueError, TypeError):
-                        return default
+                if isinstance(fecha_pago, str):
+                    fecha_pago = datetime.strptime(fecha_pago, '%Y-%m-%d')
                 
                 cobranza = Cobranza(
                     fecha_pago=fecha_pago,
-                    serie_pago=safe_string(cobranza_data.get('serie_pago', '')),
-                    folio_pago=safe_string(cobranza_data.get('folio_pago', '')),
-                    cliente=safe_string(cobranza_data.get('cliente', '')),
-                    moneda=safe_string(cobranza_data.get('moneda', 'MXN')),
-                    tipo_cambio=safe_float(cobranza_data.get('tipo_cambio', 1.0)),
-                    forma_pago=safe_string(cobranza_data.get('forma_pago', '')),
-                    parcialidad=safe_int(cobranza_data.get('numero_parcialidades', cobranza_data.get('parcialidad', 1))),
-                    importe_pagado=safe_float(cobranza_data.get('importe_pagado', 0)),
-                    uuid_factura_relacionada=safe_string(cobranza_data.get('uuid_relacionado', cobranza_data.get('uuid_factura_relacionada', ''))),
+                    serie_pago=str(cobranza_data.get('serie_pago', '')),
+                    folio_pago=str(cobranza_data.get('folio_pago', '')),
+                    cliente=str(cobranza_data.get('cliente', '')),
+                    moneda=str(cobranza_data.get('moneda', 'MXN')),
+                    tipo_cambio=float(cobranza_data.get('tipo_cambio', 1.0)),
+                    forma_pago=str(cobranza_data.get('forma_pago', '')),
+                    parcialidad=int(cobranza_data.get('parcialidad', 1)),
+                    importe_pagado=float(cobranza_data.get('importe_pagado', 0)),
+                    uuid_factura_relacionada=str(cobranza_data.get('uuid_factura_relacionada', '')),
                     archivo_id=archivo_id
                 )
                 self.db.add(cobranza)
@@ -282,35 +163,12 @@ class DatabaseService:
         count = 0
         for anticipo_data in anticipos_data:
             try:
-                # Limpiar y validar datos numéricos
-                def safe_float(value, default=0.0):
-                    try:
-                        if value is None or value == '' or str(value).strip() == '':
-                            return default
-                        # Verificar si es NaN usando numpy
-                        if np.isnan(float(value)) if isinstance(value, (int, float)) else False:
-                            return default
-                        # Verificar si es NaN como string
-                        if str(value).lower() in ['nan', 'none', 'null']:
-                            return default
-                        # Remover caracteres no numéricos excepto punto y coma
-                        clean_value = str(value).replace(',', '').replace('$', '').strip()
-                        if clean_value and clean_value != 'nan':
-                            result = float(clean_value)
-                            # Verificar si el resultado es NaN
-                            if np.isnan(result):
-                                return default
-                            return result
-                        return default
-                    except (ValueError, TypeError):
-                        return default
-                
                 anticipo = CFDIRelacionado(
-                    xml=str(anticipo_data.get('xml', '')).strip(),
-                    cliente_receptor=str(anticipo_data.get('cliente_receptor', '')).strip(),
-                    tipo_relacion=str(anticipo_data.get('tipo_relacion', '')).strip(),
-                    importe_relacion=safe_float(anticipo_data.get('importe_relacion', 0)),
-                    uuid_factura_relacionada=str(anticipo_data.get('uuid_factura_relacionada', '')).strip(),
+                    xml=str(anticipo_data.get('xml', '')),
+                    cliente_receptor=str(anticipo_data.get('cliente_receptor', '')),
+                    tipo_relacion=str(anticipo_data.get('tipo_relacion', '')),
+                    importe_relacion=float(anticipo_data.get('importe_relacion', 0)),
+                    uuid_factura_relacionada=str(anticipo_data.get('uuid_factura_relacionada', '')),
                     archivo_id=archivo_id
                 )
                 self.db.add(anticipo)
@@ -327,97 +185,23 @@ class DatabaseService:
         count = 0
         for pedido_data in pedidos_data:
             try:
-                # Convertir fechas si es necesario y válidas
+                # Convertir fechas si es necesario
                 fecha_factura = pedido_data.get('fecha_factura')
-                if fecha_factura is not None:
-                    # Verificar si es NaN
-                    if isinstance(fecha_factura, (int, float)) and np.isnan(fecha_factura):
-                        fecha_factura = None
-                    elif isinstance(fecha_factura, str) and fecha_factura.strip():
-                        try:
-                            # Solo convertir si parece una fecha válida (formato YYYY-MM-DD)
-                            if len(fecha_factura) == 10 and fecha_factura.count('-') == 2:
-                                fecha_factura = datetime.strptime(fecha_factura, '%Y-%m-%d')
-                            else:
-                                fecha_factura = None
-                        except ValueError:
-                            fecha_factura = None
-                    else:
-                        fecha_factura = None
-                else:
-                    fecha_factura = None
+                if isinstance(fecha_factura, str):
+                    fecha_factura = datetime.strptime(fecha_factura, '%Y-%m-%d')
                 
                 fecha_pago = pedido_data.get('fecha_pago')
-                if fecha_pago is not None:
-                    # Verificar si es NaN
-                    if isinstance(fecha_pago, (int, float)) and np.isnan(fecha_pago):
-                        fecha_pago = None
-                    elif isinstance(fecha_pago, str) and fecha_pago.strip():
-                        try:
-                            # Solo convertir si parece una fecha válida (formato YYYY-MM-DD)
-                            if len(fecha_pago) == 10 and fecha_pago.count('-') == 2:
-                                fecha_pago = datetime.strptime(fecha_pago, '%Y-%m-%d')
-                            else:
-                                fecha_pago = None
-                        except ValueError:
-                            fecha_pago = None
-                    else:
-                        fecha_pago = None
-                else:
-                    fecha_pago = None
-                
-                # Limpiar y validar datos numéricos
-                def safe_float(value, default=0.0):
-                    try:
-                        if value is None or value == '' or str(value).strip() == '':
-                            return default
-                        # Verificar si es NaN usando numpy
-                        if np.isnan(float(value)) if isinstance(value, (int, float)) else False:
-                            return default
-                        # Verificar si es NaN como string
-                        if str(value).lower() in ['nan', 'none', 'null']:
-                            return default
-                        # Remover caracteres no numéricos excepto punto y coma
-                        clean_value = str(value).replace(',', '').replace('$', '').strip()
-                        if clean_value and clean_value != 'nan':
-                            result = float(clean_value)
-                            # Verificar si el resultado es NaN
-                            if np.isnan(result):
-                                return default
-                            return result
-                        return default
-                    except (ValueError, TypeError):
-                        return default
-                
-                def safe_int(value, default=30):
-                    try:
-                        if value is None or value == '' or str(value).strip() == '':
-                            return default
-                        return int(float(str(value).replace(',', '').strip()))
-                    except (ValueError, TypeError):
-                        return default
-                
-                def safe_string(value, default=''):
-                    """Convierte valor a string seguro, manejando NaN"""
-                    try:
-                        if value is None:
-                            return default
-                        if isinstance(value, (int, float)) and np.isnan(value):
-                            return default
-                        if str(value).lower() in ['nan', 'none', 'null']:
-                            return default
-                        return str(value).strip() or default
-                    except (ValueError, TypeError):
-                        return default
+                if isinstance(fecha_pago, str):
+                    fecha_pago = datetime.strptime(fecha_pago, '%Y-%m-%d')
                 
                 pedido = Pedido(
-                    folio_factura=safe_string(pedido_data.get('folio_factura', '')),
-                    pedido=safe_string(pedido_data.get('pedido', '')),
-                    kg=safe_float(pedido_data.get('kg', 0)),
-                    precio_unitario=safe_float(pedido_data.get('precio_unitario', 0)),
-                    importe_sin_iva=safe_float(pedido_data.get('importe_sin_iva', 0)),
-                    material=safe_string(pedido_data.get('material', '')),
-                    dias_credito=safe_int(pedido_data.get('dias_credito', 30)),
+                    folio_factura=str(pedido_data.get('folio_factura', '')),
+                    pedido=str(pedido_data.get('pedido', '')),
+                    kg=float(pedido_data.get('kg', 0)),
+                    precio_unitario=float(pedido_data.get('precio_unitario', 0)),
+                    importe_sin_iva=float(pedido_data.get('importe_sin_iva', 0)),
+                    material=str(pedido_data.get('material', '')),
+                    dias_credito=int(pedido_data.get('dias_credito', 30)),
                     fecha_factura=fecha_factura,
                     fecha_pago=fecha_pago,
                     archivo_id=archivo_id

@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "backend/simple_upload.py",
+      "src": "main_with_db.py",
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "50mb"
@@ -12,10 +12,12 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "backend/simple_upload.py"
+      "dest": "main_with_db.py"
     }
   ],
   "env": {
-    "PYTHONPATH": "backend"
+    "ENVIRONMENT": "production",
+    "DEBUG": "false",
+    "LOG_LEVEL": "info"
   }
 }
