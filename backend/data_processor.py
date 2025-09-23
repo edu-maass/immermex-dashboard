@@ -948,6 +948,9 @@ def process_excel_from_bytes(file_bytes: bytes, filename: str) -> Tuple[Dict[str
             else:
                 df_clean = _map_pedidos_columns(df_clean)
             
+            # Log de mapeo para debugging
+            logger.info(f"Columnas mapeadas en {sheet_name}: {[col for col in df_clean.columns if col in ['fecha_factura', 'serie_factura', 'folio_factura', 'cliente', 'monto_total', 'fecha_pago', 'importe_pagado', 'pedido', 'material']]}")
+            
             # Agregar información de la hoja
             df_clean['hoja_origen'] = sheet_name
             df_clean['archivo_origen'] = filename
@@ -994,85 +997,34 @@ def process_excel_from_bytes(file_bytes: bytes, filename: str) -> Tuple[Dict[str
         raise
 
 def _map_facturacion_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Mapea columnas de facturación a nombres estándar usando el mapeo original que funcionaba"""
+    """Mapea columnas de facturación a nombres estándar usando mapeo directo por posición"""
     df_mapped = df.copy()
     
-    # Mapeo de columnas flexible y completo (copiado del método original)
-    column_mapping = {
-        # Fecha
-        'fecha': 'fecha_factura',
-        'fecha de factura': 'fecha_factura',
-        'fecha_factura': 'fecha_factura',
-        'todos los documentos': 'fecha_factura',
-        'Fecha': 'fecha_factura',
-        
-        # Serie y Folio
-        'serie': 'serie_factura',
-        'serie factura': 'serie_factura',
-        'serie_factura': 'serie_factura',
-        'unnamed: 1': 'serie_factura',
-        'Serie': 'serie_factura',
-        'folio': 'folio_factura',
-        'folio factura': 'folio_factura',
-        'folio_factura': 'folio_factura',
-        'unnamed: 2': 'folio_factura',
-        'Folio': 'folio_factura',
-        
-        # Cliente
-        'cliente': 'cliente',
-        'razón social': 'cliente',
-        'razon social': 'cliente',
-        'nombre cliente': 'cliente',
-        'unnamed: 3': 'cliente',
-        'Razón Social': 'cliente',
-        
-        # Montos
-        'neto': 'monto_neto',
-        'monto neto': 'monto_neto',
-        'monto_neto': 'monto_neto',
-        'subtotal': 'monto_neto',
-        'unnamed: 4': 'monto_neto',
-        'Neto': 'monto_neto',
-        'total': 'monto_total',
-        'monto total': 'monto_total',
-        'monto_total': 'monto_total',
-        'importe total': 'monto_total',
-        'unnamed: 5': 'monto_total',
-        'Total': 'monto_total',
-        
-        # Pendiente
-        'pendiente': 'saldo_pendiente',
-        'saldo pendiente': 'saldo_pendiente',
-        'saldo_pendiente': 'saldo_pendiente',
-        'unnamed: 6': 'saldo_pendiente',
-        'Pendiente': 'saldo_pendiente',
-        
-        # Agente
-        'agente': 'agente',
-        'nombre del agente': 'agente',
-        'vendedor': 'agente',
-        'Nombre del agente': 'agente',
-        
-        # UUID
-        'uuid': 'uuid_factura',
-        'uuid_factura': 'uuid_factura',
-        'unnamed: 13': 'uuid_factura',
-        'UUID': 'uuid_factura'
-    }
+    # Mapeo directo por posición basado en las columnas observadas
+    columns = list(df_mapped.columns)
     
-    # Renombrar columnas que existen (case-insensitive)
-    for old_name, new_name in column_mapping.items():
-        # Buscar coincidencia exacta o case-insensitive
-        for col in df_mapped.columns:
-            # Verificar que la columna sea string antes de hacer .lower()
-            if isinstance(col, str) and col.lower() == old_name.lower():
-                df_mapped[new_name] = df_mapped[col]
-                break
+    # Mapeo por posición (más confiable)
+    if len(columns) >= 1:
+        df_mapped['fecha_factura'] = df_mapped.iloc[:, 0]  # 'Todos los Documentos'
+    if len(columns) >= 2:
+        df_mapped['serie_factura'] = df_mapped.iloc[:, 1]  # 'Unnamed: 1'
+    if len(columns) >= 3:
+        df_mapped['folio_factura'] = df_mapped.iloc[:, 2]  # 'Unnamed: 2'
+    if len(columns) >= 4:
+        df_mapped['cliente'] = df_mapped.iloc[:, 3]        # 'Unnamed: 3'
+    if len(columns) >= 5:
+        df_mapped['monto_neto'] = df_mapped.iloc[:, 4]     # 'Unnamed: 4'
+    if len(columns) >= 6:
+        df_mapped['monto_total'] = df_mapped.iloc[:, 5]    # 'Unnamed: 5'
+    if len(columns) >= 7:
+        df_mapped['saldo_pendiente'] = df_mapped.iloc[:, 6] # 'Unnamed: 6'
+    if len(columns) >= 14:
+        df_mapped['uuid_factura'] = df_mapped.iloc[:, 13]  # 'Unnamed: 13'
     
     return df_mapped
 
 def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Mapea columnas de cobranza a nombres estándar usando el mapeo original"""
+    """Mapea columnas de cobranza a nombres estándar usando mapeo directo por posición"""
     df_mapped = df.copy()
     
     # Manejar columnas especiales (datetime, etc.)
@@ -1082,57 +1034,23 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
             df_mapped['fecha_pago'] = df_mapped[col]
             break
     
-    # Mapeo de columnas flexible y completo (copiado del método original)
-    column_mapping = {
-        'fecha de pago': 'fecha_pago',
-        'fecha_pago': 'fecha_pago',
-        'fecha pago': 'fecha_pago',
-        'fecha cobro': 'fecha_pago',
-        'Fecha': 'fecha_pago',
-        
-        'serie pago': 'serie_pago',
-        'serie_pago': 'serie_pago',
-        'serie': 'serie_pago',
-        'Serie': 'serie_pago',
-        
-        'folio pago': 'folio_pago',
-        'folio_pago': 'folio_pago',
-        'folio': 'folio_pago',
-        'Folio': 'folio_pago',
-        
-        'cliente': 'cliente',
-        'razón social': 'cliente',
-        'razon social': 'cliente',
-        'Cliente': 'cliente',
-        
-        'moneda': 'moneda',
-        'tipo de cambio': 'tipo_cambio',
-        'tipo_cambio': 'tipo_cambio',
-        
-        'forma de pago': 'forma_pago',
-        'forma_pago': 'forma_pago',
-        'método de pago': 'metodo_pago',
-        'metodo_pago': 'metodo_pago',
-        
-        'importe pagado': 'importe_pagado',
-        'importe_pagado': 'importe_pagado',
-        'importe': 'importe_pagado',
-        'Importe': 'importe_pagado',
-        'monto': 'importe_pagado',
-        'total': 'importe_pagado',
-        
-        'uuid': 'uuid_pago',
-        'uuid_pago': 'uuid_pago',
-        'UUID': 'uuid_pago'
-    }
+    # Mapeo directo por posición (más confiable)
+    columns = list(df_mapped.columns)
     
-    # Renombrar columnas que existen (case-insensitive)
-    for old_name, new_name in column_mapping.items():
-        for col in df_mapped.columns:
-            # Verificar que la columna sea string antes de hacer .lower()
-            if isinstance(col, str) and col.lower() == old_name.lower():
-                df_mapped[new_name] = df_mapped[col]
-                break
+    # Valores por defecto
+    df_mapped['moneda'] = 'MXN'
+    df_mapped['tipo_cambio'] = 1.0
+    df_mapped['parcialidad'] = 1
+    df_mapped['forma_pago'] = ''
+    df_mapped['serie_pago'] = ''
+    df_mapped['folio_pago'] = ''
+    df_mapped['cliente'] = ''
+    df_mapped['importe_pagado'] = 0.0
+    df_mapped['uuid_factura_relacionada'] = ''
+    
+    # Si no hay columna datetime, usar valores por defecto para fecha_pago
+    if 'fecha_pago' not in df_mapped.columns:
+        df_mapped['fecha_pago'] = None
     
     return df_mapped
 
@@ -1154,65 +1072,27 @@ def _map_cfdi_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df_mapped
 
 def _map_pedidos_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Mapea columnas de pedidos a nombres estándar usando el mapeo original"""
+    """Mapea columnas de pedidos a nombres estándar usando mapeo directo por posición"""
     df_mapped = df.copy()
     
-    # Mapeo de columnas flexible y completo (copiado del método original)
-    column_mapping = {
-        'no de factura': 'folio_factura',
-        'folio factura': 'folio_factura',
-        'folio_factura': 'folio_factura',
-        'factura': 'folio_factura',
-        'numero factura': 'folio_factura',
-        'Fecha': 'fecha_factura',
-        
-        'pedido': 'pedido',
-        'numero pedido': 'pedido',
-        'numero_pedido': 'pedido',
-        'no pedido': 'pedido',
-        'Pedido': 'pedido',
-        'unnamed: 0': 'pedido',
-        
-        'kgs': 'kg',
-        'kg': 'kg',
-        'kilogramos': 'kg',
-        'peso': 'kg',
-        'cantidad': 'kg',
-        
-        'precio unitario': 'precio_unitario',
-        'precio_unitario': 'precio_unitario',
-        'precio': 'precio_unitario',
-        'costo unitario': 'precio_unitario',
-        
-        'importe mxn sin iva': 'importe_sin_iva',
-        'importe_sin_iva': 'importe_sin_iva',
-        'importe sin iva': 'importe_sin_iva',
-        'subtotal': 'importe_sin_iva',
-        'importe': 'importe_sin_iva',
-        'monto_total': 'importe_sin_iva',
-        'Total': 'importe_sin_iva',
-        
-        'material': 'material',
-        'producto': 'material',
-        'descripcion': 'material',
-        
-        'dias de credito': 'dias_credito',
-        'dias_credito': 'dias_credito',
-        
-        'cliente': 'cliente',
-        'Cliente': 'cliente',
-        'CONTPAQ i': 'cliente',
-        'razón social': 'cliente',
-        'razon social': 'cliente'
-    }
+    # Mapeo directo por posición basado en las columnas observadas
+    columns = list(df_mapped.columns)
     
-    # Renombrar columnas que existen (case-insensitive)
-    for old_name, new_name in column_mapping.items():
-        for col in df_mapped.columns:
-            # Verificar que la columna sea string antes de hacer .lower()
-            if isinstance(col, str) and col.lower() == old_name.lower():
-                df_mapped[new_name] = df_mapped[col]
-                break
+    # Mapeo por posición (más confiable)
+    if len(columns) >= 1:
+        df_mapped['pedido'] = df_mapped.iloc[:, 0]         # 'Unnamed: 0'
+    if len(columns) >= 2:
+        df_mapped['cliente'] = df_mapped.iloc[:, 1]        # 'CONTPAQ i'
+    if len(columns) >= 3:
+        df_mapped['material'] = df_mapped.iloc[:, 2]       # 'Unnamed: 2'
+    if len(columns) >= 4:
+        df_mapped['cantidad'] = df_mapped.iloc[:, 3]       # 'Immermex S.A. de C.V.'
+    
+    # Valores por defecto
+    df_mapped['fecha_factura'] = None
+    df_mapped['precio_unitario'] = 0.0
+    df_mapped['importe_sin_iva'] = 0.0
+    df_mapped['dias_credito'] = 30
     
     return df_mapped
 
