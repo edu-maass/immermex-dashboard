@@ -1,5 +1,4 @@
 import { FC, useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { RefreshCw, Upload, TrendingUp, DollarSign, Package, Users, BarChart3 } from 'lucide-react';
 import { apiService } from '../services/api';
@@ -210,68 +209,78 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         {/* Facturación */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Facturación Total</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(kpis.facturacion_total || 0)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Sin IVA: {formatCurrency(kpis.facturacion_sin_iva || 0)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {kpis.total_facturas || 0} facturas
-            </p>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <DollarSign className="h-5 w-5 text-blue-600" />
+              <h3 className="text-sm font-medium text-gray-500">Facturación Total</h3>
+            </div>
+          </div>
+          <div className="mt-2">
+            <p className="text-2xl font-bold text-gray-900">{formatCurrency(kpis.facturacion_total || 0)}</p>
+            <p className="text-sm text-gray-500 mt-1">Sin IVA: {formatCurrency(kpis.facturacion_sin_iva || 0)}</p>
+            <p className="text-sm text-gray-500">{kpis.total_facturas || 0} facturas</p>
+          </div>
+        </div>
 
         {/* Cobranza */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cobranza Total</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(kpis.cobranza_total || 0)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Sin IVA: {formatCurrency(kpis.cobranza_sin_iva || 0)}
-            </p>
-            <p className="text-xs text-green-600 mt-1 font-medium">
-              % Cobrado: {(kpis.porcentaje_cobrado || 0).toFixed(1)}%
-            </p>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+              <h3 className="text-sm font-medium text-gray-500">Cobranza Total</h3>
+            </div>
+          </div>
+          <div className="mt-2">
+            <p className="text-2xl font-bold text-gray-900">{formatCurrency(kpis.cobranza_total || 0)}</p>
+            <p className="text-sm text-gray-500 mt-1">Sin IVA: {formatCurrency(kpis.cobranza_sin_iva || 0)}</p>
+            <p className="text-sm text-green-600 mt-1 font-medium">% Cobrado: {(kpis.porcentaje_cobrado || 0).toFixed(1)}%</p>
+          </div>
+        </div>
+
+        {/* Anticipos */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Package className="h-5 w-5 text-purple-600" />
+              <h3 className="text-sm font-medium text-gray-500">Anticipos</h3>
+            </div>
+          </div>
+          <div className="mt-2">
+            <p className="text-2xl font-bold text-gray-900">{formatCurrency(kpis.anticipos_total || 0)}</p>
+            <p className="text-sm text-gray-500">{kpis.anticipos_porcentaje?.toFixed(1)}% sobre facturación</p>
+          </div>
+        </div>
 
         {/* Pedidos */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pedidos Utilizados</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{kpis.pedidos_unicos || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              {(kpis.toneladas_total || 0).toFixed(1)} toneladas
-            </p>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Package className="h-5 w-5 text-orange-600" />
+              <h3 className="text-sm font-medium text-gray-500">Pedidos Utilizados</h3>
+            </div>
+          </div>
+          <div className="mt-2">
+            <p className="text-2xl font-bold text-gray-900">{kpis.pedidos_unicos || 0}</p>
+            <p className="text-sm text-gray-500">{(kpis.toneladas_total || 0).toFixed(1)} toneladas</p>
+          </div>
+        </div>
 
         {/* Clientes */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Clientes Únicos</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{kpis.clientes_unicos || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              clientes activos
-            </p>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Users className="h-5 w-5 text-indigo-600" />
+              <h3 className="text-sm font-medium text-gray-500">Clientes Únicos</h3>
+            </div>
+          </div>
+          <div className="mt-2">
+            <p className="text-2xl font-bold text-gray-900">{kpis.clientes_unicos || 0}</p>
+            <p className="text-sm text-gray-500">clientes activos</p>
+          </div>
+        </div>
       </div>
 
       {/* Gráficos */}
