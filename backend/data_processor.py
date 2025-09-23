@@ -952,19 +952,29 @@ def process_excel_from_bytes(file_bytes: bytes, filename: str) -> Tuple[Dict[str
                 # Asumir que es una hoja de pedidos por mes
                 processed_data["pedidos_clean"] = pd.concat([processed_data["pedidos_clean"], df_clean], ignore_index=True)
         
+        # Convertir DataFrames a listas de diccionarios para la base de datos
+        processed_data_dict = {}
+        for key, df in processed_data.items():
+            if not df.empty:
+                # Convertir DataFrame a lista de diccionarios
+                processed_data_dict[key] = df.to_dict('records')
+                logger.info(f"{key}: {len(processed_data_dict[key])} registros convertidos")
+            else:
+                processed_data_dict[key] = []
+        
         # Calcular KPIs básicos
         kpis = {
-            "total_facturas": len(processed_data["facturacion_clean"]),
-            "total_cobranzas": len(processed_data["cobranza_clean"]),
-            "total_cfdi": len(processed_data["cfdi_clean"]),
-            "total_pedidos": len(processed_data["pedidos_clean"]),
+            "total_facturas": len(processed_data_dict["facturacion_clean"]),
+            "total_cobranzas": len(processed_data_dict["cobranza_clean"]),
+            "total_cfdi": len(processed_data_dict["cfdi_clean"]),
+            "total_pedidos": len(processed_data_dict["pedidos_clean"]),
             "fecha_procesamiento": datetime.now().isoformat(),
             "archivo": filename,
             "hojas_procesadas": list(excel_data.keys())
         }
         
         logger.info(f"Procesamiento desde bytes completado - Facturas: {kpis['total_facturas']}, Pedidos: {kpis['total_pedidos']}")
-        return processed_data, kpis
+        return processed_data_dict, kpis
         
     except Exception as e:
         logger.error(f"Error procesando archivo desde bytes: {str(e)}")
