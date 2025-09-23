@@ -197,6 +197,9 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(kpis.facturacion_total || 0)}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Sin IVA: {formatCurrency(kpis.facturacion_sin_iva || 0)}
+            </p>
             <p className="text-xs text-muted-foreground">
               {kpis.total_facturas || 0} facturas
             </p>
@@ -211,8 +214,11 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(kpis.cobranza_total || 0)}</div>
-            <p className="text-xs text-muted-foreground">
-              {(kpis.porcentaje_cobrado || 0).toFixed(1)}% cobrado
+            <p className="text-xs text-muted-foreground mt-1">
+              Sin IVA: {formatCurrency(kpis.cobranza_sin_iva || 0)}
+            </p>
+            <p className="text-xs text-green-600 mt-1 font-medium">
+              % Cobrado: {(kpis.porcentaje_cobrado || 0).toFixed(1)}%
             </p>
           </CardContent>
         </Card>
