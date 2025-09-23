@@ -34,7 +34,7 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
       console.log('Obteniendo KPIs...');
       const kpisData = await apiService.getKPIs();
       console.log('KPIs obtenidos:', kpisData);
-      setKpis(kpisData);
+      setKpis(kpisData as KPIs);
       
     } catch (err) {
       console.error('Error cargando datos:', err);
@@ -45,7 +45,8 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
   };
 
   useEffect(() => {
-    loadData();
+    // Inicializar con datos en cero (sin pedidos seleccionados)
+    loadData([]);
   }, []);
 
   // Recargar pedidos cuando hay un upload exitoso
@@ -113,7 +114,7 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
     return (
       <div className="text-center py-8">
         <p className="text-red-600 mb-4">{error}</p>
-        <Button onClick={() => loadData(filtros, pedidosSeleccionados)}>
+        <Button onClick={() => loadData(pedidosSeleccionados)}>
           <RefreshCw className="h-4 w-4 mr-2" />
           Reintentar
         </Button>
@@ -149,6 +150,7 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
         <PedidoFilter
           onPedidosChange={handlePedidosChange}
           onClearPedidos={handleClearPedidos}
+          onUploadSuccess={!!onUploadSuccess}
         />
       </div>
 

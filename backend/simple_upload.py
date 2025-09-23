@@ -909,8 +909,14 @@ async def get_pedidos_filtro():
         logger.warning("No hay pedidos disponibles para filtro")
         return []
     
+    # Debug: mostrar estructura de algunos pedidos
+    logger.info(f"Total pedidos disponibles: {len(pedidos)}")
+    if pedidos:
+        logger.info(f"Estructura del primer pedido: {list(pedidos[0].keys())}")
+        logger.info(f"Valores del primer pedido: {pedidos[0]}")
+    
     numeros_pedido = list(set(str(p.get("numero_pedido", "")) for p in pedidos if p.get("numero_pedido") and str(p.get("numero_pedido")) != "nan" and str(p.get("numero_pedido")).strip()))
-    logger.info(f"Pedidos para filtro: {len(numeros_pedido)} - {numeros_pedido[:5]}")
+    logger.info(f"Pedidos únicos encontrados: {len(numeros_pedido)} - {numeros_pedido[:5]}")
     return sorted([p for p in numeros_pedido if p])
 
 @app.get("/api/debug/datos")
@@ -932,6 +938,41 @@ async def debug_datos():
         "pedidos_unicos": obtener_pedidos_unicos(),
         "sample_original_pedidos": [{"numero_pedido": p.get("numero_pedido"), "numero_factura": p.get("numero_factura")} for p in original_data["pedidos"][:3]],
         "sample_processed_pedidos": [{"numero_pedido": p.get("numero_pedido"), "numero_factura": p.get("numero_factura")} for p in processed_data["pedidos"][:3]]
+    }
+
+@app.get("/api/debug/pedidos")
+async def debug_pedidos():
+    """Endpoint de debug específico para pedidos"""
+    pedidos = original_data["pedidos"] if original_data["pedidos"] else processed_data["pedidos"]
+    
+    if not pedidos:
+        return {"message": "No hay pedidos disponibles", "total": 0}
+    
+    # Analizar estructura de pedidos
+    sample_pedidos = pedidos[:5]
+    pedidos_analysis = []
+    
+    for i, pedido in enumerate(sample_pedidos):
+        pedidos_analysis.append({
+            "index": i,
+            "keys": list(pedido.keys()),
+            "values": pedido,
+            "numero_pedido": pedido.get("numero_pedido"),
+            "numero_factura": pedido.get("numero_factura")
+        })
+    
+    # Contar pedidos únicos
+    numeros_pedido = set()
+    for pedido in pedidos:
+        num_pedido = pedido.get("numero_pedido")
+        if num_pedido and str(num_pedido) != "nan" and str(num_pedido).strip():
+            numeros_pedido.add(str(num_pedido))
+    
+    return {
+        "total_pedidos": len(pedidos),
+        "pedidos_unicos": len(numeros_pedido),
+        "sample_analysis": pedidos_analysis,
+        "pedidos_unicos_list": sorted(list(numeros_pedido))[:10]
     }
 
 @app.post("/api/filtros/aplicar")

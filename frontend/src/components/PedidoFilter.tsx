@@ -9,9 +9,10 @@ import { apiService } from '../services/api';
 interface PedidoFilterProps {
   onPedidosChange: (pedidos: string[]) => void;
   onClearPedidos: () => void;
+  onUploadSuccess?: boolean;
 }
 
-export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPedidos }) => {
+export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPedidos, onUploadSuccess }) => {
   const [pedidosDisponibles, setPedidosDisponibles] = useState<string[]>([]);
   const [pedidosSeleccionados, setPedidosSeleccionados] = useState<string[]>([]);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<string>('');
@@ -30,7 +31,7 @@ export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPe
     cargarPedidos();
   }, []);
 
-  // Recargar pedidos si el dropdown está vacío
+  // Recargar pedidos si el dropdown está vacío (con retry)
   useEffect(() => {
     if (pedidosDisponibles.length === 0) {
       const recargarPedidos = async () => {
@@ -39,6 +40,19 @@ export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPe
           if (pedidos.length > 0) {
             setPedidosDisponibles(pedidos);
             console.log('Pedidos recargados:', pedidos);
+          } else {
+            // Si aún no hay pedidos, intentar de nuevo después de un delay
+            setTimeout(async () => {
+              try {
+                const pedidosRetry = await apiService.getPedidosFiltro();
+                if (pedidosRetry.length > 0) {
+                  setPedidosDisponibles(pedidosRetry);
+                  console.log('Pedidos recargados en retry:', pedidosRetry);
+                }
+              } catch (error) {
+                console.error('Error en retry de pedidos:', error);
+              }
+            }, 2000);
           }
         } catch (error) {
           console.error('Error recargando pedidos:', error);
@@ -47,6 +61,22 @@ export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPe
       recargarPedidos();
     }
   }, [pedidosDisponibles.length]);
+
+  // Recargar pedidos cuando hay un upload exitoso
+  useEffect(() => {
+    if (onUploadSuccess) {
+      const recargarPedidosPostUpload = async () => {
+        try {
+          const pedidos = await apiService.getPedidosFiltro();
+          setPedidosDisponibles(pedidos);
+          console.log('Pedidos recargados después de upload:', pedidos);
+        } catch (error) {
+          console.error('Error recargando pedidos después de upload:', error);
+        }
+      };
+      recargarPedidosPostUpload();
+    }
+  }, [onUploadSuccess]);
 
   const handleAgregarPedido = () => {
     if (pedidoSeleccionado && !pedidosSeleccionados.includes(pedidoSeleccionado)) {
