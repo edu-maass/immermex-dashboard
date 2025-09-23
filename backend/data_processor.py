@@ -1077,7 +1077,7 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
     
     # Manejar columnas especiales (datetime, etc.)
     for col in df_mapped.columns:
-        if isinstance(col, datetime.datetime):
+        if isinstance(col, datetime):
             # Mapear columnas datetime a fecha_pago
             df_mapped['fecha_pago'] = df_mapped[col]
             break
