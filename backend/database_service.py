@@ -16,6 +16,84 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+def is_nan_value(value):
+    """Detecta si un valor es NaN de cualquier tipo"""
+    if value is None:
+        return True
+    if isinstance(value, (int, float)):
+        return np.isnan(value)
+    if isinstance(value, str):
+        value_lower = value.lower().strip()
+        return value_lower in ['nan', 'none', 'null', '']
+    return False
+
+def safe_date(value):
+    """Convierte valor a fecha segura, manejando NaN"""
+    try:
+        if is_nan_value(value):
+            return None
+        if isinstance(value, (int, float)):
+            return None  # Los números no son fechas válidas
+        if isinstance(value, str):
+            value = value.strip()
+            if not value or value.lower() in ['nan', 'none', 'null']:
+                return None
+            # Intentar parsear como fecha
+            try:
+                return datetime.strptime(value, '%Y-%m-%d').date()
+            except ValueError:
+                try:
+                    return datetime.strptime(value, '%d/%m/%Y').date()
+                except ValueError:
+                    return None
+        return None
+    except (ValueError, TypeError):
+        return None
+
+def safe_float(value, default=0.0):
+    """Convierte valor a float seguro, manejando NaN"""
+    try:
+        if is_nan_value(value):
+            return default
+        if isinstance(value, str):
+            value = value.strip()
+            if not value or value.lower() in ['nan', 'none', 'null']:
+                return default
+            # Remover caracteres no numéricos excepto punto y coma
+            import re
+            value = re.sub(r'[^\d.,-]', '', value)
+            if not value:
+                return default
+            # Reemplazar coma por punto para decimales
+            value = value.replace(',', '.')
+            return float(value)
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+def safe_int(value, default=30):
+    """Convierte valor a int seguro, manejando NaN"""
+    try:
+        if is_nan_value(value):
+            return default
+        if isinstance(value, str):
+            value = value.strip()
+            if not value or value.lower() in ['nan', 'none', 'null']:
+                return default
+        return int(float(str(value).replace(',', '').strip()))
+    except (ValueError, TypeError):
+        return default
+
+def safe_string(value, default=''):
+    """Convierte valor a string seguro, manejando NaN"""
+    try:
+        if is_nan_value(value):
+            return default
+        result = str(value).strip()
+        return result if result else default
+    except (ValueError, TypeError):
+        return default
+
 class DatabaseService:
     def __init__(self, db: Session):
         self.db = db
@@ -98,72 +176,8 @@ class DatabaseService:
         count = 0
         for factura_data in facturas_data:
             try:
-                def safe_date(value):
-                    """Convierte valor a fecha segura, manejando NaN"""
-                    try:
-                        if value is None:
-                            return None
-                        if isinstance(value, (int, float)):
-                            if np.isnan(value):
-                                return None
-                            return None  # Los números no son fechas válidas
-                        if isinstance(value, str):
-                            value = value.strip()
-                            if not value or value.lower() in ['nan', 'none', 'null']:
-                                return None
-                            # Solo convertir si parece una fecha válida (formato YYYY-MM-DD)
-                            if len(value) == 10 and value.count('-') == 2:
-                                return datetime.strptime(value, '%Y-%m-%d')
-                        return None
-                    except (ValueError, TypeError):
-                        return None
-                
                 # Convertir fecha de forma segura
                 fecha_factura = safe_date(factura_data.get('fecha_factura'))
-                
-                # Limpiar y validar datos numéricos
-                def safe_float(value, default=0.0):
-                    try:
-                        if value is None or value == '' or str(value).strip() == '':
-                            return default
-                        # Verificar si es NaN usando numpy
-                        if np.isnan(float(value)) if isinstance(value, (int, float)) else False:
-                            return default
-                        # Verificar si es NaN como string
-                        if str(value).lower() in ['nan', 'none', 'null']:
-                            return default
-                        # Remover caracteres no numéricos excepto punto y coma
-                        clean_value = str(value).replace(',', '').replace('$', '').strip()
-                        if clean_value and clean_value != 'nan':
-                            result = float(clean_value)
-                            # Verificar si el resultado es NaN
-                            if np.isnan(result):
-                                return default
-                            return result
-                        return default
-                    except (ValueError, TypeError):
-                        return default
-                
-                def safe_int(value, default=30):
-                    try:
-                        if value is None or value == '' or str(value).strip() == '':
-                            return default
-                        return int(float(str(value).replace(',', '').strip()))
-                    except (ValueError, TypeError):
-                        return default
-                
-                def safe_string(value, default=''):
-                    """Convierte valor a string seguro, manejando NaN"""
-                    try:
-                        if value is None:
-                            return default
-                        if isinstance(value, (int, float)) and np.isnan(value):
-                            return default
-                        if str(value).lower() in ['nan', 'none', 'null']:
-                            return default
-                        return str(value).strip() or default
-                    except (ValueError, TypeError):
-                        return default
                 
                 factura = Facturacion(
                     serie_factura=safe_string(factura_data.get('serie_factura', '')),
@@ -194,72 +208,8 @@ class DatabaseService:
         count = 0
         for cobranza_data in cobranzas_data:
             try:
-                def safe_date(value):
-                    """Convierte valor a fecha segura, manejando NaN"""
-                    try:
-                        if value is None:
-                            return None
-                        if isinstance(value, (int, float)):
-                            if np.isnan(value):
-                                return None
-                            return None  # Los números no son fechas válidas
-                        if isinstance(value, str):
-                            value = value.strip()
-                            if not value or value.lower() in ['nan', 'none', 'null']:
-                                return None
-                            # Solo convertir si parece una fecha válida (formato YYYY-MM-DD)
-                            if len(value) == 10 and value.count('-') == 2:
-                                return datetime.strptime(value, '%Y-%m-%d')
-                        return None
-                    except (ValueError, TypeError):
-                        return None
-                
                 # Convertir fecha de forma segura
                 fecha_pago = safe_date(cobranza_data.get('fecha_pago'))
-                
-                # Limpiar y validar datos numéricos
-                def safe_float(value, default=0.0):
-                    try:
-                        if value is None or value == '' or str(value).strip() == '':
-                            return default
-                        # Verificar si es NaN usando numpy
-                        if np.isnan(float(value)) if isinstance(value, (int, float)) else False:
-                            return default
-                        # Verificar si es NaN como string
-                        if str(value).lower() in ['nan', 'none', 'null']:
-                            return default
-                        # Remover caracteres no numéricos excepto punto y coma
-                        clean_value = str(value).replace(',', '').replace('$', '').strip()
-                        if clean_value and clean_value != 'nan':
-                            result = float(clean_value)
-                            # Verificar si el resultado es NaN
-                            if np.isnan(result):
-                                return default
-                            return result
-                        return default
-                    except (ValueError, TypeError):
-                        return default
-                
-                def safe_int(value, default=1):
-                    try:
-                        if value is None or value == '' or str(value).strip() == '':
-                            return default
-                        return int(float(str(value).replace(',', '').strip()))
-                    except (ValueError, TypeError):
-                        return default
-                
-                def safe_string(value, default=''):
-                    """Convierte valor a string seguro, manejando NaN"""
-                    try:
-                        if value is None:
-                            return default
-                        if isinstance(value, (int, float)) and np.isnan(value):
-                            return default
-                        if str(value).lower() in ['nan', 'none', 'null']:
-                            return default
-                        return str(value).strip() or default
-                    except (ValueError, TypeError):
-                        return default
                 
                 cobranza = Cobranza(
                     fecha_pago=fecha_pago,
