@@ -145,6 +145,13 @@ export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPe
             📊 Mostrando datos filtrados por {pedidosSeleccionados.length} pedido(s) seleccionado(s)
           </div>
         )}
+        
+        {/* Mensaje cuando no hay pedidos disponibles */}
+        {pedidosDisponibles.length === 0 && (
+          <div className="text-sm text-orange-600 bg-orange-50 p-2 rounded-md">
+            ⚠️ No hay pedidos disponibles. Sube un archivo Excel en la pestaña "Carga de Archivos" para comenzar.
+          </div>
+        )}
       </CardContent>
     </Card>
   );
