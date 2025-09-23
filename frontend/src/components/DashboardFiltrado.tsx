@@ -81,6 +81,28 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
     checkDataAvailability();
   }, [dataLoaded]);
 
+  // Efecto adicional para verificar datos cuando se monta el componente
+  useEffect(() => {
+    const verifyDataOnMount = async () => {
+      // Si no hay dataLoaded pero el componente se monta, verificar si hay datos
+      if (!dataLoaded) {
+        try {
+          const pedidos = await apiService.getPedidosFiltro();
+          if (pedidos.length > 0) {
+            console.log('Datos encontrados al montar componente, cargando...');
+            await apiService.aplicarFiltrosPedido([]);
+            const kpisData = await apiService.getKPIs();
+            setKpis(kpisData as KPIs);
+          }
+        } catch (error) {
+          console.error('Error verificando datos al montar:', error);
+        }
+      }
+    };
+    
+    verifyDataOnMount();
+  }, []); // Solo se ejecuta al montar el componente
+
   // Recargar pedidos cuando hay un upload exitoso
   useEffect(() => {
     if (onUploadSuccess) {

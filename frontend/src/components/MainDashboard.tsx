@@ -8,11 +8,21 @@ import { Upload, BarChart3, Package } from 'lucide-react';
 export const MainDashboard: FC = () => {
   const [activeTab, setActiveTab] = useState('upload');
   const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(() => {
+    // Verificar si hay datos cargados en localStorage
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('immermex_data_loaded') === 'true';
+    }
+    return false;
+  });
 
   const handleUploadSuccess = () => {
     setUploadSuccess(true);
     setDataLoaded(true);
+    // Persistir en localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('immermex_data_loaded', 'true');
+    }
     // Cambiar automáticamente a la pestaña de dashboard general
     setActiveTab('dashboard');
   };
@@ -22,6 +32,15 @@ export const MainDashboard: FC = () => {
     // Si hay datos cargados y se cambia a pedidos, no necesitamos recargar
     if (tab === 'pedidos' && dataLoaded) {
       console.log('Cambiando a pestaña de pedidos con datos ya cargados');
+    }
+  };
+
+  const handleNewUpload = () => {
+    // Limpiar estado anterior cuando se sube un nuevo archivo
+    setUploadSuccess(false);
+    setDataLoaded(false);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('immermex_data_loaded');
     }
   };
 
@@ -55,7 +74,7 @@ export const MainDashboard: FC = () => {
 
           <TabsContent value="upload" className="mt-6">
             <div className="max-w-2xl mx-auto">
-              <FileUpload onUploadSuccess={handleUploadSuccess} />
+              <FileUpload onUploadSuccess={handleUploadSuccess} onNewUpload={handleNewUpload} />
             </div>
           </TabsContent>
 

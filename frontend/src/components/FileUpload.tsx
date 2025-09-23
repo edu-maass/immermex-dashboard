@@ -8,11 +8,13 @@ import { apiService } from '../services/api';
 interface FileUploadProps {
   onUploadSuccess?: (data: any) => void;
   onUploadError?: (error: string) => void;
+  onNewUpload?: () => void;
 }
 
 export const FileUpload: FC<FileUploadProps> = ({
   onUploadSuccess,
-  onUploadError
+  onUploadError,
+  onNewUpload
 }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -21,6 +23,11 @@ export const FileUpload: FC<FileUploadProps> = ({
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
+
+    // Notificar que se está iniciando un nuevo upload
+    if (onNewUpload) {
+      onNewUpload();
+    }
 
     setUploading(true);
     setUploadStatus('idle');
