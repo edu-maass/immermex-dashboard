@@ -997,34 +997,95 @@ def process_excel_from_bytes(file_bytes: bytes, filename: str) -> Tuple[Dict[str
         raise
 
 def _map_facturacion_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Mapea columnas de facturación a nombres estándar usando mapeo directo por posición"""
+    """Mapea columnas de facturación usando enfoque híbrido: nombre + posición"""
     df_mapped = df.copy()
     
-    # Mapeo directo por posición basado en las columnas observadas
+    # Mapeo por nombre de columna (flexible)
+    column_mapping = {
+        # Fecha - múltiples variaciones
+        'fecha': 'fecha_factura',
+        'fecha de factura': 'fecha_factura',
+        'fecha_factura': 'fecha_factura',
+        'todos los documentos': 'fecha_factura',
+        'Fecha': 'fecha_factura',
+        
+        # Serie y Folio
+        'serie': 'serie_factura',
+        'serie factura': 'serie_factura',
+        'serie_factura': 'serie_factura',
+        'Serie': 'serie_factura',
+        'folio': 'folio_factura',
+        'folio factura': 'folio_factura',
+        'folio_factura': 'folio_factura',
+        'Folio': 'folio_factura',
+        
+        # Cliente - múltiples variaciones
+        'cliente': 'cliente',
+        'razón social': 'cliente',
+        'razon social': 'cliente',
+        'nombre cliente': 'cliente',
+        'Razón Social': 'cliente',
+        
+        # Montos
+        'neto': 'monto_neto',
+        'monto neto': 'monto_neto',
+        'monto_neto': 'monto_neto',
+        'subtotal': 'monto_neto',
+        'Neto': 'monto_neto',
+        'total': 'monto_total',
+        'monto total': 'monto_total',
+        'monto_total': 'monto_total',
+        'importe total': 'monto_total',
+        'Total': 'monto_total',
+        
+        # Pendiente
+        'pendiente': 'saldo_pendiente',
+        'saldo pendiente': 'saldo_pendiente',
+        'saldo_pendiente': 'saldo_pendiente',
+        'Pendiente': 'saldo_pendiente',
+        
+        # UUID
+        'uuid': 'uuid_factura',
+        'uuid_factura': 'uuid_factura',
+        'UUID': 'uuid_factura'
+    }
+    
+    # Mapeo por nombre (case-insensitive)
+    for old_name, new_name in column_mapping.items():
+        for col in df_mapped.columns:
+            if isinstance(col, str) and col.lower() == old_name.lower():
+                df_mapped[new_name] = df_mapped[col]
+                break
+    
+    # Mapeo por posición como fallback (solo si no se encontró por nombre)
     columns = list(df_mapped.columns)
     
-    # Mapeo por posición (más confiable)
-    if len(columns) >= 1:
-        df_mapped['fecha_factura'] = df_mapped.iloc[:, 0]  # 'Todos los Documentos'
-    if len(columns) >= 2:
-        df_mapped['serie_factura'] = df_mapped.iloc[:, 1]  # 'Unnamed: 1'
-    if len(columns) >= 3:
-        df_mapped['folio_factura'] = df_mapped.iloc[:, 2]  # 'Unnamed: 2'
-    if len(columns) >= 4:
-        df_mapped['cliente'] = df_mapped.iloc[:, 3]        # 'Unnamed: 3'
-    if len(columns) >= 5:
-        df_mapped['monto_neto'] = df_mapped.iloc[:, 4]     # 'Unnamed: 4'
-    if len(columns) >= 6:
-        df_mapped['monto_total'] = df_mapped.iloc[:, 5]    # 'Unnamed: 5'
-    if len(columns) >= 7:
-        df_mapped['saldo_pendiente'] = df_mapped.iloc[:, 6] # 'Unnamed: 6'
-    if len(columns) >= 14:
-        df_mapped['uuid_factura'] = df_mapped.iloc[:, 13]  # 'Unnamed: 13'
+    if 'fecha_factura' not in df_mapped.columns and len(columns) >= 1:
+        df_mapped['fecha_factura'] = df_mapped.iloc[:, 0]
+    if 'serie_factura' not in df_mapped.columns and len(columns) >= 2:
+        df_mapped['serie_factura'] = df_mapped.iloc[:, 1]
+    if 'folio_factura' not in df_mapped.columns and len(columns) >= 3:
+        df_mapped['folio_factura'] = df_mapped.iloc[:, 2]
+    if 'cliente' not in df_mapped.columns and len(columns) >= 4:
+        df_mapped['cliente'] = df_mapped.iloc[:, 3]
+    if 'monto_neto' not in df_mapped.columns and len(columns) >= 5:
+        df_mapped['monto_neto'] = df_mapped.iloc[:, 4]
+    if 'monto_total' not in df_mapped.columns and len(columns) >= 6:
+        df_mapped['monto_total'] = df_mapped.iloc[:, 5]
+    if 'saldo_pendiente' not in df_mapped.columns and len(columns) >= 7:
+        df_mapped['saldo_pendiente'] = df_mapped.iloc[:, 6]
+    if 'agente' not in df_mapped.columns and len(columns) >= 11:
+        df_mapped['agente'] = df_mapped.iloc[:, 10]        # 'Unnamed: 10'
+    if 'uuid_factura' not in df_mapped.columns and len(columns) >= 14:
+        df_mapped['uuid_factura'] = df_mapped.iloc[:, 13]
+    
+    # Log para debugging
+    logger.info(f"Mapeo final facturación: {len([col for col in df_mapped.columns if col in ['fecha_factura', 'serie_factura', 'folio_factura', 'cliente', 'monto_neto', 'monto_total', 'saldo_pendiente', 'agente', 'uuid_factura']])} columnas mapeadas")
     
     return df_mapped
 
 def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Mapea columnas de cobranza a nombres estándar usando mapeo directo por posición"""
+    """Mapea columnas de cobranza usando enfoque híbrido: nombre + posición"""
     df_mapped = df.copy()
     
     # Manejar columnas especiales (datetime, etc.)
@@ -1034,23 +1095,96 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
             df_mapped['fecha_pago'] = df_mapped[col]
             break
     
-    # Mapeo directo por posición (más confiable)
+    # Mapeo por nombre de columna (flexible)
+    column_mapping = {
+        'fecha de pago': 'fecha_pago',
+        'fecha_pago': 'fecha_pago',
+        'fecha pago': 'fecha_pago',
+        'fecha cobro': 'fecha_pago',
+        'Fecha': 'fecha_pago',
+        
+        'serie pago': 'serie_pago',
+        'serie_pago': 'serie_pago',
+        'serie': 'serie_pago',
+        'Serie': 'serie_pago',
+        
+        'folio pago': 'folio_pago',
+        'folio_pago': 'folio_pago',
+        'folio': 'folio_pago',
+        'Folio': 'folio_pago',
+        
+        'cliente': 'cliente',
+        'razón social': 'cliente',
+        'razon social': 'cliente',
+        'Cliente': 'cliente',
+        
+        'moneda': 'moneda',
+        'tipo de cambio': 'tipo_cambio',
+        'tipo_cambio': 'tipo_cambio',
+        
+        'forma de pago': 'forma_pago',
+        'forma_pago': 'forma_pago',
+        'método de pago': 'metodo_pago',
+        'metodo_pago': 'metodo_pago',
+        
+        'importe pagado': 'importe_pagado',
+        'importe_pagado': 'importe_pagado',
+        'importe': 'importe_pagado',
+        'Importe': 'importe_pagado',
+        'monto': 'importe_pagado',
+        'total': 'importe_pagado',
+        
+        'uuid': 'uuid_factura_relacionada',
+        'uuid_pago': 'uuid_factura_relacionada',
+        'UUID': 'uuid_factura_relacionada'
+    }
+    
+    # Mapeo por nombre (case-insensitive)
+    for old_name, new_name in column_mapping.items():
+        for col in df_mapped.columns:
+            if isinstance(col, str) and col.lower() == old_name.lower():
+                df_mapped[new_name] = df_mapped[col]
+                break
+    
+    # Mapeo por posición para campos no encontrados
     columns = list(df_mapped.columns)
     
-    # Valores por defecto
-    df_mapped['moneda'] = 'MXN'
-    df_mapped['tipo_cambio'] = 1.0
-    df_mapped['parcialidad'] = 1
-    df_mapped['forma_pago'] = ''
-    df_mapped['serie_pago'] = ''
-    df_mapped['folio_pago'] = ''
-    df_mapped['cliente'] = ''
-    df_mapped['importe_pagado'] = 0.0
-    df_mapped['uuid_factura_relacionada'] = ''
+    # Mapeo más completo por posición
+    if 'serie_pago' not in df_mapped.columns and len(columns) >= 2:
+        df_mapped['serie_pago'] = df_mapped.iloc[:, 1]     # 'Unnamed: 1'
+    if 'folio_pago' not in df_mapped.columns and len(columns) >= 3:
+        df_mapped['folio_pago'] = df_mapped.iloc[:, 2]     # 'Unnamed: 2'
+    if 'cliente' not in df_mapped.columns and len(columns) >= 4:
+        df_mapped['cliente'] = df_mapped.iloc[:, 3]        # 'Unnamed: 3'
+    if 'importe_pagado' not in df_mapped.columns and len(columns) >= 5:
+        df_mapped['importe_pagado'] = df_mapped.iloc[:, 4] # 'Unnamed: 4'
+    if 'uuid_factura_relacionada' not in df_mapped.columns and len(columns) >= 6:
+        df_mapped['uuid_factura_relacionada'] = df_mapped.iloc[:, 5] # 'Unnamed: 5'
     
-    # Si no hay columna datetime, usar valores por defecto para fecha_pago
+    # Valores por defecto para campos no encontrados
+    if 'moneda' not in df_mapped.columns:
+        df_mapped['moneda'] = 'MXN'
+    if 'tipo_cambio' not in df_mapped.columns:
+        df_mapped['tipo_cambio'] = 1.0
+    if 'parcialidad' not in df_mapped.columns:
+        df_mapped['parcialidad'] = 1
+    if 'forma_pago' not in df_mapped.columns:
+        df_mapped['forma_pago'] = ''
+    if 'serie_pago' not in df_mapped.columns:
+        df_mapped['serie_pago'] = ''
+    if 'folio_pago' not in df_mapped.columns:
+        df_mapped['folio_pago'] = ''
+    if 'cliente' not in df_mapped.columns:
+        df_mapped['cliente'] = ''
+    if 'importe_pagado' not in df_mapped.columns:
+        df_mapped['importe_pagado'] = 0.0
+    if 'uuid_factura_relacionada' not in df_mapped.columns:
+        df_mapped['uuid_factura_relacionada'] = ''
     if 'fecha_pago' not in df_mapped.columns:
         df_mapped['fecha_pago'] = None
+    
+    # Log para debugging
+    logger.info(f"Mapeo final cobranza: {len([col for col in df_mapped.columns if col in ['fecha_pago', 'serie_pago', 'folio_pago', 'cliente', 'importe_pagado', 'uuid_factura_relacionada']])} columnas mapeadas")
     
     return df_mapped
 
@@ -1058,16 +1192,53 @@ def _map_cfdi_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Mapea columnas de CFDI a nombres estándar"""
     df_mapped = df.copy()
     
-    # Mapeo básico para CFDI
+    # Mapeo completo para CFDI
     column_mapping = {
+        'xml': 'xml',
+        'XML': 'xml',
         'Fecha': 'fecha_cfdi',
         'Total': 'importe_relacion',
-        'UUID': 'uuid_cfdi'
+        'UUID': 'uuid_factura_relacionada',
+        'Nombre Receptor': 'cliente_receptor',
+        'Tipo Relación': 'tipo_relacion'
     }
     
+    # Mapeo por nombre (case-insensitive)
     for old_name, new_name in column_mapping.items():
-        if old_name in df_mapped.columns:
-            df_mapped[new_name] = df_mapped[old_name]
+        for col in df_mapped.columns:
+            if isinstance(col, str) and col.lower() == old_name.lower():
+                df_mapped[new_name] = df_mapped[col]
+                break
+    
+    # Mapeo por posición como fallback
+    columns = list(df_mapped.columns)
+    if 'xml' not in df_mapped.columns and len(columns) >= 1:
+        df_mapped['xml'] = df_mapped.iloc[:, 0]             # 'XML'
+    if 'fecha_cfdi' not in df_mapped.columns and len(columns) >= 14:
+        df_mapped['fecha_cfdi'] = df_mapped.iloc[:, 13]     # 'Fecha'
+    if 'importe_relacion' not in df_mapped.columns and len(columns) >= 21:
+        df_mapped['importe_relacion'] = df_mapped.iloc[:, 20] # 'Total'
+    if 'uuid_factura_relacionada' not in df_mapped.columns and len(columns) >= 22:
+        df_mapped['uuid_factura_relacionada'] = df_mapped.iloc[:, 21] # 'UUID'
+    if 'cliente_receptor' not in df_mapped.columns and len(columns) >= 7:
+        df_mapped['cliente_receptor'] = df_mapped.iloc[:, 6] # 'Nombre Receptor'
+    if 'tipo_relacion' not in df_mapped.columns and len(columns) >= 34:
+        df_mapped['tipo_relacion'] = df_mapped.iloc[:, 33]  # 'Tipo Relación'
+    
+    # Valores por defecto
+    if 'xml' not in df_mapped.columns:
+        df_mapped['xml'] = ''
+    if 'importe_relacion' not in df_mapped.columns:
+        df_mapped['importe_relacion'] = 0.0
+    if 'cliente_receptor' not in df_mapped.columns:
+        df_mapped['cliente_receptor'] = ''
+    if 'tipo_relacion' not in df_mapped.columns:
+        df_mapped['tipo_relacion'] = ''
+    if 'uuid_factura_relacionada' not in df_mapped.columns:
+        df_mapped['uuid_factura_relacionada'] = ''
+    
+    # Log para debugging
+    logger.info(f"Mapeo final CFDI: {len([col for col in df_mapped.columns if col in ['xml', 'fecha_cfdi', 'importe_relacion', 'cliente_receptor', 'tipo_relacion', 'uuid_factura_relacionada']])} columnas mapeadas")
     
     return df_mapped
 
