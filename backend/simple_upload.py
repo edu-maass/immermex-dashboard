@@ -831,7 +831,13 @@ async def upload_file(file: UploadFile = File(...)):
 @app.get("/api/filtros/clientes")
 async def get_clientes_filtro():
     """Obtener lista de clientes para filtros"""
-    facturas = processed_data["facturas"]
+    # Usar datos originales si están disponibles, sino usar datos procesados
+    facturas = original_data["facturas"] if original_data["facturas"] else processed_data["facturas"]
+    
+    if not facturas:
+        logger.warning("No hay facturas disponibles para filtro de clientes")
+        return []
+    
     clientes = list(set(f.get("cliente", "") for f in facturas if f.get("cliente") and f.get("cliente") != "nan" and str(f.get("cliente")).strip()))
     logger.info(f"Clientes para filtro: {len(clientes)} - {clientes[:5]}")
     return sorted([c for c in clientes if c])
@@ -839,7 +845,13 @@ async def get_clientes_filtro():
 @app.get("/api/filtros/materiales")
 async def get_materiales_filtro():
     """Obtener lista de materiales para filtros"""
-    pedidos = processed_data["pedidos"]
+    # Usar datos originales si están disponibles, sino usar datos procesados
+    pedidos = original_data["pedidos"] if original_data["pedidos"] else processed_data["pedidos"]
+    
+    if not pedidos:
+        logger.warning("No hay pedidos disponibles para filtro de materiales")
+        return []
+    
     materiales = []
     for pedido in pedidos:
         material = pedido.get("material", "")
@@ -856,7 +868,13 @@ async def get_materiales_filtro():
 @app.get("/api/filtros/pedidos")
 async def get_pedidos_filtro():
     """Obtener lista de números de pedido para filtros"""
-    pedidos = original_data["pedidos"]  # Usar datos originales
+    # Usar datos originales si están disponibles, sino usar datos procesados
+    pedidos = original_data["pedidos"] if original_data["pedidos"] else processed_data["pedidos"]
+    
+    if not pedidos:
+        logger.warning("No hay pedidos disponibles para filtro")
+        return []
+    
     numeros_pedido = list(set(str(p.get("numero_pedido", "")) for p in pedidos if p.get("numero_pedido") and str(p.get("numero_pedido")) != "nan" and str(p.get("numero_pedido")).strip()))
     logger.info(f"Pedidos para filtro: {len(numeros_pedido)} - {numeros_pedido[:5]}")
     return sorted([p for p in numeros_pedido if p])
