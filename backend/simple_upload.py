@@ -522,13 +522,15 @@ async def upload_file(file: UploadFile = File(...)):
                             "fecha_factura": row.get("fecha_factura", "").strftime("%Y-%m-%d") if pd.notna(row.get("fecha_factura")) else "",
                             "serie": str(row.get("serie_factura", "")),
                             "folio": str(row.get("folio_factura", "")),
+                            "folio_factura": str(row.get("folio_factura", "")),  # Agregar campo duplicado para compatibilidad
                             "cliente": str(row.get("cliente", "")),
                             "monto_neto": float(row.get("monto_neto", 0)) if pd.notna(row.get("monto_neto")) else 0.0,
                             "monto_total": float(row.get("monto_total", 0)) if pd.notna(row.get("monto_total")) else 0.0,
                             "saldo_pendiente": float(row.get("saldo_pendiente", 0)) if pd.notna(row.get("saldo_pendiente")) else 0.0,
                             "dias_credito": 30,
                             "agente": "",
-                            "uuid": str(row.get("uuid_factura", ""))
+                            "uuid": str(row.get("uuid_factura", "")),
+                            "uuid_factura": str(row.get("uuid_factura", ""))  # Agregar campo duplicado para compatibilidad
                         }
                         facturas.append(factura)
                     
@@ -684,8 +686,22 @@ async def upload_file(file: UploadFile = File(...)):
                         # Columna 7 (G): Importe - Columna 8 (H): Material - Columna 9 (I): Cliente
                         
                         # Mapeo directo por posición de columna (índice 0-based)
-                        column_mapping_pedidos = {
-                            'Unnamed: 0': 'numero_factura',   # Columna A (número de factura)
+                        # Primero intentar mapeo por nombres de columnas conocidos
+                        column_mapping_pedidos = {}
+                        
+                        # Mapeo por nombres de columnas si están disponibles
+                        if 'No de factura' in df_pedidos.columns:
+                            column_mapping_pedidos['No de factura'] = 'numero_factura'
+                        elif 'Factura' in df_pedidos.columns:
+                            column_mapping_pedidos['Factura'] = 'numero_factura'
+                        elif 'Número de factura' in df_pedidos.columns:
+                            column_mapping_pedidos['Número de factura'] = 'numero_factura'
+                        else:
+                            # Fallback al mapeo por posición
+                            column_mapping_pedidos['Unnamed: 0'] = 'numero_factura'   # Columna A (número de factura)
+                        
+                        # Continuar con el resto del mapeo
+                        column_mapping_pedidos.update({
                             'Hora: 15:59:28:697': 'fecha_pedido',  # Columna B (fecha)
                             'Unnamed: 2': 'numero_pedido',    # Columna C (número de pedido)
                             'FACTURADO': 'total',             # Columna D (total - tiene datos numéricos)
@@ -694,7 +710,7 @@ async def upload_file(file: UploadFile = File(...)):
                             'Unnamed: 6': 'material',         # Columna G (material - para consumo)
                             'Unnamed: 7': 'producto',         # Columna H (producto)
                             'Unnamed: 8': 'cliente'           # Columna I (cliente)
-                        }
+                        })
                         
                         # Renombrar columnas
                         for old_col, new_col in column_mapping_pedidos.items():
@@ -702,6 +718,14 @@ async def upload_file(file: UploadFile = File(...)):
                                 df_pedidos = df_pedidos.rename(columns={old_col: new_col})
                         
                         logger.info(f"Columnas pedidos después del mapeo: {list(df_pedidos.columns)}")
+                        
+                        # Debug: verificar datos de numero_factura
+                        if 'numero_factura' in df_pedidos.columns:
+                            logger.info(f"Valores únicos en 'numero_factura': {df_pedidos['numero_factura'].nunique()}")
+                            logger.info(f"Primeros 5 valores de 'numero_factura': {df_pedidos['numero_factura'].head().tolist()}")
+                            logger.info(f"Valores no nulos en 'numero_factura': {df_pedidos['numero_factura'].notna().sum()}")
+                        else:
+                            logger.warning("Columna 'numero_factura' no encontrada en pedidos")
                         
                         # Verificar datos de material
                         if 'material' in df_pedidos.columns:
@@ -790,9 +814,20 @@ async def upload_file(file: UploadFile = File(...)):
                                 else:
                                     material = "Sin material"
                                 
+                                # Obtener numero_factura de la columna correcta
+                                numero_factura_raw = row.get("numero_factura", "")
+                                numero_factura = ""
+                                if pd.notna(numero_factura_raw) and str(numero_factura_raw).strip() != "":
+                                    try:
+                                        # Intentar convertir a entero y luego a string para limpiar
+                                        numero_factura = str(int(float(str(numero_factura_raw))))
+                                    except (ValueError, TypeError):
+                                        numero_factura = str(numero_factura_raw).strip()
+                                
                                 pedido = {
                                     "fecha_pedido": row.get("fecha_pedido", "").strftime("%Y-%m-%d") if pd.notna(row.get("fecha_pedido")) and hasattr(row.get("fecha_pedido"), 'strftime') else "",
                                     "numero_pedido": numero_pedido,
+                                    "numero_factura": numero_factura,  # Agregar campo numero_factura
                                     "cliente": cliente,
                                     "producto": str(row.get("producto", "Sin producto")),
                                     "material": material,
