@@ -72,8 +72,9 @@ async def startup_event():
             # Verificar conexión
             try:
                 from database import SessionLocal
+                from sqlalchemy import text
                 db = SessionLocal()
-                db.execute("SELECT 1")
+                db.execute(text("SELECT 1"))
                 db.close()
                 logger.info("✅ Conexión a base de datos verificada")
             except Exception as e:
@@ -100,7 +101,8 @@ async def health_check(db: Session = Depends(get_db)):
     """Endpoint de verificación de salud con base de datos"""
     try:
         # Verificar conexión a base de datos
-        db.execute("SELECT 1")
+        from sqlalchemy import text
+        db.execute(text("SELECT 1"))
         
         # Obtener resumen de datos
         db_service = DatabaseService(db)
