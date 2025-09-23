@@ -10,8 +10,10 @@ from datetime import datetime
 class KPIsResponse(BaseModel):
     facturacion_total: float
     cobranza_total: float
+    cobranza_general_total: float  # Todas las cobranzas sin filtro
     anticipos_total: float
     porcentaje_cobrado: float
+    porcentaje_cobrado_general: float  # Porcentaje sobre cobranza general
     rotacion_inventario: float
     total_facturas: int
     clientes_unicos: int

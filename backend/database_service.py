@@ -428,9 +428,13 @@ class DatabaseService:
             cobranzas_relacionadas = [c for c in cobranzas if c.uuid_factura_relacionada in facturas_uuids]
             cobranza_total = sum(c.importe_pagado for c in cobranzas_relacionadas)
             
+            # Cobranza general (todas las cobranzas sin filtro)
+            cobranza_general_total = sum(c.importe_pagado for c in cobranzas)
+            
             anticipos_total = sum(a.importe_relacion for a in anticipos)
             
             porcentaje_cobrado = (cobranza_total / facturacion_total * 100) if facturacion_total > 0 else 0
+            porcentaje_cobrado_general = (cobranza_general_total / facturacion_total * 100) if facturacion_total > 0 else 0
             
             # Aging de cartera
             aging_cartera = self._calculate_aging_cartera(facturas)
@@ -453,9 +457,11 @@ class DatabaseService:
                 "facturacion_total": round(facturacion_total, 2),
                 "facturacion_sin_iva": round(sum(f.monto_neto for f in facturas), 2),
                 "cobranza_total": round(cobranza_total, 2),
+                "cobranza_general_total": round(cobranza_general_total, 2),
                 "cobranza_sin_iva": round(sum(f.monto_neto for f in facturas if f.importe_cobrado > 0), 2),
                 "anticipos_total": round(anticipos_total, 2),
                 "porcentaje_cobrado": round(porcentaje_cobrado, 2),
+                "porcentaje_cobrado_general": round(porcentaje_cobrado_general, 2),
                 "total_facturas": total_facturas,
                 "clientes_unicos": clientes_unicos,
                 "pedidos_unicos": pedidos_unicos,
@@ -527,9 +533,11 @@ class DatabaseService:
             "facturacion_total": 0.0,
             "facturacion_sin_iva": 0.0,
             "cobranza_total": 0.0,
+            "cobranza_general_total": 0.0,
             "cobranza_sin_iva": 0.0,
             "anticipos_total": 0.0,
             "porcentaje_cobrado": 0.0,
+            "porcentaje_cobrado_general": 0.0,
             "total_facturas": 0,
             "clientes_unicos": 0,
             "pedidos_unicos": 0,
