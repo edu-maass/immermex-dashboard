@@ -1064,7 +1064,8 @@ def _map_facturacion_columns(df: pd.DataFrame) -> pd.DataFrame:
     for old_name, new_name in column_mapping.items():
         # Buscar coincidencia exacta o case-insensitive
         for col in df_mapped.columns:
-            if col.lower() == old_name.lower():
+            # Verificar que la columna sea string antes de hacer .lower()
+            if isinstance(col, str) and col.lower() == old_name.lower():
                 df_mapped[new_name] = df_mapped[col]
                 break
     
@@ -1073,6 +1074,13 @@ def _map_facturacion_columns(df: pd.DataFrame) -> pd.DataFrame:
 def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Mapea columnas de cobranza a nombres estándar usando el mapeo original"""
     df_mapped = df.copy()
+    
+    # Manejar columnas especiales (datetime, etc.)
+    for col in df_mapped.columns:
+        if isinstance(col, datetime.datetime):
+            # Mapear columnas datetime a fecha_pago
+            df_mapped['fecha_pago'] = df_mapped[col]
+            break
     
     # Mapeo de columnas flexible y completo (copiado del método original)
     column_mapping = {
@@ -1121,7 +1129,8 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
     # Renombrar columnas que existen (case-insensitive)
     for old_name, new_name in column_mapping.items():
         for col in df_mapped.columns:
-            if col.lower() == old_name.lower():
+            # Verificar que la columna sea string antes de hacer .lower()
+            if isinstance(col, str) and col.lower() == old_name.lower():
                 df_mapped[new_name] = df_mapped[col]
                 break
     
@@ -1200,7 +1209,8 @@ def _map_pedidos_columns(df: pd.DataFrame) -> pd.DataFrame:
     # Renombrar columnas que existen (case-insensitive)
     for old_name, new_name in column_mapping.items():
         for col in df_mapped.columns:
-            if col.lower() == old_name.lower():
+            # Verificar que la columna sea string antes de hacer .lower()
+            if isinstance(col, str) and col.lower() == old_name.lower():
                 df_mapped[new_name] = df_mapped[col]
                 break
     
