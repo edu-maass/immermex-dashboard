@@ -21,7 +21,12 @@ import {
   Clock
 } from 'lucide-react';
 
-export const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onUploadSuccess?: () => void;
+  dataLoaded?: boolean;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
   const [kpis, setKpis] = useState<KPIs | null>(null);
   const [agingData, setAgingData] = useState<GraficoDatos | null>(null);
   const [topClientesData, setTopClientesData] = useState<GraficoDatos | null>(null);

@@ -12,9 +12,10 @@ import { ExpectativaCobranzaChart } from './Charts/ExpectativaCobranzaChart';
 
 interface DashboardFiltradoProps {
   onUploadSuccess?: () => void;
+  dataLoaded?: boolean;
 }
 
-export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess }) => {
+export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess, dataLoaded }) => {
   const [kpis, setKpis] = useState<KPIs | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,9 +46,40 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
   };
 
   useEffect(() => {
-    // Inicializar con datos en cero (sin pedidos seleccionados)
-    loadData([]);
-  }, []);
+    // Verificar si hay datos disponibles antes de inicializar
+    const checkDataAvailability = async () => {
+      try {
+        // Si ya sabemos que hay datos cargados, cargar directamente
+        if (dataLoaded) {
+          console.log('Datos ya cargados, mostrando dashboard general');
+          await apiService.aplicarFiltrosPedido([]); // Limpiar filtros para mostrar todos los datos
+          const kpisData = await apiService.getKPIs();
+          setKpis(kpisData as KPIs);
+          return;
+        }
+
+        // Si no sabemos el estado, verificar si hay pedidos disponibles
+        const pedidos = await apiService.getPedidosFiltro();
+        if (pedidos.length > 0) {
+          // Si hay pedidos, cargar datos generales (sin filtro)
+          console.log('Datos disponibles encontrados, cargando dashboard general');
+          await apiService.aplicarFiltrosPedido([]); // Limpiar filtros para mostrar todos los datos
+          const kpisData = await apiService.getKPIs();
+          setKpis(kpisData as KPIs);
+        } else {
+          // Si no hay pedidos, mostrar datos en cero
+          console.log('No hay datos disponibles, mostrando datos en cero');
+          loadData([]);
+        }
+      } catch (error) {
+        console.error('Error verificando disponibilidad de datos:', error);
+        // En caso de error, mostrar datos en cero
+        loadData([]);
+      }
+    };
+    
+    checkDataAvailability();
+  }, [dataLoaded]);
 
   // Recargar pedidos cuando hay un upload exitoso
   useEffect(() => {
@@ -151,6 +183,7 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
           onPedidosChange={handlePedidosChange}
           onClearPedidos={handleClearPedidos}
           onUploadSuccess={!!onUploadSuccess}
+          dataLoaded={dataLoaded}
         />
       </div>
 

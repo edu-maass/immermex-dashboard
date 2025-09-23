@@ -10,9 +10,10 @@ interface PedidoFilterProps {
   onPedidosChange: (pedidos: string[]) => void;
   onClearPedidos: () => void;
   onUploadSuccess?: boolean;
+  dataLoaded?: boolean;
 }
 
-export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPedidos, onUploadSuccess }) => {
+export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPedidos, onUploadSuccess, dataLoaded }) => {
   const [pedidosDisponibles, setPedidosDisponibles] = useState<string[]>([]);
   const [pedidosSeleccionados, setPedidosSeleccionados] = useState<string[]>([]);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<string>('');
@@ -21,6 +22,11 @@ export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPe
   useEffect(() => {
     const cargarPedidos = async () => {
       try {
+        // Si ya sabemos que hay datos cargados, cargar directamente
+        if (dataLoaded) {
+          console.log('Datos ya cargados, cargando pedidos directamente');
+        }
+        
         const pedidos = await apiService.getPedidosFiltro();
         setPedidosDisponibles(pedidos);
         console.log('Pedidos cargados en PedidoFilter:', pedidos);
@@ -29,7 +35,7 @@ export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPe
       }
     };
     cargarPedidos();
-  }, []);
+  }, [dataLoaded]);
 
   // Recargar pedidos si el dropdown está vacío (con retry)
   useEffect(() => {

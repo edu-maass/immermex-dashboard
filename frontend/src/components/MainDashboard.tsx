@@ -8,11 +8,21 @@ import { Upload, BarChart3, Package } from 'lucide-react';
 export const MainDashboard: FC = () => {
   const [activeTab, setActiveTab] = useState('upload');
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   const handleUploadSuccess = () => {
     setUploadSuccess(true);
+    setDataLoaded(true);
     // Cambiar automáticamente a la pestaña de dashboard general
     setActiveTab('dashboard');
+  };
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    // Si hay datos cargados y se cambia a pedidos, no necesitamos recargar
+    if (tab === 'pedidos' && dataLoaded) {
+      console.log('Cambiando a pestaña de pedidos con datos ya cargados');
+    }
   };
 
   return (
@@ -27,7 +37,7 @@ export const MainDashboard: FC = () => {
           </p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="upload" className="flex items-center gap-2">
               <Upload className="h-4 w-4" />
@@ -54,7 +64,7 @@ export const MainDashboard: FC = () => {
           </TabsContent>
 
           <TabsContent value="pedidos" className="mt-6">
-            <DashboardFiltrado onUploadSuccess={handleUploadSuccess} />
+            <DashboardFiltrado onUploadSuccess={handleUploadSuccess} dataLoaded={dataLoaded} />
           </TabsContent>
         </Tabs>
       </div>
