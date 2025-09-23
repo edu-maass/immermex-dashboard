@@ -937,6 +937,16 @@ def process_excel_from_bytes(file_bytes: bytes, filename: str) -> Tuple[Dict[str
             # Eliminar columnas completamente vacías
             df_clean = df_clean.dropna(axis=1, how='all')
             
+            # Mapear columnas según el tipo de hoja
+            if 'facturacion' in sheet_name.lower():
+                df_clean = self._map_facturacion_columns(df_clean)
+            elif 'cobranza' in sheet_name.lower():
+                df_clean = self._map_cobranza_columns(df_clean)
+            elif 'cfdi' in sheet_name.lower() or 'relacionado' in sheet_name.lower():
+                df_clean = self._map_cfdi_columns(df_clean)
+            else:
+                df_clean = self._map_pedidos_columns(df_clean)
+            
             # Agregar información de la hoja
             df_clean['hoja_origen'] = sheet_name
             df_clean['archivo_origen'] = filename
@@ -981,6 +991,82 @@ def process_excel_from_bytes(file_bytes: bytes, filename: str) -> Tuple[Dict[str
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
         raise
+
+def _map_facturacion_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Mapea columnas de facturación a nombres estándar"""
+    df_mapped = df.copy()
+    
+    # Mapeo básico de columnas comunes
+    column_mapping = {
+        'Fecha': 'fecha_factura',
+        'Serie': 'serie_factura', 
+        'Folio': 'folio_factura',
+        'Razón Social': 'cliente',
+        'Nombre del agente': 'agente',
+        'Neto': 'monto_neto',
+        'Total': 'monto_total',
+        'Pendiente': 'saldo_pendiente',
+        'UUID': 'uuid_factura'
+    }
+    
+    # Renombrar columnas que existen
+    for old_name, new_name in column_mapping.items():
+        if old_name in df_mapped.columns:
+            df_mapped[new_name] = df_mapped[old_name]
+    
+    return df_mapped
+
+def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Mapea columnas de cobranza a nombres estándar"""
+    df_mapped = df.copy()
+    
+    # Mapeo básico para cobranza
+    column_mapping = {
+        'Fecha': 'fecha_pago',
+        'Importe': 'importe_pagado',
+        'Cliente': 'cliente'
+    }
+    
+    for old_name, new_name in column_mapping.items():
+        if old_name in df_mapped.columns:
+            df_mapped[new_name] = df_mapped[old_name]
+    
+    return df_mapped
+
+def _map_cfdi_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Mapea columnas de CFDI a nombres estándar"""
+    df_mapped = df.copy()
+    
+    # Mapeo básico para CFDI
+    column_mapping = {
+        'Fecha': 'fecha_cfdi',
+        'Total': 'importe_relacion',
+        'UUID': 'uuid_cfdi'
+    }
+    
+    for old_name, new_name in column_mapping.items():
+        if old_name in df_mapped.columns:
+            df_mapped[new_name] = df_mapped[old_name]
+    
+    return df_mapped
+
+def _map_pedidos_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Mapea columnas de pedidos a nombres estándar"""
+    df_mapped = df.copy()
+    
+    # Mapeo básico para pedidos
+    column_mapping = {
+        'Fecha': 'fecha_factura',
+        'Pedido': 'pedido',
+        'Cliente': 'cliente',
+        'Total': 'monto_total'
+    }
+    
+    for old_name, new_name in column_mapping.items():
+        if old_name in df_mapped.columns:
+            df_mapped[new_name] = df_mapped[old_name]
+    
+    return df_mapped
 
 def load_and_clean_excel(file_path: str) -> Dict[str, pd.DataFrame]:
     """
