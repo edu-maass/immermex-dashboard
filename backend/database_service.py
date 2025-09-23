@@ -237,9 +237,9 @@ class DatabaseService:
                     moneda=str(cobranza_data.get('moneda', 'MXN')).strip(),
                     tipo_cambio=safe_float(cobranza_data.get('tipo_cambio', 1.0)),
                     forma_pago=str(cobranza_data.get('forma_pago', '')).strip(),
-                    parcialidad=safe_int(cobranza_data.get('parcialidad', 1)),
+                    parcialidad=safe_int(cobranza_data.get('numero_parcialidades', cobranza_data.get('parcialidad', 1))),
                     importe_pagado=safe_float(cobranza_data.get('importe_pagado', 0)),
-                    uuid_factura_relacionada=str(cobranza_data.get('uuid_factura_relacionada', '')).strip(),
+                    uuid_factura_relacionada=str(cobranza_data.get('uuid_relacionado', cobranza_data.get('uuid_factura_relacionada', ''))).strip(),
                     archivo_id=archivo_id
                 )
                 self.db.add(cobranza)
