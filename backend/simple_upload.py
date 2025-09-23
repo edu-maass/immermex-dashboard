@@ -957,13 +957,14 @@ async def aplicar_filtros_pedido(pedidos: List[str] = Query([])):
     logger.info(f"Recibiendo filtros de pedido: {pedidos}")
     
     if not pedidos or len(pedidos) == 0:
-        # Sin filtros de pedido, usar datos originales
+        # Sin filtros de pedido, establecer datos vacíos (KPIs en cero)
         processed_data = {
-            "facturas": original_data["facturas"].copy(),
-            "cobranzas": original_data["cobranzas"].copy(),
-            "anticipos": original_data["anticipos"].copy(),
-            "pedidos": original_data["pedidos"].copy()
+            "facturas": [],
+            "cobranzas": [],
+            "anticipos": [],
+            "pedidos": []
         }
+        logger.info("No pedidos seleccionados - KPIs en cero")
     else:
         # 1. Filtrar pedidos por números seleccionados
         pedidos_filtrados = []

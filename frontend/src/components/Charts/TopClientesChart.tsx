@@ -8,12 +8,9 @@ interface TopClientesChartProps {
 
 export const TopClientesChart: FC<TopClientesChartProps> = ({ data }) => {
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
+    if (value >= 1000000) return `$${Math.round(value / 1000000)}M`;
+    if (value >= 1000) return `$${Math.round(value / 1000)}K`;
+    return `$${value.toFixed(0)}`;
   };
 
   // Limitar a 10 clientes y truncar nombres a 20 caracteres
@@ -28,7 +25,7 @@ export const TopClientesChart: FC<TopClientesChartProps> = ({ data }) => {
         <CardTitle>Top 10 Clientes por Facturación</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-80">
+        <div className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart 
               data={limitedData} 

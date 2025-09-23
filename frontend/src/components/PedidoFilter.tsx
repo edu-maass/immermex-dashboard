@@ -22,12 +22,31 @@ export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPe
       try {
         const pedidos = await apiService.getPedidosFiltro();
         setPedidosDisponibles(pedidos);
+        console.log('Pedidos cargados en PedidoFilter:', pedidos);
       } catch (error) {
         console.error('Error cargando pedidos:', error);
       }
     };
     cargarPedidos();
   }, []);
+
+  // Recargar pedidos si el dropdown está vacío
+  useEffect(() => {
+    if (pedidosDisponibles.length === 0) {
+      const recargarPedidos = async () => {
+        try {
+          const pedidos = await apiService.getPedidosFiltro();
+          if (pedidos.length > 0) {
+            setPedidosDisponibles(pedidos);
+            console.log('Pedidos recargados:', pedidos);
+          }
+        } catch (error) {
+          console.error('Error recargando pedidos:', error);
+        }
+      };
+      recargarPedidos();
+    }
+  }, [pedidosDisponibles.length]);
 
   const handleAgregarPedido = () => {
     if (pedidoSeleccionado && !pedidosSeleccionados.includes(pedidoSeleccionado)) {

@@ -26,15 +26,9 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
     setError(null);
     
     try {
-      // Aplicar filtros de pedido si existen
-      if (pedidosAplicar && pedidosAplicar.length > 0) {
-        console.log('Aplicando filtros de pedido:', pedidosAplicar);
-        await apiService.aplicarFiltrosPedido(pedidosAplicar);
-      } else {
-        console.log('Sin filtros de pedido, usando datos originales');
-        // Si no hay pedidos seleccionados, no aplicar filtros (usar datos originales)
-        // No llamar a aplicarFiltrosPedido([]) para evitar limpiar los datos
-      }
+      // Aplicar filtros de pedido (incluso si es array vacío)
+      console.log('Aplicando filtros de pedido:', pedidosAplicar || []);
+      await apiService.aplicarFiltrosPedido(pedidosAplicar || []);
       
       // Obtener KPIs
       console.log('Obteniendo KPIs...');
@@ -54,6 +48,13 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
     loadData();
   }, []);
 
+  // Recargar pedidos cuando hay un upload exitoso
+  useEffect(() => {
+    if (onUploadSuccess) {
+      loadData([]);
+    }
+  }, [onUploadSuccess]);
+
   const handlePedidosChange = (pedidos: string[]) => {
     console.log('DashboardFiltrado recibiendo pedidos:', pedidos);
     setPedidosSeleccionados(pedidos);
@@ -63,9 +64,8 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess 
   const handleClearPedidos = async () => {
     console.log('DashboardFiltrado limpiando pedidos');
     setPedidosSeleccionados([]);
-    // No llamar a aplicarFiltrosPedido([]) para evitar limpiar los datos
-    // Solo recargar con datos originales
-    loadData();
+    // Llamar a loadData con array vacío para establecer KPIs en cero
+    loadData([]);
   };
 
   const formatCurrency = (value: number) => {
