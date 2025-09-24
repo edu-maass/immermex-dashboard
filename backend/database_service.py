@@ -448,6 +448,9 @@ class DatabaseService:
             # Consumo por material
             consumo_material = self._calculate_consumo_material(pedidos)
             
+            # Expectativa de cobranza futura
+            expectativa_cobranza = self._calculate_expectativa_cobranza(facturas_validas, pedidos)
+            
             # Métricas adicionales
             total_facturas = len(facturas_validas)
             clientes_unicos = len(set(f.cliente for f in facturas_validas if f.cliente))
@@ -482,6 +485,7 @@ class DatabaseService:
                 "aging_cartera": aging_cartera,
                 "top_clientes": top_clientes,
                 "consumo_material": consumo_material,
+                "expectativa_cobranza": expectativa_cobranza,
                 "rotacion_inventario": 0,  # Se calcularía con datos de inventario
                 "dias_cxc_ajustado": 0,    # Se calcularía con datos de inventario
                 "ciclo_efectivo": 0        # Se calcularía con datos de inventario
@@ -548,6 +552,62 @@ class DatabaseService:
         sorted_materiales = sorted(materiales_consumo.items(), key=lambda x: x[1], reverse=True)
         return dict(sorted_materiales[:10])
     
+    def _calculate_expectativa_cobranza(self, facturas: list, pedidos: list) -> dict:
+        """Calcula expectativa de cobranza futura basada en pedidos pendientes"""
+        from datetime import datetime, timedelta
+        
+        expectativa = {}
+        
+        # Obtener fecha actual
+        hoy = datetime.now()
+        
+        # Agrupar pedidos por semana (próximas 8 semanas)
+        for i in range(8):
+            semana_inicio = hoy + timedelta(weeks=i)
+            semana_fin = semana_inicio + timedelta(days=6)
+            semana_key = f"Semana {i+1} ({semana_inicio.strftime('%d/%m')} - {semana_fin.strftime('%d/%m')})"
+            
+            # Calcular expectativa basada en:
+            # 1. Facturas pendientes que vencen en esa semana
+            # 2. Pedidos que se esperan facturar en esa semana
+            # 3. Promedio histórico de cobranza por semana
+            
+            # Facturas que vencen en esa semana (basado en días de crédito)
+            facturas_vencen = [
+                f for f in facturas 
+                if f.saldo_pendiente > 0 and f.fecha_factura
+            ]
+            
+            # Calcular monto esperado de cobranza
+            cobranza_esperada = 0
+            pedidos_pendientes = 0
+            
+            # Para facturas que vencen en esa semana
+            for factura in facturas_vencen:
+                if factura.fecha_factura and factura.dias_credito:
+                    fecha_vencimiento = factura.fecha_factura + timedelta(days=factura.dias_credito)
+                    if semana_inicio <= fecha_vencimiento <= semana_fin:
+                        cobranza_esperada += factura.saldo_pendiente * 0.8  # 80% de probabilidad de cobro
+            
+            # Para pedidos que se esperan facturar (estimación basada en promedio histórico)
+            pedidos_semana = [p for p in pedidos if p.fecha_factura and semana_inicio <= p.fecha_factura <= semana_fin]
+            pedidos_pendientes = len(pedidos_semana)
+            
+            # Estimación de facturación futura basada en pedidos (promedio histórico de precio por kg)
+            if pedidos_semana:
+                kg_total = sum(p.kg for p in pedidos_semana)
+                # Estimación conservadora: $50 pesos por kg (ajustar según datos históricos)
+                facturacion_estimada = kg_total * 50
+                cobranza_esperada += facturacion_estimada * 0.6  # 60% de probabilidad de cobro inmediato
+            
+            expectativa[semana_key] = {
+                'cobranza_esperada': round(cobranza_esperada, 2),
+                'cobranza_real': 0,  # Se llenará con datos reales cuando estén disponibles
+                'pedidos_pendientes': pedidos_pendientes
+            }
+        
+        return expectativa
+    
     def _get_default_kpis(self) -> dict:
         """Retorna KPIs por defecto cuando no hay datos"""
         return {
@@ -567,6 +627,7 @@ class DatabaseService:
             "aging_cartera": {},
             "top_clientes": {},
             "consumo_material": {},
+            "expectativa_cobranza": {},
             "rotacion_inventario": 0.0,
             "dias_cxc_ajustado": 0.0,
             "ciclo_efectivo": 0.0

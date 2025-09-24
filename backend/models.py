@@ -9,7 +9,9 @@ from datetime import datetime
 # Modelos de respuesta para KPIs
 class KPIsResponse(BaseModel):
     facturacion_total: float
+    facturacion_sin_iva: float
     cobranza_total: float
+    cobranza_sin_iva: float
     cobranza_general_total: float  # Todas las cobranzas sin filtro
     anticipos_total: float
     porcentaje_anticipos: float  # Porcentaje de anticipos sobre facturación
@@ -18,9 +20,12 @@ class KPIsResponse(BaseModel):
     rotacion_inventario: float
     total_facturas: int
     clientes_unicos: int
+    pedidos_unicos: int
+    toneladas_total: float
     aging_cartera: Dict[str, int]
     top_clientes: Dict[str, float]
     consumo_material: Dict[str, float]
+    expectativa_cobranza: Dict[str, Dict[str, float]]  # Cobranza futura esperada
 
 class FacturacionResponse(BaseModel):
     id: int

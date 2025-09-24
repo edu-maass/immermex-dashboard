@@ -7,6 +7,7 @@ import { AgingChart } from './Charts/AgingChart';
 import { TopClientesChart } from './Charts/TopClientesChart';
 import { ConsumoMaterialChart } from './Charts/ConsumoMaterialChart';
 import { ExpectativaCobranzaChart } from './Charts/ExpectativaCobranzaChart';
+import { CobranzaFuturaChart } from './Charts/CobranzaFuturaChart';
 import { apiService } from '../services/api';
 import { KPIs, FiltrosDashboard, GraficoDatos } from '../types';
 import { 
@@ -122,7 +123,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
     return Object.entries(materiales).map(([name, value]) => ({ name, value }));
   };
 
-  const formatExpectativaCobranzaData = (expectativa: Record<string, {cobranza_esperada: number, cobranza_real: number}>) => {
+  const formatExpectativaCobranzaData = (expectativa: Record<string, {cobranza_esperada: number, cobranza_real: number, pedidos_pendientes: number}>) => {
+    return Object.entries(expectativa).map(([semana, datos]) => ({
+      semana,
+      cobranza_esperada: datos.cobranza_esperada,
+      cobranza_real: datos.cobranza_real,
+      pedidos_pendientes: datos.pedidos_pendientes
+    }));
+  };
+
+  const formatExpectativaCobranzaDataOld = (expectativa: Record<string, {cobranza_esperada: number, cobranza_real: number}>) => {
     // Convertir a array y ordenar por semana (ya viene ordenado del backend)
     return Object.entries(expectativa).map(([semana, datos]) => ({
       semana,
@@ -298,6 +308,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
         {/* Expectativa de Cobranza */}
         {kpis && kpis.expectativa_cobranza && Object.keys(kpis.expectativa_cobranza).length > 0 && (
           <ExpectativaCobranzaChart 
+            data={formatExpectativaCobranzaDataOld(kpis.expectativa_cobranza)}
+          />
+        )}
+      </div>
+
+      {/* Nueva fila para gráfico de cobranza futura */}
+      <div className="grid grid-cols-1 gap-6 mt-6">
+        {/* Cobranza Futura Esperada */}
+        {kpis && kpis.expectativa_cobranza && Object.keys(kpis.expectativa_cobranza).length > 0 && (
+          <CobranzaFuturaChart 
             data={formatExpectativaCobranzaData(kpis.expectativa_cobranza)}
           />
         )}
