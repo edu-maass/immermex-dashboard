@@ -1022,6 +1022,8 @@ def _convert_dias_credito(value):
 
 def _map_facturacion_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Mapea columnas de facturación usando enfoque híbrido: nombre + posición"""
+    logger.info(f"=== INICIANDO MAPEO FACTURACION ===")
+    logger.info(f"Columnas originales: {list(df.columns)}")
     df_mapped = df.copy()
     
     # Mapeo por nombre de columna (flexible)
@@ -1129,6 +1131,7 @@ def _map_facturacion_columns(df: pd.DataFrame) -> pd.DataFrame:
         sample_credito = df_mapped['dias_credito'].head(3).tolist()
         logger.info(f"Muestra de días crédito: {sample_credito}")
     
+    logger.info(f"=== FINALIZANDO MAPEO FACTURACION ===")
     return df_mapped
 
 def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
