@@ -12,6 +12,7 @@ class KPIsResponse(BaseModel):
     cobranza_total: float
     cobranza_general_total: float  # Todas las cobranzas sin filtro
     anticipos_total: float
+    porcentaje_anticipos: float  # Porcentaje de anticipos sobre facturación
     porcentaje_cobrado: float
     porcentaje_cobrado_general: float  # Porcentaje sobre cobranza general
     rotacion_inventario: float

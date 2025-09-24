@@ -453,19 +453,29 @@ class DatabaseService:
             pedidos_unicos = len(set(p.pedido for p in pedidos if p.pedido))
             toneladas_total = sum(p.kg for p in pedidos)
             
+            # Calcular facturación sin IVA (monto_neto es sin IVA, monto_total es con IVA)
+            facturacion_sin_iva = sum(f.monto_neto for f in facturas)
+            
+            # Calcular cobranza sin IVA (de las cobranzas relacionadas)
+            cobranza_sin_iva = sum(c.importe_pagado / 1.16 for c in cobranzas_relacionadas if c.importe_pagado > 0)  # Dividir por 1.16 para quitar IVA
+            
+            # Calcular porcentaje de anticipos sobre facturación
+            porcentaje_anticipos = (anticipos_total / facturacion_total * 100) if facturacion_total > 0 else 0
+            
             return {
                 "facturacion_total": round(facturacion_total, 2),
-                "facturacion_sin_iva": round(sum(f.monto_neto for f in facturas), 2),
+                "facturacion_sin_iva": round(facturacion_sin_iva, 2),
                 "cobranza_total": round(cobranza_total, 2),
                 "cobranza_general_total": round(cobranza_general_total, 2),
-                "cobranza_sin_iva": round(sum(f.monto_neto for f in facturas if f.importe_cobrado > 0), 2),
+                "cobranza_sin_iva": round(cobranza_sin_iva, 2),
                 "anticipos_total": round(anticipos_total, 2),
+                "porcentaje_anticipos": round(porcentaje_anticipos, 2),
                 "porcentaje_cobrado": round(porcentaje_cobrado, 2),
                 "porcentaje_cobrado_general": round(porcentaje_cobrado_general, 2),
                 "total_facturas": total_facturas,
                 "clientes_unicos": clientes_unicos,
                 "pedidos_unicos": pedidos_unicos,
-                "toneladas_total": round(toneladas_total, 2),
+                "toneladas_total": round(toneladas_total / 1000, 2),  # Convertir kg a toneladas
                 "aging_cartera": aging_cartera,
                 "top_clientes": top_clientes,
                 "consumo_material": consumo_material,
@@ -519,6 +529,10 @@ class DatabaseService:
         
         for pedido in pedidos:
             material = pedido.material or "Sin material"
+            # Truncar código de material a primeros 7 dígitos para agrupación útil
+            if material != "Sin material" and len(material) > 7:
+                material = material[:7]
+            
             if material not in materiales_consumo:
                 materiales_consumo[material] = 0
             materiales_consumo[material] += pedido.kg
@@ -536,6 +550,7 @@ class DatabaseService:
             "cobranza_general_total": 0.0,
             "cobranza_sin_iva": 0.0,
             "anticipos_total": 0.0,
+            "porcentaje_anticipos": 0.0,
             "porcentaje_cobrado": 0.0,
             "porcentaje_cobrado_general": 0.0,
             "total_facturas": 0,
