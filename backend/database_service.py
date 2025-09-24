@@ -577,6 +577,14 @@ class DatabaseService:
         
         expectativa = {}
         
+        logger.info(f"Calculando expectativa de cobranza con {len(facturas)} facturas")
+        
+        # Log de debug para días de crédito
+        facturas_con_credito_info = []
+        for factura in facturas[:5]:  # Solo las primeras 5 para no saturar logs
+            facturas_con_credito_info.append(f"ID:{factura.id}, dias_credito:{factura.dias_credito}, fecha:{factura.fecha_factura}")
+        logger.info(f"Muestra de facturas con crédito: {facturas_con_credito_info}")
+        
         # Obtener fecha actual
         hoy = datetime.now()
         
@@ -603,9 +611,14 @@ class DatabaseService:
             pedidos_pendientes = 0
             
             # Calcular cobranza esperada basada en facturas que vencen en esa semana
+            facturas_con_credito = 0
+            facturas_vencen_semana = 0
+            
             for factura in facturas:
                 if not factura.fecha_factura or not factura.dias_credito:
                     continue
+                
+                facturas_con_credito += 1
                 
                 try:
                     # Calcular fecha de vencimiento
@@ -613,6 +626,8 @@ class DatabaseService:
                     
                     # Si la factura vence en esta semana
                     if semana_inicio <= fecha_vencimiento <= semana_fin:
+                        facturas_vencen_semana += 1
+                        
                         # Calcular monto pendiente real
                         anticipo_factura = anticipos_por_factura.get(factura.uuid_factura, 0)
                         cobranza_factura = cobranzas_por_factura.get(factura.uuid_factura, 0)
