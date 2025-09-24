@@ -111,7 +111,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
   };
 
   const formatAgingData = (aging: Record<string, number>) => {
-    return Object.entries(aging).map(([name, value]) => ({ name, value }));
+    console.log('formatAgingData received:', aging);
+    const formatted = Object.entries(aging).map(([name, value]) => ({ name, value }));
+    console.log('formatAgingData formatted:', formatted);
+    return formatted;
   };
 
   const formatTopClientesData = (clientes: Record<string, number>) => {
@@ -122,7 +125,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
   };
 
   const formatConsumoMaterialData = (materiales: Record<string, number>) => {
-    return Object.entries(materiales).map(([name, value]) => ({ name, value }));
+    console.log('formatConsumoMaterialData received:', materiales);
+    const formatted = Object.entries(materiales).map(([name, value]) => ({ name, value }));
+    console.log('formatConsumoMaterialData formatted:', formatted);
+    return formatted;
   };
 
   const formatExpectativaCobranzaData = (expectativa: Record<string, {cobranza_esperada: number, cobranza_real: number}>) => {
@@ -279,23 +285,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Aging de Cartera */}
         {kpis && kpis.aging_cartera && (
-          <AgingChart 
-            data={formatAgingData(kpis.aging_cartera)}
-          />
+          <>
+            {console.log('Rendering AgingChart with data:', kpis.aging_cartera)}
+            <AgingChart 
+              data={formatAgingData(kpis.aging_cartera)}
+            />
+          </>
         )}
 
         {/* Top Clientes */}
         {kpis && kpis.top_clientes && Object.keys(kpis.top_clientes).length > 0 && (
-          <TopClientesChart 
-            data={formatTopClientesData(kpis.top_clientes)}
-          />
+          <>
+            {console.log('Rendering TopClientesChart with data:', kpis.top_clientes)}
+            <TopClientesChart 
+              data={formatTopClientesData(kpis.top_clientes)}
+            />
+          </>
         )}
 
         {/* Consumo por Material */}
         {kpis && kpis.consumo_material && (
-          <ConsumoMaterialChart 
-            data={formatConsumoMaterialData(kpis.consumo_material)}
-          />
+          <>
+            {console.log('Rendering ConsumoMaterialChart with data:', kpis.consumo_material)}
+            <ConsumoMaterialChart 
+              data={formatConsumoMaterialData(kpis.consumo_material)}
+            />
+          </>
         )}
 
         {/* Expectativa de Cobranza */}
