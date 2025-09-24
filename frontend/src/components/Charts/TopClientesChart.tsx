@@ -7,6 +7,8 @@ interface TopClientesChartProps {
 }
 
 export const TopClientesChart: FC<TopClientesChartProps> = ({ data }) => {
+  console.log('TopClientesChart component received data:', data);
+  
   const formatCurrency = (value: number) => {
     if (value >= 1000000) return `$${Math.round(value / 1000000)}M`;
     if (value >= 1000) return `$${Math.round(value / 1000)}K`;
@@ -18,6 +20,8 @@ export const TopClientesChart: FC<TopClientesChartProps> = ({ data }) => {
     ...item,
     name: item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name
   }));
+
+  console.log('TopClientesChart limitedData:', limitedData);
 
   return (
     <Card>

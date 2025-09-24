@@ -7,6 +7,8 @@ interface ConsumoMaterialChartProps {
 }
 
 export const ConsumoMaterialChart: FC<ConsumoMaterialChartProps> = ({ data }) => {
+  console.log('ConsumoMaterialChart component received data:', data);
+  
   const COLORS = [
     '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
     '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'
@@ -15,6 +17,8 @@ export const ConsumoMaterialChart: FC<ConsumoMaterialChartProps> = ({ data }) =>
   const formatWeight = (value: number) => {
     return `${value.toLocaleString('es-MX')} kg`;
   };
+
+  console.log('ConsumoMaterialChart data length:', data.length);
 
   return (
     <Card>

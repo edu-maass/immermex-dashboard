@@ -7,6 +7,8 @@ interface AgingChartProps {
 }
 
 export const AgingChart: FC<AgingChartProps> = ({ data }) => {
+  console.log('AgingChart component received data:', data);
+  
   const colors = {
     '0-30 dias': '#10b981',
     '31-60 dias': '#f59e0b',
@@ -19,44 +21,58 @@ export const AgingChart: FC<AgingChartProps> = ({ data }) => {
     color: colors[item.name as keyof typeof colors] || '#6b7280'
   }));
 
+  console.log('AgingChart chartData:', chartData);
+
+  // Si todos los valores son 0, mostrar mensaje
+  const allZero = data.every(item => item.value === 0);
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Aging de Cartera</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="name" 
-                tick={{ fontSize: 12 }}
-                angle={-45}
-                textAnchor="end"
-                height={80}
-              />
-              <YAxis 
-                tick={{ fontSize: 12 }}
-                tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`}
-              />
-              <Tooltip 
-                formatter={(value: number) => [`$${value.toLocaleString('es-MX', { maximumFractionDigits: 0 })}`, 'Monto']}
-                labelStyle={{ color: '#374151' }}
-                contentStyle={{ 
-                  backgroundColor: '#fff', 
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '6px'
-                }}
-              />
-              <Bar 
-                dataKey="value" 
-                fill="#3b82f6"
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {allZero ? (
+          <div className="h-80 flex items-center justify-center text-gray-500">
+            <div className="text-center">
+              <p className="text-lg font-medium">Sin saldos pendientes</p>
+              <p className="text-sm">Todas las facturas están completamente cobradas</p>
+            </div>
+          </div>
+        ) : (
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="name" 
+                  tick={{ fontSize: 12 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`}
+                />
+                <Tooltip 
+                  formatter={(value: number) => [`$${value.toLocaleString('es-MX', { maximumFractionDigits: 0 })}`, 'Monto']}
+                  labelStyle={{ color: '#374151' }}
+                  contentStyle={{ 
+                    backgroundColor: '#fff', 
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '6px'
+                  }}
+                />
+                <Bar 
+                  dataKey="value" 
+                  fill="#3b82f6"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
