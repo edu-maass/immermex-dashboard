@@ -593,8 +593,8 @@ class DatabaseService:
                 if cobranza.uuid_factura_relacionada:
                     cobranzas_por_factura[cobranza.uuid_factura_relacionada] = cobranzas_por_factura.get(cobranza.uuid_factura_relacionada, 0) + cobranza.importe_pagado
         
-        # Agrupar por semana (próximas 12 semanas para cubrir más períodos)
-        for i in range(12):
+        # Agrupar por semana (próximas 8 semanas)
+        for i in range(8):
             semana_inicio = hoy + timedelta(weeks=i)
             semana_fin = semana_inicio + timedelta(days=6)
             semana_key = f"Semana {i+1} ({semana_inicio.strftime('%d/%m')} - {semana_fin.strftime('%d/%m')})"
@@ -607,35 +607,34 @@ class DatabaseService:
                 if not factura.fecha_factura or not factura.dias_credito:
                     continue
                 
-                # Calcular fecha de vencimiento
-                fecha_vencimiento = factura.fecha_factura + timedelta(days=factura.dias_credito)
-                
-                # Si la factura vence en esta semana
-                if semana_inicio <= fecha_vencimiento <= semana_fin:
-                    # Calcular monto pendiente real
-                    anticipo_factura = anticipos_por_factura.get(factura.uuid_factura, 0)
-                    cobranza_factura = cobranzas_por_factura.get(factura.uuid_factura, 0)
+                try:
+                    # Calcular fecha de vencimiento
+                    fecha_vencimiento = factura.fecha_factura + timedelta(days=factura.dias_credito)
                     
-                    # Monto pendiente = facturación total - anticipos - cobranzas ya recibidas
-                    monto_pendiente = factura.monto_total - anticipo_factura - cobranza_factura
-                    
-                    # Solo considerar si hay monto pendiente positivo
-                    if monto_pendiente > 0:
-                        # Aplicar probabilidad de cobro (más alta para facturas recientes)
-                        if i <= 2:  # Próximas 2 semanas: 85% probabilidad
-                            probabilidad = 0.85
-                        elif i <= 4:  # Semanas 3-4: 75% probabilidad
-                            probabilidad = 0.75
-                        elif i <= 8:  # Semanas 5-8: 60% probabilidad
-                            probabilidad = 0.60
-                        else:  # Semanas 9+: 40% probabilidad
-                            probabilidad = 0.40
+                    # Si la factura vence en esta semana
+                    if semana_inicio <= fecha_vencimiento <= semana_fin:
+                        # Calcular monto pendiente real
+                        anticipo_factura = anticipos_por_factura.get(factura.uuid_factura, 0)
+                        cobranza_factura = cobranzas_por_factura.get(factura.uuid_factura, 0)
                         
-                        cobranza_esperada += monto_pendiente * probabilidad
+                        # Monto pendiente = facturación total - anticipos - cobranzas ya recibidas
+                        monto_pendiente = factura.monto_total - anticipo_factura - cobranza_factura
+                        
+                        # Solo considerar si hay monto pendiente positivo
+                        if monto_pendiente > 0:
+                            # Sin ponderación por probabilidad - mostrar monto exacto esperado
+                            cobranza_esperada += monto_pendiente
+                except Exception as e:
+                    logger.warning(f"Error procesando factura {factura.id}: {str(e)}")
+                    continue
             
             # Contar pedidos pendientes para esa semana (pedidos que se esperan facturar)
-            pedidos_semana = [p for p in pedidos if p.fecha_factura and semana_inicio <= p.fecha_factura <= semana_fin]
-            pedidos_pendientes = len(pedidos_semana)
+            try:
+                pedidos_semana = [p for p in pedidos if p.fecha_factura and semana_inicio <= p.fecha_factura <= semana_fin]
+                pedidos_pendientes = len(pedidos_semana)
+            except Exception as e:
+                logger.warning(f"Error contando pedidos para semana {i+1}: {str(e)}")
+                pedidos_pendientes = 0
             
             expectativa[semana_key] = {
                 'cobranza_esperada': round(cobranza_esperada, 2),
@@ -643,6 +642,7 @@ class DatabaseService:
                 'pedidos_pendientes': pedidos_pendientes
             }
         
+        logger.info(f"Expectativa calculada: {len(expectativa)} semanas, total esperado: {sum(d['cobranza_esperada'] for d in expectativa.values())}")
         return expectativa
     
     def _get_default_kpis(self) -> dict:
