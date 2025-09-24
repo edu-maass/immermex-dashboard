@@ -423,6 +423,13 @@ class DatabaseService:
             # Calcular KPIs
             # Filtrar solo facturas con folio válido (no filas de totales)
             facturas_validas = [f for f in facturas if f.folio_factura and f.folio_factura.strip() and not f.folio_factura.lower().startswith(('total', 'suma', 'subtotal'))]
+            
+            # Debug: Log para verificar el filtrado
+            logger.info(f"Total facturas: {len(facturas)}, Facturas válidas: {len(facturas_validas)}")
+            if len(facturas_validas) == 0:
+                logger.warning("No hay facturas válidas después del filtrado, usando todas las facturas")
+                facturas_validas = facturas
+            
             facturacion_total = sum(f.monto_total for f in facturas_validas)
             
             # Solo considerar cobranzas relacionadas con las facturas del mismo período
@@ -433,6 +440,13 @@ class DatabaseService:
             # Cobranza general (todas las cobranzas con folio válido, sin filtro de facturas)
             cobranzas_validas = [c for c in cobranzas if c.folio_pago and c.folio_pago.strip() and not c.folio_pago.lower().startswith(('total', 'suma', 'subtotal'))]
             cobranza_general_total = sum(c.importe_pagado for c in cobranzas_validas)
+            
+            # Debug: Log para verificar cobranzas
+            logger.info(f"Total cobranzas: {len(cobranzas)}, Cobranzas válidas: {len(cobranzas_validas)}, Cobranzas relacionadas: {len(cobranzas_relacionadas)}")
+            if len(cobranzas_validas) == 0:
+                logger.warning("No hay cobranzas válidas después del filtrado, usando todas las cobranzas")
+                cobranzas_validas = cobranzas
+                cobranza_general_total = sum(c.importe_pagado for c in cobranzas)
             
             anticipos_total = sum(a.importe_relacion for a in anticipos)
             
@@ -449,7 +463,12 @@ class DatabaseService:
             consumo_material = self._calculate_consumo_material(pedidos)
             
             # Expectativa de cobranza futura
-            expectativa_cobranza = self._calculate_expectativa_cobranza(facturas_validas, pedidos, anticipos, cobranzas)
+            try:
+                expectativa_cobranza = self._calculate_expectativa_cobranza(facturas_validas, pedidos, anticipos, cobranzas)
+                logger.info(f"Expectativa de cobranza calculada: {len(expectativa_cobranza)} semanas")
+            except Exception as e:
+                logger.error(f"Error calculando expectativa de cobranza: {str(e)}")
+                expectativa_cobranza = {}
             
             # Métricas adicionales
             total_facturas = len(facturas_validas)
