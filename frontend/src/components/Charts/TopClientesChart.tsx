@@ -29,20 +29,19 @@ export const TopClientesChart: FC<TopClientesChartProps> = ({ data }) => {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart 
               data={limitedData} 
-              layout="horizontal"
-              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
-                type="number"
-                tick={{ fontSize: 12 }}
-                tickFormatter={formatCurrency}
-              />
-              <YAxis 
-                type="category"
                 dataKey="name"
                 tick={{ fontSize: 12 }}
-                width={150}
+                angle={-45}
+                textAnchor="end"
+                height={60}
+              />
+              <YAxis 
+                tick={{ fontSize: 12 }}
+                tickFormatter={formatCurrency}
               />
               <Tooltip 
                 formatter={(value: number) => [formatCurrency(value), 'Facturación']}
@@ -56,7 +55,8 @@ export const TopClientesChart: FC<TopClientesChartProps> = ({ data }) => {
               <Bar 
                 dataKey="value" 
                 fill="#3b82f6"
-                radius={[0, 4, 4, 0]}
+                radius={[4, 4, 0, 0]}
+                name="Facturación"
               />
             </BarChart>
           </ResponsiveContainer>
