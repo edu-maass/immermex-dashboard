@@ -427,11 +427,12 @@ class DatabaseService:
             
             # Solo considerar cobranzas relacionadas con las facturas del mismo período
             facturas_uuids = {f.uuid_factura for f in facturas_validas if f.uuid_factura}
-            cobranzas_relacionadas = [c for c in cobranzas if c.uuid_factura_relacionada in facturas_uuids]
+            cobranzas_relacionadas = [c for c in cobranzas if c.uuid_factura_relacionada in facturas_uuids and c.folio_pago and c.folio_pago.strip() and not c.folio_pago.lower().startswith(('total', 'suma', 'subtotal'))]
             cobranza_total = sum(c.importe_pagado for c in cobranzas_relacionadas)
             
-            # Cobranza general (todas las cobranzas sin filtro)
-            cobranza_general_total = sum(c.importe_pagado for c in cobranzas)
+            # Cobranza general (todas las cobranzas con folio válido, sin filtro de facturas)
+            cobranzas_validas = [c for c in cobranzas if c.folio_pago and c.folio_pago.strip() and not c.folio_pago.lower().startswith(('total', 'suma', 'subtotal'))]
+            cobranza_general_total = sum(c.importe_pagado for c in cobranzas_validas)
             
             anticipos_total = sum(a.importe_relacion for a in anticipos)
             
