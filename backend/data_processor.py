@@ -999,6 +999,27 @@ def process_excel_from_bytes(file_bytes: bytes, filename: str) -> Tuple[Dict[str
         logger.error(f"Traceback: {traceback.format_exc()}")
         raise
 
+def _convert_dias_credito(value):
+    """Convierte valores de texto de días de crédito a números"""
+    if pd.isna(value) or value is None:
+        return 0
+    
+    # Convertir a string si no lo es
+    str_value = str(value).strip().lower()
+    
+    # Si dice "contado", retornar 0 días
+    if 'contado' in str_value:
+        return 0
+    
+    # Extraer solo números del texto
+    import re
+    numbers = re.findall(r'\d+', str_value)
+    
+    if numbers:
+        return int(numbers[0])  # Tomar el primer número encontrado
+    
+    return 0
+
 def _map_facturacion_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Mapea columnas de facturación usando enfoque híbrido: nombre + posición"""
     df_mapped = df.copy()
@@ -1050,7 +1071,15 @@ def _map_facturacion_columns(df: pd.DataFrame) -> pd.DataFrame:
         # UUID
         'uuid': 'uuid_factura',
         'uuid_factura': 'uuid_factura',
-        'UUID': 'uuid_factura'
+        'UUID': 'uuid_factura',
+        
+        # Días de crédito
+        'dias_credito': 'dias_credito',
+        'dias credito': 'dias_credito',
+        'días de crédito': 'dias_credito',
+        'días de credito': 'dias_credito',
+        'credito': 'dias_credito',
+        'crédito': 'dias_credito'
     }
     
     # Mapeo por nombre (case-insensitive)
@@ -1077,13 +1106,19 @@ def _map_facturacion_columns(df: pd.DataFrame) -> pd.DataFrame:
         df_mapped['monto_total'] = df_mapped.iloc[:, 5]
     if 'saldo_pendiente' not in df_mapped.columns and len(columns) >= 7:
         df_mapped['saldo_pendiente'] = df_mapped.iloc[:, 6]
+    if 'dias_credito' not in df_mapped.columns and len(columns) >= 8:
+        df_mapped['dias_credito'] = df_mapped.iloc[:, 7]    # Columna H
     if 'agente' not in df_mapped.columns and len(columns) >= 11:
         df_mapped['agente'] = df_mapped.iloc[:, 10]        # 'Unnamed: 10'
     if 'uuid_factura' not in df_mapped.columns and len(columns) >= 14:
         df_mapped['uuid_factura'] = df_mapped.iloc[:, 13]
     
+    # Convertir días de crédito de texto a número
+    if 'dias_credito' in df_mapped.columns:
+        df_mapped['dias_credito'] = df_mapped['dias_credito'].apply(_convert_dias_credito)
+    
     # Log para debugging
-    logger.info(f"Mapeo final facturación: {len([col for col in df_mapped.columns if col in ['fecha_factura', 'serie_factura', 'folio_factura', 'cliente', 'monto_neto', 'monto_total', 'saldo_pendiente', 'agente', 'uuid_factura']])} columnas mapeadas")
+    logger.info(f"Mapeo final facturación: {len([col for col in df_mapped.columns if col in ['fecha_factura', 'serie_factura', 'folio_factura', 'cliente', 'monto_neto', 'monto_total', 'saldo_pendiente', 'dias_credito', 'agente', 'uuid_factura']])} columnas mapeadas")
     
     return df_mapped
 
