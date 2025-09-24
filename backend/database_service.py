@@ -421,10 +421,12 @@ class DatabaseService:
                 return self._get_default_kpis()
             
             # Calcular KPIs
-            facturacion_total = sum(f.monto_total for f in facturas)
+            # Filtrar solo facturas con folio válido (no filas de totales)
+            facturas_validas = [f for f in facturas if f.folio_factura and f.folio_factura.strip() and not f.folio_factura.lower().startswith(('total', 'suma', 'subtotal'))]
+            facturacion_total = sum(f.monto_total for f in facturas_validas)
             
             # Solo considerar cobranzas relacionadas con las facturas del mismo período
-            facturas_uuids = {f.uuid_factura for f in facturas if f.uuid_factura}
+            facturas_uuids = {f.uuid_factura for f in facturas_validas if f.uuid_factura}
             cobranzas_relacionadas = [c for c in cobranzas if c.uuid_factura_relacionada in facturas_uuids]
             cobranza_total = sum(c.importe_pagado for c in cobranzas_relacionadas)
             
@@ -437,24 +439,24 @@ class DatabaseService:
             porcentaje_cobrado_general = (cobranza_general_total / facturacion_total * 100) if facturacion_total > 0 else 0
             
             # Aging de cartera
-            aging_cartera = self._calculate_aging_cartera(facturas)
+            aging_cartera = self._calculate_aging_cartera(facturas_validas)
             
             # Top clientes
-            top_clientes = self._calculate_top_clientes(facturas)
+            top_clientes = self._calculate_top_clientes(facturas_validas)
             
             # Consumo por material
             consumo_material = self._calculate_consumo_material(pedidos)
             
             # Métricas adicionales
-            total_facturas = len(facturas)
-            clientes_unicos = len(set(f.cliente for f in facturas if f.cliente))
+            total_facturas = len(facturas_validas)
+            clientes_unicos = len(set(f.cliente for f in facturas_validas if f.cliente))
             
             # Pedidos únicos y toneladas
             pedidos_unicos = len(set(p.pedido for p in pedidos if p.pedido))
             toneladas_total = sum(p.kg for p in pedidos)
             
             # Calcular facturación sin IVA (monto_neto es sin IVA, monto_total es con IVA)
-            facturacion_sin_iva = sum(f.monto_neto for f in facturas)
+            facturacion_sin_iva = sum(f.monto_neto for f in facturas_validas)
             
             # Calcular cobranza sin IVA (de las cobranzas relacionadas)
             cobranza_sin_iva = sum(c.importe_pagado / 1.16 for c in cobranzas_relacionadas if c.importe_pagado > 0)  # Dividir por 1.16 para quitar IVA
