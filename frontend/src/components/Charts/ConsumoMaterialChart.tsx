@@ -26,39 +26,14 @@ export const ConsumoMaterialChart: FC<ConsumoMaterialChartProps> = ({ data }) =>
         <CardTitle>Consumo por Material</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={48}
-                outerRadius={88}
-                labelLine={false}
-                label={(props: any) => {
-                  const { name, percent } = props || {};
-                  const pct = typeof percent === 'number' ? percent : 0;
-                  return `${name ?? ''} (${(pct * 100).toFixed(1)}%)`;
-                }}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {data.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip 
-                formatter={(value: number) => [formatWeight(value), 'Consumo']}
-                labelStyle={{ color: '#374151' }}
-                contentStyle={{ 
-                  backgroundColor: '#fff', 
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '6px'
-                }}
-              />
-              <Legend />
-            </PieChart>
+        <div className="h-80 bg-purple-100 border-2 border-orange-500">
+          <p className="p-2">ConsumoMaterialChart Container</p>
+          <ResponsiveContainer width="100%" height="90%">
+            <BarChart data={data.slice(0, 5)}>
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Bar dataKey="value" fill="#8884d8" />
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </CardContent>

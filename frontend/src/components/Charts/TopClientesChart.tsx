@@ -29,39 +29,13 @@ export const TopClientesChart: FC<TopClientesChartProps> = ({ data }) => {
         <CardTitle>Top 10 Clientes por Facturación</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-80 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart 
-              data={limitedData} 
-              layout="horizontal"
-              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                type="number"
-                tick={{ fontSize: 12 }}
-                tickFormatter={formatCurrency}
-              />
-              <YAxis 
-                type="category"
-                dataKey="name"
-                tick={{ fontSize: 12 }}
-                width={150}
-              />
-              <Tooltip 
-                formatter={(value: number) => [formatCurrency(value), 'Facturación']}
-                labelStyle={{ color: '#374151' }}
-                contentStyle={{ 
-                  backgroundColor: '#fff', 
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '6px'
-                }}
-              />
-              <Bar 
-                dataKey="value" 
-                fill="#3b82f6"
-                radius={[0, 4, 4, 0]}
-              />
+        <div className="h-80 w-full bg-yellow-100 border-2 border-green-500">
+          <p className="p-2">TopClientesChart Container</p>
+          <ResponsiveContainer width="100%" height="90%">
+            <BarChart data={limitedData}>
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Bar dataKey="value" fill="#3b82f6" />
             </BarChart>
           </ResponsiveContainer>
         </div>
