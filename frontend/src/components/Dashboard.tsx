@@ -341,12 +341,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
             return <CobranzaFuturaChart data={testData} />;
           }
           
-          return kpis && kpis.expectativa_cobranza && Object.keys(kpis.expectativa_cobranza).length > 0;
-        })() && (
-          <CobranzaFuturaChart 
-            data={formatExpectativaCobranzaData(kpis.expectativa_cobranza)}
-          />
-        )}
+          // Si hay datos reales, usarlos
+          if (kpis && kpis.expectativa_cobranza && Object.keys(kpis.expectativa_cobranza).length > 0) {
+            return <CobranzaFuturaChart data={formatExpectativaCobranzaData(kpis.expectativa_cobranza)} />;
+          }
+          
+          // Si no hay datos en absoluto, no mostrar nada
+          return null;
+        })()}
       </div>
     </div>
   );
