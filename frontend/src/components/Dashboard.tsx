@@ -124,12 +124,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
   };
 
   const formatExpectativaCobranzaData = (expectativa: Record<string, {cobranza_esperada: number, cobranza_real: number, pedidos_pendientes: number}>) => {
-    return Object.entries(expectativa).map(([semana, datos]) => ({
+    console.log('formatExpectativaCobranzaData received:', expectativa);
+    const formatted = Object.entries(expectativa).map(([semana, datos]) => ({
       semana,
       cobranza_esperada: datos.cobranza_esperada,
       cobranza_real: datos.cobranza_real,
       pedidos_pendientes: datos.pedidos_pendientes
     }));
+    console.log('formatExpectativaCobranzaData formatted:', formatted);
+    return formatted;
   };
 
   const formatExpectativaCobranzaDataOld = (expectativa: Record<string, {cobranza_esperada: number, cobranza_real: number}>) => {
@@ -316,7 +319,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
       {/* Nueva fila para gráfico de cobranza futura */}
       <div className="grid grid-cols-1 gap-6 mt-6">
         {/* Cobranza Futura Esperada */}
-        {kpis && kpis.expectativa_cobranza && Object.keys(kpis.expectativa_cobranza).length > 0 && (
+        {(() => {
+          console.log('Checking cobranza futura condition:', {
+            hasKpis: !!kpis,
+            hasExpectativa: !!kpis?.expectativa_cobranza,
+            expectativaKeys: kpis?.expectativa_cobranza ? Object.keys(kpis.expectativa_cobranza) : [],
+            expectativaLength: kpis?.expectativa_cobranza ? Object.keys(kpis.expectativa_cobranza).length : 0
+          });
+          return kpis && kpis.expectativa_cobranza && Object.keys(kpis.expectativa_cobranza).length > 0;
+        })() && (
           <CobranzaFuturaChart 
             data={formatExpectativaCobranzaData(kpis.expectativa_cobranza)}
           />

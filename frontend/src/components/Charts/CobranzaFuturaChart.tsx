@@ -12,6 +12,8 @@ interface CobranzaFuturaChartProps {
 }
 
 export const CobranzaFuturaChart: FC<CobranzaFuturaChartProps> = ({ data }) => {
+  console.log('CobranzaFuturaChart received data:', data);
+  
   const formatCurrency = (value: number) => {
     if (value >= 1000000) return `$${Math.round(value / 1000000)}M`;
     if (value >= 1000) return `$${Math.round(value / 1000)}K`;
