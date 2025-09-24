@@ -1033,6 +1033,10 @@ def _map_facturacion_columns(df: pd.DataFrame) -> pd.DataFrame:
         'fecha de factura': 'fecha_factura',
         'fecha_factura': 'fecha_factura',
         'todos los documentos': 'fecha_factura',
+        'Todos los Documentos': 'fecha_factura',
+        'TODOS LOS DOCUMENTOS': 'fecha_factura',
+        'todos los documentos.': 'fecha_factura',
+        'Todos los Documentos.': 'fecha_factura',
         'Fecha': 'fecha_factura',
         
         # Serie y Folio
