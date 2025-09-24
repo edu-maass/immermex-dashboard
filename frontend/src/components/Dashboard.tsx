@@ -278,7 +278,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Aging de Cartera */}
-        {kpis && kpis.aging_cartera && Object.keys(kpis.aging_cartera).length > 0 && (
+        {kpis && kpis.aging_cartera && (
           <AgingChart 
             data={formatAgingData(kpis.aging_cartera)}
           />
@@ -292,7 +292,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
         )}
 
         {/* Consumo por Material */}
-        {kpis && kpis.consumo_material && Object.keys(kpis.consumo_material).length > 0 && (
+        {kpis && kpis.consumo_material && (
           <ConsumoMaterialChart 
             data={formatConsumoMaterialData(kpis.consumo_material)}
           />
