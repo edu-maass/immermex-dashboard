@@ -7,6 +7,7 @@ import { AgingChart } from './Charts/AgingChart';
 import { TopClientesChart } from './Charts/TopClientesChart';
 import { ConsumoMaterialChart } from './Charts/ConsumoMaterialChart';
 import { ExpectativaCobranzaChart } from './Charts/ExpectativaCobranzaChart';
+import { TestChart } from './Charts/TestChart';
 import { apiService } from '../services/api';
 import { KPIs, FiltrosDashboard, GraficoDatos } from '../types';
 import { 
@@ -283,6 +284,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Test Chart */}
+        <TestChart 
+          data={[{ name: 'Test', value: 100 }, { name: 'Test2', value: 200 }]}
+        />
+        
         {/* Aging de Cartera */}
         {kpis && kpis.aging_cartera && (
           <>
