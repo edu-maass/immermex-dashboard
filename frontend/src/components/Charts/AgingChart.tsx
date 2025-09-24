@@ -8,10 +8,10 @@ interface AgingChartProps {
 
 export const AgingChart: FC<AgingChartProps> = ({ data }) => {
   const colors = {
-    '0-30 días': '#10b981',
-    '31-60 días': '#f59e0b',
-    '61-90 días': '#f97316',
-    '90+ días': '#ef4444'
+    '0-30 dias': '#10b981',
+    '31-60 dias': '#f59e0b',
+    '61-90 dias': '#f97316',
+    '90+ dias': '#ef4444'
   };
 
   const chartData = data.map(item => ({

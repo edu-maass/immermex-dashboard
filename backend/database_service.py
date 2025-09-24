@@ -490,7 +490,7 @@ class DatabaseService:
     
     def _calculate_aging_cartera(self, facturas: list) -> dict:
         """Calcula aging de cartera por monto pendiente"""
-        aging = {"0-30 días": 0, "31-60 días": 0, "61-90 días": 0, "90+ días": 0}
+        aging = {"0-30 dias": 0, "31-60 dias": 0, "61-90 dias": 0, "90+ dias": 0}
         
         for factura in facturas:
             if factura.fecha_factura:
@@ -503,13 +503,13 @@ class DatabaseService:
                 
                 if monto_pendiente > 0:  # Solo incluir facturas con saldo pendiente
                     if dias_vencidos <= 30:
-                        aging["0-30 días"] += monto_pendiente
+                        aging["0-30 dias"] += monto_pendiente
                     elif dias_vencidos <= 60:
-                        aging["31-60 días"] += monto_pendiente
+                        aging["31-60 dias"] += monto_pendiente
                     elif dias_vencidos <= 90:
-                        aging["61-90 días"] += monto_pendiente
+                        aging["61-90 dias"] += monto_pendiente
                     else:
-                        aging["90+ días"] += monto_pendiente
+                        aging["90+ dias"] += monto_pendiente
         
         return aging
     
