@@ -7,7 +7,6 @@ import { AgingChart } from './Charts/AgingChart';
 import { TopClientesChart } from './Charts/TopClientesChart';
 import { ConsumoMaterialChart } from './Charts/ConsumoMaterialChart';
 import { ExpectativaCobranzaChart } from './Charts/ExpectativaCobranzaChart';
-import { TestChart } from './Charts/TestChart';
 import { apiService } from '../services/api';
 import { KPIs, FiltrosDashboard, GraficoDatos } from '../types';
 import { 
@@ -112,24 +111,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
   };
 
   const formatAgingData = (aging: Record<string, number>) => {
-    console.log('formatAgingData received:', aging);
-    const formatted = Object.entries(aging).map(([name, value]) => ({ name, value }));
-    console.log('formatAgingData formatted:', formatted);
-    return formatted;
+    return Object.entries(aging).map(([name, value]) => ({ name, value }));
   };
 
   const formatTopClientesData = (clientes: Record<string, number>) => {
-    console.log('Top clientes data:', clientes);
-    const formatted = Object.entries(clientes).map(([name, value]) => ({ name, value }));
-    console.log('Formatted top clientes:', formatted);
-    return formatted;
+    return Object.entries(clientes).map(([name, value]) => ({ name, value }));
   };
 
   const formatConsumoMaterialData = (materiales: Record<string, number>) => {
-    console.log('formatConsumoMaterialData received:', materiales);
-    const formatted = Object.entries(materiales).map(([name, value]) => ({ name, value }));
-    console.log('formatConsumoMaterialData formatted:', formatted);
-    return formatted;
+    return Object.entries(materiales).map(([name, value]) => ({ name, value }));
   };
 
   const formatExpectativaCobranzaData = (expectativa: Record<string, {cobranza_esperada: number, cobranza_real: number}>) => {
@@ -284,39 +274,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Test Chart */}
-        <TestChart 
-          data={[{ name: 'Test', value: 100 }, { name: 'Test2', value: 200 }]}
-        />
-        
         {/* Aging de Cartera */}
         {kpis && kpis.aging_cartera && (
-          <>
-            {console.log('Rendering AgingChart with data:', kpis.aging_cartera)}
-            <AgingChart 
-              data={formatAgingData(kpis.aging_cartera)}
-            />
-          </>
+          <AgingChart 
+            data={formatAgingData(kpis.aging_cartera)}
+          />
         )}
 
         {/* Top Clientes */}
         {kpis && kpis.top_clientes && Object.keys(kpis.top_clientes).length > 0 && (
-          <>
-            {console.log('Rendering TopClientesChart with data:', kpis.top_clientes)}
-            <TopClientesChart 
-              data={formatTopClientesData(kpis.top_clientes)}
-            />
-          </>
+          <TopClientesChart 
+            data={formatTopClientesData(kpis.top_clientes)}
+          />
         )}
 
         {/* Consumo por Material */}
         {kpis && kpis.consumo_material && (
-          <>
-            {console.log('Rendering ConsumoMaterialChart with data:', kpis.consumo_material)}
-            <ConsumoMaterialChart 
-              data={formatConsumoMaterialData(kpis.consumo_material)}
-            />
-          </>
+          <ConsumoMaterialChart 
+            data={formatConsumoMaterialData(kpis.consumo_material)}
+          />
         )}
 
         {/* Expectativa de Cobranza */}

@@ -7,8 +7,6 @@ interface AgingChartProps {
 }
 
 export const AgingChart: FC<AgingChartProps> = ({ data }) => {
-  console.log('AgingChart component received data:', data);
-  
   const colors = {
     '0-30 dias': '#10b981',
     '31-60 dias': '#f59e0b',
@@ -20,8 +18,6 @@ export const AgingChart: FC<AgingChartProps> = ({ data }) => {
     ...item,
     color: colors[item.name as keyof typeof colors] || '#6b7280'
   }));
-
-  console.log('AgingChart chartData:', chartData);
 
   // Si todos los valores son 0, mostrar mensaje
   const allZero = data.every(item => item.value === 0);

@@ -1,9 +1,9 @@
-import { FC, useState, useEffect } from 'react';
+import { FC, useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Input } from './ui/input';
 import { Chip } from './ui/chip';
-import { Search, X, Package } from 'lucide-react';
+import { Search, X, Package, ChevronDown } from 'lucide-react';
 import { apiService } from '../services/api';
 
 interface PedidoFilterProps {
@@ -17,6 +17,30 @@ export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPe
   const [pedidosDisponibles, setPedidosDisponibles] = useState<string[]>([]);
   const [pedidosSeleccionados, setPedidosSeleccionados] = useState<string[]>([]);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Cerrar dropdown cuando se hace clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Filtrar pedidos por término de búsqueda
+  const pedidosFiltrados = pedidosDisponibles.filter(pedido => 
+    !pedidosSeleccionados.includes(pedido) && 
+    pedido.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // Cargar pedidos disponibles
   useEffect(() => {
@@ -84,13 +108,33 @@ export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPe
     }
   }, [onUploadSuccess]);
 
-  const handleAgregarPedido = () => {
-    if (pedidoSeleccionado && !pedidosSeleccionados.includes(pedidoSeleccionado)) {
-      const nuevosPedidos = [...pedidosSeleccionados, pedidoSeleccionado];
+  const handleAgregarPedido = (pedido?: string) => {
+    const pedidoToAdd = pedido || pedidoSeleccionado;
+    if (pedidoToAdd && !pedidosSeleccionados.includes(pedidoToAdd)) {
+      const nuevosPedidos = [...pedidosSeleccionados, pedidoToAdd];
       setPedidosSeleccionados(nuevosPedidos);
-      console.log('Agregando pedido:', pedidoSeleccionado, 'Lista actual:', nuevosPedidos);
+      console.log('Agregando pedido:', pedidoToAdd, 'Lista actual:', nuevosPedidos);
       onPedidosChange(nuevosPedidos);
       setPedidoSeleccionado('');
+      setSearchTerm('');
+      setIsDropdownOpen(false);
+    }
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setIsDropdownOpen(true);
+  };
+
+  const handleInputFocus = () => {
+    setIsDropdownOpen(true);
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && pedidosFiltrados.length > 0) {
+      handleAgregarPedido(pedidosFiltrados[0]);
+    } else if (e.key === 'Escape') {
+      setIsDropdownOpen(false);
     }
   };
 
@@ -116,33 +160,58 @@ export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPe
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Selector de pedido */}
-        <div className="flex gap-2">
-          <Select
-            value={pedidoSeleccionado}
-            onValueChange={setPedidoSeleccionado}
-          >
-            <SelectTrigger className="flex-1">
-              <SelectValue placeholder="Seleccionar pedido" />
-            </SelectTrigger>
-            <SelectContent>
-              {pedidosDisponibles
-                .filter(pedido => !pedidosSeleccionados.includes(pedido))
-                .map((pedido) => (
-                  <SelectItem key={pedido} value={pedido}>
-                    Pedido {pedido}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-          <Button 
-            onClick={handleAgregarPedido}
-            disabled={!pedidoSeleccionado}
-            size="sm"
-          >
-            <Search className="h-4 w-4 mr-2" />
-            Agregar
-          </Button>
+        {/* Selector de pedido con búsqueda */}
+        <div className="relative" ref={dropdownRef}>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Input
+                ref={inputRef}
+                type="text"
+                placeholder="Buscar pedido por número..."
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onFocus={handleInputFocus}
+                onKeyDown={handleInputKeyDown}
+                className="pr-8"
+              />
+              <ChevronDown 
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 cursor-pointer"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              />
+            </div>
+            <Button 
+              onClick={() => handleAgregarPedido()}
+              disabled={!pedidoSeleccionado && pedidosFiltrados.length === 0}
+              size="sm"
+            >
+              <Search className="h-4 w-4 mr-2" />
+              Agregar
+            </Button>
+          </div>
+          
+          {/* Dropdown personalizado */}
+          {isDropdownOpen && pedidosFiltrados.length > 0 && (
+            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+              {pedidosFiltrados.map((pedido) => (
+                <div
+                  key={pedido}
+                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+                  onClick={() => handleAgregarPedido(pedido)}
+                >
+                  Pedido {pedido}
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Mensaje cuando no hay resultados */}
+          {isDropdownOpen && searchTerm && pedidosFiltrados.length === 0 && (
+            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
+              <div className="px-3 py-2 text-sm text-gray-500">
+                No se encontraron pedidos con "{searchTerm}"
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Pedidos seleccionados */}
