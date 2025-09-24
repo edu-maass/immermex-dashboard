@@ -1118,7 +1118,16 @@ def _map_facturacion_columns(df: pd.DataFrame) -> pd.DataFrame:
         df_mapped['dias_credito'] = df_mapped['dias_credito'].apply(_convert_dias_credito)
     
     # Log para debugging
-    logger.info(f"Mapeo final facturación: {len([col for col in df_mapped.columns if col in ['fecha_factura', 'serie_factura', 'folio_factura', 'cliente', 'monto_neto', 'monto_total', 'saldo_pendiente', 'dias_credito', 'agente', 'uuid_factura']])} columnas mapeadas")
+    mapped_cols = [col for col in df_mapped.columns if col in ['fecha_factura', 'serie_factura', 'folio_factura', 'cliente', 'monto_neto', 'monto_total', 'saldo_pendiente', 'dias_credito', 'agente', 'uuid_factura']]
+    logger.info(f"Mapeo final facturación: {len(mapped_cols)} columnas mapeadas: {mapped_cols}")
+    
+    # Log de muestra de datos para debugging
+    if 'fecha_factura' in df_mapped.columns:
+        sample_dates = df_mapped['fecha_factura'].head(3).tolist()
+        logger.info(f"Muestra de fechas factura: {sample_dates}")
+    if 'dias_credito' in df_mapped.columns:
+        sample_credito = df_mapped['dias_credito'].head(3).tolist()
+        logger.info(f"Muestra de días crédito: {sample_credito}")
     
     return df_mapped
 

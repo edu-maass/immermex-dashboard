@@ -592,8 +592,8 @@ class DatabaseService:
         anticipos_por_factura = {}
         if anticipos:
             for anticipo in anticipos:
-                if anticipo.uuid_relacion:
-                    anticipos_por_factura[anticipo.uuid_relacion] = anticipos_por_factura.get(anticipo.uuid_relacion, 0) + anticipo.importe_relacion
+                if hasattr(anticipo, 'uuid_factura_relacionada') and anticipo.uuid_factura_relacionada:
+                    anticipos_por_factura[anticipo.uuid_factura_relacionada] = anticipos_por_factura.get(anticipo.uuid_factura_relacionada, 0) + anticipo.importe_relacion
         
         cobranzas_por_factura = {}
         if cobranzas:
