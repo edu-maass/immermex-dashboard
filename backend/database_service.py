@@ -449,7 +449,7 @@ class DatabaseService:
             consumo_material = self._calculate_consumo_material(pedidos)
             
             # Expectativa de cobranza futura
-            expectativa_cobranza = self._calculate_expectativa_cobranza(facturas_validas, pedidos)
+            expectativa_cobranza = self._calculate_expectativa_cobranza(facturas_validas, pedidos, anticipos, cobranzas)
             
             # Métricas adicionales
             total_facturas = len(facturas_validas)
@@ -552,8 +552,8 @@ class DatabaseService:
         sorted_materiales = sorted(materiales_consumo.items(), key=lambda x: x[1], reverse=True)
         return dict(sorted_materiales[:10])
     
-    def _calculate_expectativa_cobranza(self, facturas: list, pedidos: list) -> dict:
-        """Calcula expectativa de cobranza futura basada en pedidos pendientes"""
+    def _calculate_expectativa_cobranza(self, facturas: list, pedidos: list, anticipos: list = None, cobranzas: list = None) -> dict:
+        """Calcula expectativa de cobranza futura basada en facturas pendientes y sus días de crédito"""
         from datetime import datetime, timedelta
         
         expectativa = {}
@@ -561,44 +561,62 @@ class DatabaseService:
         # Obtener fecha actual
         hoy = datetime.now()
         
-        # Agrupar pedidos por semana (próximas 8 semanas)
-        for i in range(8):
+        # Crear diccionarios para búsqueda rápida
+        anticipos_por_factura = {}
+        if anticipos:
+            for anticipo in anticipos:
+                if anticipo.uuid_relacion:
+                    anticipos_por_factura[anticipo.uuid_relacion] = anticipos_por_factura.get(anticipo.uuid_relacion, 0) + anticipo.importe_relacion
+        
+        cobranzas_por_factura = {}
+        if cobranzas:
+            for cobranza in cobranzas:
+                if cobranza.uuid_factura_relacionada:
+                    cobranzas_por_factura[cobranza.uuid_factura_relacionada] = cobranzas_por_factura.get(cobranza.uuid_factura_relacionada, 0) + cobranza.importe_pagado
+        
+        # Agrupar por semana (próximas 12 semanas para cubrir más períodos)
+        for i in range(12):
             semana_inicio = hoy + timedelta(weeks=i)
             semana_fin = semana_inicio + timedelta(days=6)
             semana_key = f"Semana {i+1} ({semana_inicio.strftime('%d/%m')} - {semana_fin.strftime('%d/%m')})"
             
-            # Calcular expectativa basada en:
-            # 1. Facturas pendientes que vencen en esa semana
-            # 2. Pedidos que se esperan facturar en esa semana
-            # 3. Promedio histórico de cobranza por semana
-            
-            # Facturas que vencen en esa semana (basado en días de crédito)
-            facturas_vencen = [
-                f for f in facturas 
-                if f.saldo_pendiente > 0 and f.fecha_factura
-            ]
-            
-            # Calcular monto esperado de cobranza
             cobranza_esperada = 0
             pedidos_pendientes = 0
             
-            # Para facturas que vencen en esa semana
-            for factura in facturas_vencen:
-                if factura.fecha_factura and factura.dias_credito:
-                    fecha_vencimiento = factura.fecha_factura + timedelta(days=factura.dias_credito)
-                    if semana_inicio <= fecha_vencimiento <= semana_fin:
-                        cobranza_esperada += factura.saldo_pendiente * 0.8  # 80% de probabilidad de cobro
+            # Calcular cobranza esperada basada en facturas que vencen en esa semana
+            for factura in facturas:
+                if not factura.fecha_factura or not factura.dias_credito:
+                    continue
+                
+                # Calcular fecha de vencimiento
+                fecha_vencimiento = factura.fecha_factura + timedelta(days=factura.dias_credito)
+                
+                # Si la factura vence en esta semana
+                if semana_inicio <= fecha_vencimiento <= semana_fin:
+                    # Calcular monto pendiente real
+                    anticipo_factura = anticipos_por_factura.get(factura.uuid_factura, 0)
+                    cobranza_factura = cobranzas_por_factura.get(factura.uuid_factura, 0)
+                    
+                    # Monto pendiente = facturación total - anticipos - cobranzas ya recibidas
+                    monto_pendiente = factura.monto_total - anticipo_factura - cobranza_factura
+                    
+                    # Solo considerar si hay monto pendiente positivo
+                    if monto_pendiente > 0:
+                        # Aplicar probabilidad de cobro (más alta para facturas recientes)
+                        if i <= 2:  # Próximas 2 semanas: 85% probabilidad
+                            probabilidad = 0.85
+                        elif i <= 4:  # Semanas 3-4: 75% probabilidad
+                            probabilidad = 0.75
+                        elif i <= 8:  # Semanas 5-8: 60% probabilidad
+                            probabilidad = 0.60
+                        else:  # Semanas 9+: 40% probabilidad
+                            probabilidad = 0.40
+                        
+                        cobranza_esperada += monto_pendiente * probabilidad
             
-            # Para pedidos que se esperan facturar (estimación basada en promedio histórico)
+            # Contar pedidos pendientes para esa semana (pedidos que se esperan facturar)
             pedidos_semana = [p for p in pedidos if p.fecha_factura and semana_inicio <= p.fecha_factura <= semana_fin]
             pedidos_pendientes = len(pedidos_semana)
-            
-            # Estimación de facturación futura basada en pedidos (promedio histórico de precio por kg)
-            if pedidos_semana:
-                kg_total = sum(p.kg for p in pedidos_semana)
-                # Estimación conservadora: $50 pesos por kg (ajustar según datos históricos)
-                facturacion_estimada = kg_total * 50
-                cobranza_esperada += facturacion_estimada * 0.6  # 60% de probabilidad de cobro inmediato
             
             expectativa[semana_key] = {
                 'cobranza_esperada': round(cobranza_esperada, 2),
