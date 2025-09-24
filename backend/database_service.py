@@ -645,7 +645,7 @@ class DatabaseService:
         logger.info(f"Expectativa calculada: {len(expectativa)} semanas, total esperado: {sum(d['cobranza_esperada'] for d in expectativa.values())}")
         
         # Si no hay datos, agregar datos de prueba para verificar que el gráfico funcione
-        if not expectativa or sum(d['cobranza_esperada'] for d in expectativa.values()) == 0:
+        if len(expectativa) == 0 or sum(d['cobranza_esperada'] for d in expectativa.values()) == 0:
             logger.warning("No hay datos de expectativa de cobranza, agregando datos de prueba")
             from datetime import datetime, timedelta
             hoy = datetime.now()
