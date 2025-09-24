@@ -176,7 +176,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
 
       {/* KPIs Grid */}
       {kpis && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
           {/* Facturación con sin IVA */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
@@ -191,18 +191,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
             </div>
           </div>
 
-          {/* Cobranza con sin IVA y % cobrado */}
+          {/* Cobranza Relacionada */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <TrendingUp className="h-5 w-5 text-green-600" />
-                <h3 className="text-sm font-medium text-gray-500">Cobranza Total</h3>
+                <h3 className="text-sm font-medium text-gray-500">Cobranza Relacionada</h3>
               </div>
             </div>
             <div className="mt-2">
               <p className="text-2xl font-bold text-gray-900">${kpis.cobranza_total?.toLocaleString()}</p>
               <p className="text-sm text-gray-500 mt-1">Sin IVA: ${kpis.cobranza_sin_iva?.toLocaleString()}</p>
-              <p className="text-sm text-green-600 mt-1 font-medium">% Cobrado: {kpis.porcentaje_cobrado}%</p>
+              <p className="text-sm text-green-600 mt-1 font-medium">% Cobrado: {kpis.porcentaje_cobrado?.toFixed(2)}%</p>
+            </div>
+          </div>
+
+          {/* Cobranza General */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+                <h3 className="text-sm font-medium text-gray-500">Cobranza General</h3>
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl font-bold text-gray-900">${kpis.cobranza_general_total?.toLocaleString()}</p>
+              <p className="text-sm text-gray-500 mt-1">Todas las cobranzas</p>
+              <p className="text-sm text-blue-600 mt-1 font-medium">% vs Facturación: {kpis.porcentaje_cobrado_general?.toFixed(2)}%</p>
             </div>
           </div>
 
@@ -216,7 +231,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
             </div>
             <div className="mt-2">
               <p className="text-2xl font-bold text-gray-900">${kpis.anticipos_total?.toLocaleString()}</p>
-              <p className="text-sm text-gray-500 mt-1">{kpis.anticipos_porcentaje?.toFixed(1)}% sobre facturación</p>
+              <p className="text-sm text-gray-500 mt-1">{kpis.porcentaje_anticipos?.toFixed(2)}% sobre facturación</p>
             </div>
           </div>
 

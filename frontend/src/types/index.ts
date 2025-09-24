@@ -9,12 +9,14 @@ export interface KPIs {
   
   // Cobranza
   cobranza_total: number;
+  cobranza_general_total: number;
   cobranza_sin_iva: number;
   porcentaje_cobrado: number;
+  porcentaje_cobrado_general: number;
   
   // Anticipos
   anticipos_total: number;
-  anticipos_porcentaje: number;
+  porcentaje_anticipos: number;
   
   // Pedidos
   total_pedidos: number;
