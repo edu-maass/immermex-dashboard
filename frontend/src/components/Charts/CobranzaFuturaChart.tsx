@@ -24,11 +24,30 @@ export const CobranzaFuturaChart: FC<CobranzaFuturaChartProps> = ({ data }) => {
     return value.toLocaleString('es-MX');
   };
 
-  // Extraer solo la fecha de inicio de la semana
+  // Extraer fecha de inicio y calcular semana del año
   const extractStartDate = (semana: string) => {
     // Formato: "Semana X (DD/MM - DD/MM)" -> extraer "DD/MM"
     const match = semana.match(/\((\d{2}\/\d{2})/);
-    return match ? match[1] : semana;
+    if (match) {
+      const fechaStr = match[1]; // "DD/MM"
+      const [dia, mes] = fechaStr.split('/').map(Number);
+      
+      // Crear fecha (asumimos año actual)
+      const fecha = new Date(new Date().getFullYear(), mes - 1, dia);
+      
+      // Calcular semana del año
+      const semanaDelAño = getWeekOfYear(fecha);
+      
+      return `S${semanaDelAño}`;
+    }
+    return semana;
+  };
+
+  // Función para calcular la semana del año
+  const getWeekOfYear = (date: Date) => {
+    const start = new Date(date.getFullYear(), 0, 1);
+    const days = Math.floor((date.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
+    return Math.ceil((days + start.getDay() + 1) / 7);
   };
 
   return (
