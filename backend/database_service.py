@@ -32,6 +32,8 @@ def safe_date(value):
     try:
         if is_nan_value(value):
             return None
+        if isinstance(value, datetime):
+            return value  # Ya es un objeto datetime, devolverlo tal como está
         if isinstance(value, (int, float)):
             return None  # Los números no son fechas válidas
         if isinstance(value, str):
