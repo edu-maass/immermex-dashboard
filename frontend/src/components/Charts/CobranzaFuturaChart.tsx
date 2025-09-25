@@ -24,6 +24,13 @@ export const CobranzaFuturaChart: FC<CobranzaFuturaChartProps> = ({ data }) => {
     return value.toLocaleString('es-MX');
   };
 
+  // Extraer solo la fecha de inicio de la semana
+  const extractStartDate = (semana: string) => {
+    // Formato: "Semana X (DD/MM - DD/MM)" -> extraer "DD/MM"
+    const match = semana.match(/\((\d{2}\/\d{2})/);
+    return match ? match[1] : semana;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -43,6 +50,7 @@ export const CobranzaFuturaChart: FC<CobranzaFuturaChartProps> = ({ data }) => {
                 angle={-45}
                 textAnchor="end"
                 height={60}
+                tickFormatter={extractStartDate}
               />
               <YAxis 
                 yAxisId="cobranza"
@@ -62,6 +70,7 @@ export const CobranzaFuturaChart: FC<CobranzaFuturaChartProps> = ({ data }) => {
                   }
                   return [formatNumber(value), 'Pedidos Pendientes'];
                 }}
+                labelFormatter={(label) => `Semana: ${label}`}
                 labelStyle={{ color: '#374151' }}
                 contentStyle={{ 
                   backgroundColor: '#fff', 
