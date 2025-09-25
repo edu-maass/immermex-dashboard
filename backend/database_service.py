@@ -558,16 +558,25 @@ class DatabaseService:
     def _calculate_consumo_material(self, pedidos: list) -> dict:
         """Calcula consumo por material"""
         materiales_consumo = {}
+        pedidos_omitidos = 0
         
         for pedido in pedidos:
-            material = pedido.material or "Sin material"
+            # Omitir pedidos sin material o con material vacío
+            if not pedido.material or pedido.material.strip() == "":
+                pedidos_omitidos += 1
+                continue
+                
+            material = pedido.material.strip()
             # Truncar código de material a primeros 7 dígitos para agrupación útil
-            if material != "Sin material" and len(material) > 7:
+            if len(material) > 7:
                 material = material[:7]
             
             if material not in materiales_consumo:
                 materiales_consumo[material] = 0
             materiales_consumo[material] += pedido.kg
+        
+        # Log de debug
+        logger.info(f"Consumo material: {pedidos_omitidos} pedidos omitidos sin material, {len(materiales_consumo)} materiales válidos")
         
         # Ordenar y tomar top 10
         sorted_materiales = sorted(materiales_consumo.items(), key=lambda x: x[1], reverse=True)
