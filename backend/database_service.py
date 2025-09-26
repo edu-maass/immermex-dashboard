@@ -431,9 +431,14 @@ class DatabaseService:
             # Si se está filtrando por pedidos específicos, usar facturación de pedidos
             if filtros and filtros.get('pedidos'):
                 logger.info(f"Filtrando por pedidos específicos: {filtros['pedidos']}")
-                # Usar facturación de la tabla de pedidos (columna F - importe_sin_iva)
-                facturacion_total = sum(p.importe_sin_iva for p in pedidos if p.importe_sin_iva)
-                logger.info(f"Facturación calculada desde pedidos: {facturacion_total}")
+                # Calcular facturación desde pedidos: importe_sin_iva * 1.16 (con IVA)
+                facturacion_total = sum(p.importe_sin_iva * 1.16 for p in pedidos if p.importe_sin_iva)
+                # Facturación sin IVA: importe_sin_iva
+                facturacion_sin_iva = sum(p.importe_sin_iva for p in pedidos if p.importe_sin_iva)
+                # Contar facturas únicas por folio_factura
+                folios_unicos = len(set(p.folio_factura for p in pedidos if p.folio_factura))
+                total_facturas = folios_unicos
+                logger.info(f"Facturación calculada desde pedidos: {facturacion_total} (con IVA), {facturacion_sin_iva} (sin IVA), {total_facturas} facturas únicas")
             else:
                 # Filtrar solo facturas con folio válido (no filas de totales)
                 facturas_validas = [f for f in facturas if f.folio_factura and f.folio_factura.strip() and not f.folio_factura.lower().startswith(('total', 'suma', 'subtotal'))]
@@ -515,7 +520,9 @@ class DatabaseService:
                 expectativa_cobranza = {}
             
             # Métricas adicionales
-            total_facturas = len(facturas_validas)
+            if not (filtros and filtros.get('pedidos')):
+                # Solo calcular total_facturas si no se está filtrando por pedidos
+                total_facturas = len(facturas_validas)
             clientes_unicos = len(set(f.cliente for f in facturas_validas if f.cliente))
             
             # Pedidos únicos y toneladas
@@ -524,8 +531,8 @@ class DatabaseService:
             
             # Calcular facturación sin IVA (monto_neto es sin IVA, monto_total es con IVA)
             if filtros and filtros.get('pedidos'):
-                # Para filtros por pedidos, la facturación sin IVA es la misma que la total (ya viene sin IVA de pedidos)
-                facturacion_sin_iva = facturacion_total
+                # Para filtros por pedidos, ya se calculó arriba
+                pass  # facturacion_sin_iva ya se calculó en el bloque anterior
             else:
                 facturacion_sin_iva = sum(f.monto_neto for f in facturas_validas)
             
