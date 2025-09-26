@@ -411,7 +411,7 @@ class DatabaseService:
                 if filtros.get('pedidos'):
                     pedidos_list = filtros['pedidos']
                     query_facturas = query_facturas.filter(Facturacion.folio_factura.in_(pedidos_list))
-                    query_pedidos = query_pedidos.filter(Pedido.pedido.in_(pedidos_list))
+                    query_pedidos = query_pedidos.filter(Pedido.folio_factura.in_(pedidos_list))
             
             # Obtener datos
             facturas = query_facturas.all()
@@ -763,8 +763,8 @@ class DatabaseService:
     def get_filtros_disponibles(self) -> dict:
         """Obtiene opciones disponibles para filtros"""
         try:
-            # Pedidos disponibles
-            pedidos = self.db.query(Pedido.pedido).filter(Pedido.pedido.isnot(None)).distinct().all()
+            # Pedidos disponibles - usar folio_factura (columna A) en lugar de pedido
+            pedidos = self.db.query(Pedido.folio_factura).filter(Pedido.folio_factura.isnot(None)).distinct().all()
             pedidos_list = [p[0] for p in pedidos if p[0]]
             
             # Clientes disponibles
