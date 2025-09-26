@@ -423,21 +423,35 @@ class DatabaseService:
                 return self._get_default_kpis()
             
             # Calcular KPIs
-            # Filtrar solo facturas con folio válido (no filas de totales)
-            facturas_validas = [f for f in facturas if f.folio_factura and f.folio_factura.strip() and not f.folio_factura.lower().startswith(('total', 'suma', 'subtotal'))]
-            
-            # Debug: Log para verificar el filtrado
-            logger.info(f"Total facturas: {len(facturas)}, Facturas válidas: {len(facturas_validas)}")
-            if len(facturas_validas) == 0:
-                logger.warning("No hay facturas válidas después del filtrado, usando todas las facturas")
-                facturas_validas = facturas
-            
-            facturacion_total = sum(f.monto_total for f in facturas_validas)
+            # Si se está filtrando por pedidos específicos, usar facturación de pedidos
+            if filtros and filtros.get('pedidos'):
+                logger.info(f"Filtrando por pedidos específicos: {filtros['pedidos']}")
+                # Usar facturación de la tabla de pedidos (columna F - importe_sin_iva)
+                facturacion_total = sum(p.importe_sin_iva for p in pedidos if p.importe_sin_iva)
+                logger.info(f"Facturación calculada desde pedidos: {facturacion_total}")
+            else:
+                # Filtrar solo facturas con folio válido (no filas de totales)
+                facturas_validas = [f for f in facturas if f.folio_factura and f.folio_factura.strip() and not f.folio_factura.lower().startswith(('total', 'suma', 'subtotal'))]
+                
+                # Debug: Log para verificar el filtrado
+                logger.info(f"Total facturas: {len(facturas)}, Facturas válidas: {len(facturas_validas)}")
+                if len(facturas_validas) == 0:
+                    logger.warning("No hay facturas válidas después del filtrado, usando todas las facturas")
+                    facturas_validas = facturas
+                
+                facturacion_total = sum(f.monto_total for f in facturas_validas)
             
             # Solo considerar cobranzas relacionadas con las facturas del mismo período
-            facturas_uuids = {f.uuid_factura for f in facturas_validas if f.uuid_factura}
-            cobranzas_relacionadas = [c for c in cobranzas if c.uuid_factura_relacionada in facturas_uuids and c.folio_pago and c.folio_pago.strip() and not c.folio_pago.lower().startswith(('total', 'suma', 'subtotal'))]
-            cobranza_total = sum(c.importe_pagado for c in cobranzas_relacionadas)
+            if filtros and filtros.get('pedidos'):
+                # Para filtros por pedidos, usar todas las cobranzas válidas (no relacionadas con facturas específicas)
+                cobranzas_validas = [c for c in cobranzas if c.folio_pago and c.folio_pago.strip() and not c.folio_pago.lower().startswith(('total', 'suma', 'subtotal'))]
+                cobranza_total = sum(c.importe_pagado for c in cobranzas_validas)
+                logger.info(f"Cobranza calculada para pedidos filtrados: {cobranza_total}")
+            else:
+                # Para filtros generales, usar cobranzas relacionadas con facturas
+                facturas_uuids = {f.uuid_factura for f in facturas_validas if f.uuid_factura}
+                cobranzas_relacionadas = [c for c in cobranzas if c.uuid_factura_relacionada in facturas_uuids and c.folio_pago and c.folio_pago.strip() and not c.folio_pago.lower().startswith(('total', 'suma', 'subtotal'))]
+                cobranza_total = sum(c.importe_pagado for c in cobranzas_relacionadas)
             
             # Cobranza general (todas las cobranzas con folio válido, sin filtro de facturas)
             cobranzas_validas = [c for c in cobranzas if c.folio_pago and c.folio_pago.strip() and not c.folio_pago.lower().startswith(('total', 'suma', 'subtotal'))]
@@ -456,7 +470,12 @@ class DatabaseService:
             porcentaje_cobrado_general = (cobranza_general_total / facturacion_total * 100) if facturacion_total > 0 else 0
             
             # Aging de cartera
-            aging_cartera = self._calculate_aging_cartera(facturas_validas)
+            if filtros and filtros.get('pedidos'):
+                # Para filtros por pedidos, usar facturas relacionadas con esos pedidos
+                facturas_validas = [f for f in facturas if f.folio_factura and f.folio_factura.strip() and not f.folio_factura.lower().startswith(('total', 'suma', 'subtotal'))]
+                aging_cartera = self._calculate_aging_cartera(facturas_validas)
+            else:
+                aging_cartera = self._calculate_aging_cartera(facturas_validas)
             
             # Top clientes
             top_clientes = self._calculate_top_clientes(facturas_validas)
@@ -481,10 +500,18 @@ class DatabaseService:
             toneladas_total = sum(p.kg for p in pedidos)
             
             # Calcular facturación sin IVA (monto_neto es sin IVA, monto_total es con IVA)
-            facturacion_sin_iva = sum(f.monto_neto for f in facturas_validas)
+            if filtros and filtros.get('pedidos'):
+                # Para filtros por pedidos, la facturación sin IVA es la misma que la total (ya viene sin IVA de pedidos)
+                facturacion_sin_iva = facturacion_total
+            else:
+                facturacion_sin_iva = sum(f.monto_neto for f in facturas_validas)
             
             # Calcular cobranza sin IVA (de las cobranzas relacionadas)
-            cobranza_sin_iva = sum(c.importe_pagado / 1.16 for c in cobranzas_relacionadas if c.importe_pagado > 0)  # Dividir por 1.16 para quitar IVA
+            if filtros and filtros.get('pedidos'):
+                # Para filtros por pedidos, usar todas las cobranzas válidas
+                cobranza_sin_iva = sum(c.importe_pagado / 1.16 for c in cobranzas_validas if c.importe_pagado > 0)  # Dividir por 1.16 para quitar IVA
+            else:
+                cobranza_sin_iva = sum(c.importe_pagado / 1.16 for c in cobranzas_relacionadas if c.importe_pagado > 0)  # Dividir por 1.16 para quitar IVA
             
             # Calcular porcentaje de anticipos sobre facturación
             porcentaje_anticipos = (anticipos_total / facturacion_total * 100) if facturacion_total > 0 else 0
