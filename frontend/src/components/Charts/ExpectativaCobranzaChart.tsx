@@ -16,6 +16,18 @@ export const ExpectativaCobranzaChart: FC<ExpectativaCobranzaChartProps> = ({ da
     }).format(value);
   };
 
+  // Función para formatear las etiquetas del eje X
+  const formatXAxisLabel = (semana: string) => {
+    // Formato: "Semana X (DD/MM - DD/MM)" -> extraer semana del año y fecha de inicio
+    const match = semana.match(/Semana (\d+) \((\d{2}\/\d{2})/);
+    if (match) {
+      const semanaNum = match[1];
+      const fechaInicio = match[2]; // "DD/MM"
+      return `S${semanaNum} (${fechaInicio})`;
+    }
+    return semana;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -35,6 +47,7 @@ export const ExpectativaCobranzaChart: FC<ExpectativaCobranzaChartProps> = ({ da
                 angle={-45}
                 textAnchor="end"
                 height={80}
+                tickFormatter={formatXAxisLabel}
               />
               <YAxis 
                 tick={{ fontSize: 12 }}
