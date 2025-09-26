@@ -30,9 +30,9 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
       console.log('Aplicando filtros de pedido:', pedidosAplicar || []);
       await apiService.aplicarFiltrosPedido(pedidosAplicar || []);
       
-      // Obtener KPIs
+      // Obtener KPIs con filtros de pedidos
       console.log('Obteniendo KPIs...');
-      const kpisData = await apiService.getKPIs();
+      const kpisData = await apiService.getKPIs({ pedidos: pedidosAplicar?.join(',') });
       console.log('KPIs obtenidos:', kpisData);
       setKpis(kpisData as KPIs);
       
@@ -52,7 +52,7 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
         if (dataLoaded) {
           console.log('Datos ya cargados, mostrando dashboard general');
           await apiService.aplicarFiltrosPedido([]); // Limpiar filtros para mostrar todos los datos
-          const kpisData = await apiService.getKPIs();
+          const kpisData = await apiService.getKPIs({ pedidos: '' });
           setKpis(kpisData as KPIs);
           return;
         }
@@ -63,7 +63,7 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
           // Si hay pedidos, cargar datos generales (sin filtro)
           console.log('Datos disponibles encontrados, cargando dashboard general');
           await apiService.aplicarFiltrosPedido([]); // Limpiar filtros para mostrar todos los datos
-          const kpisData = await apiService.getKPIs();
+          const kpisData = await apiService.getKPIs({ pedidos: '' });
           setKpis(kpisData as KPIs);
         } else {
           // Si no hay pedidos, mostrar datos en cero
@@ -90,7 +90,7 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
           if (pedidos.length > 0) {
             console.log('Datos encontrados al montar componente, cargando...');
             await apiService.aplicarFiltrosPedido([]);
-            const kpisData = await apiService.getKPIs();
+            const kpisData = await apiService.getKPIs({ pedidos: '' });
             setKpis(kpisData as KPIs);
           }
         } catch (error) {
