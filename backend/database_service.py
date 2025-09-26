@@ -469,13 +469,17 @@ class DatabaseService:
             porcentaje_cobrado = (cobranza_total / facturacion_total * 100) if facturacion_total > 0 else 0
             porcentaje_cobrado_general = (cobranza_general_total / facturacion_total * 100) if facturacion_total > 0 else 0
             
-            # Aging de cartera
+            # Definir facturas_validas para cálculos posteriores
             if filtros and filtros.get('pedidos'):
-                # Para filtros por pedidos, usar facturas relacionadas con esos pedidos
-                facturas_validas = [f for f in facturas if f.folio_factura and f.folio_factura.strip() and not f.folio_factura.lower().startswith(('total', 'suma', 'subtotal'))]
-                aging_cartera = self._calculate_aging_cartera(facturas_validas)
-            else:
-                aging_cartera = self._calculate_aging_cartera(facturas_validas)
+                # Para filtros por pedidos, buscar facturas relacionadas con esos pedidos
+                facturas_validas = []
+                for pedido_num in filtros['pedidos']:
+                    facturas_pedido = [f for f in facturas if f.folio_factura == pedido_num and f.folio_factura and f.folio_factura.strip() and not f.folio_factura.lower().startswith(('total', 'suma', 'subtotal'))]
+                    facturas_validas.extend(facturas_pedido)
+                logger.info(f"Facturas válidas para pedidos filtrados: {len(facturas_validas)}")
+            
+            # Aging de cartera
+            aging_cartera = self._calculate_aging_cartera(facturas_validas)
             
             # Top clientes
             top_clientes = self._calculate_top_clientes(facturas_validas)
@@ -485,8 +489,22 @@ class DatabaseService:
             
             # Expectativa de cobranza futura
             try:
-                expectativa_cobranza = self._calculate_expectativa_cobranza(facturas_validas, pedidos, anticipos, cobranzas)
-                logger.info(f"Expectativa de cobranza calculada: {len(expectativa_cobranza)} semanas")
+                if filtros and filtros.get('pedidos'):
+                    # Para filtros por pedidos, buscar facturas relacionadas con esos pedidos
+                    logger.info(f"Buscando facturas relacionadas con pedidos: {filtros['pedidos']}")
+                    facturas_relacionadas = []
+                    for pedido_num in filtros['pedidos']:
+                        # Buscar facturas que tengan el mismo folio que el pedido
+                        facturas_pedido = [f for f in facturas if f.folio_factura == pedido_num]
+                        facturas_relacionadas.extend(facturas_pedido)
+                        logger.info(f"Pedido {pedido_num}: {len(facturas_pedido)} facturas encontradas")
+                    
+                    # Usar facturas relacionadas para calcular expectativa
+                    expectativa_cobranza = self._calculate_expectativa_cobranza(facturas_relacionadas, pedidos, anticipos, cobranzas)
+                    logger.info(f"Expectativa de cobranza calculada con {len(facturas_relacionadas)} facturas relacionadas: {len(expectativa_cobranza)} semanas")
+                else:
+                    expectativa_cobranza = self._calculate_expectativa_cobranza(facturas_validas, pedidos, anticipos, cobranzas)
+                    logger.info(f"Expectativa de cobranza calculada: {len(expectativa_cobranza)} semanas")
             except Exception as e:
                 logger.error(f"Error calculando expectativa de cobranza: {str(e)}")
                 expectativa_cobranza = {}
