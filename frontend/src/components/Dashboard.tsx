@@ -7,7 +7,6 @@ import { AgingChart } from './Charts/AgingChart';
 import { TopClientesChart } from './Charts/TopClientesChart';
 import { ConsumoMaterialChart } from './Charts/ConsumoMaterialChart';
 import { ExpectativaCobranzaChart } from './Charts/ExpectativaCobranzaChart';
-import { CobranzaFuturaChart } from './Charts/CobranzaFuturaChart';
 import { apiService } from '../services/api';
 import { KPIs, FiltrosDashboard, GraficoDatos } from '../types';
 import { 
@@ -121,18 +120,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
 
   const formatConsumoMaterialData = (materiales: Record<string, number>) => {
     return Object.entries(materiales).map(([name, value]) => ({ name, value }));
-  };
-
-  const formatExpectativaCobranzaData = (expectativa: Record<string, {cobranza_esperada: number, cobranza_real: number, pedidos_pendientes: number}>) => {
-    console.log('formatExpectativaCobranzaData received:', expectativa);
-    const formatted = Object.entries(expectativa).map(([semana, datos]) => ({
-      semana,
-      cobranza_esperada: datos.cobranza_esperada,
-      cobranza_real: datos.cobranza_real,
-      pedidos_pendientes: datos.pedidos_pendientes
-    }));
-    console.log('formatExpectativaCobranzaData formatted:', formatted);
-    return formatted;
   };
 
   const formatExpectativaCobranzaDataOld = (expectativa: Record<string, {cobranza_esperada: number, cobranza_real: number}>) => {
@@ -314,41 +301,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
             data={formatExpectativaCobranzaDataOld(kpis.expectativa_cobranza)}
           />
         )}
-      </div>
-
-      {/* Nueva fila para gráfico de cobranza futura */}
-      <div className="grid grid-cols-1 gap-6 mt-6">
-        {/* Cobranza Futura Esperada */}
-        {(() => {
-          console.log('Checking cobranza futura condition:', {
-            hasKpis: !!kpis,
-            hasExpectativa: !!kpis?.expectativa_cobranza,
-            expectativaKeys: kpis?.expectativa_cobranza ? Object.keys(kpis.expectativa_cobranza) : [],
-            expectativaLength: kpis?.expectativa_cobranza ? Object.keys(kpis.expectativa_cobranza).length : 0
-          });
-          
-          // Si no hay datos reales, usar datos de prueba temporalmente
-          if (kpis && kpis.expectativa_cobranza && Object.keys(kpis.expectativa_cobranza).length === 0) {
-            console.log('Using fallback test data for cobranza futura chart');
-            const testData = [
-              { semana: 'Semana 1 (25/09 - 01/10)', cobranza_esperada: 100000, cobranza_real: 0, pedidos_pendientes: 5 },
-              { semana: 'Semana 2 (02/10 - 08/10)', cobranza_esperada: 150000, cobranza_real: 0, pedidos_pendientes: 6 },
-              { semana: 'Semana 3 (09/10 - 15/10)', cobranza_esperada: 200000, cobranza_real: 0, pedidos_pendientes: 7 },
-              { semana: 'Semana 4 (16/10 - 22/10)', cobranza_esperada: 250000, cobranza_real: 0, pedidos_pendientes: 8 },
-              { semana: 'Semana 5 (23/10 - 29/10)', cobranza_esperada: 300000, cobranza_real: 0, pedidos_pendientes: 9 },
-              { semana: 'Semana 6 (30/10 - 05/11)', cobranza_esperada: 350000, cobranza_real: 0, pedidos_pendientes: 10 }
-            ];
-            return <CobranzaFuturaChart data={testData} />;
-          }
-          
-          // Si hay datos reales, usarlos
-          if (kpis && kpis.expectativa_cobranza && Object.keys(kpis.expectativa_cobranza).length > 0) {
-            return <CobranzaFuturaChart data={formatExpectativaCobranzaData(kpis.expectativa_cobranza)} />;
-          }
-          
-          // Si no hay datos en absoluto, no mostrar nada
-          return null;
-        })()}
       </div>
     </div>
   );
