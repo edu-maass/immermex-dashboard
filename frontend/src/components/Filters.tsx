@@ -1,7 +1,7 @@
 import { useState, FC } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { SearchableSelect } from './ui/searchable-select';
 import { FiltrosDashboard } from '../types';
 import { Search, X } from 'lucide-react';
 import { apiService } from '../services/api';
@@ -40,21 +40,24 @@ export const Filters: FC<FiltersProps> = ({ onFiltersChange, onClearFilters }) =
   };
 
   const meses = [
-    { value: 1, label: 'Enero' },
-    { value: 2, label: 'Febrero' },
-    { value: 3, label: 'Marzo' },
-    { value: 4, label: 'Abril' },
-    { value: 5, label: 'Mayo' },
-    { value: 6, label: 'Junio' },
-    { value: 7, label: 'Julio' },
-    { value: 8, label: 'Agosto' },
-    { value: 9, label: 'Septiembre' },
-    { value: 10, label: 'Octubre' },
-    { value: 11, label: 'Noviembre' },
-    { value: 12, label: 'Diciembre' },
+    { value: '1', label: 'Enero' },
+    { value: '2', label: 'Febrero' },
+    { value: '3', label: 'Marzo' },
+    { value: '4', label: 'Abril' },
+    { value: '5', label: 'Mayo' },
+    { value: '6', label: 'Junio' },
+    { value: '7', label: 'Julio' },
+    { value: '8', label: 'Agosto' },
+    { value: '9', label: 'Septiembre' },
+    { value: '10', label: 'Octubre' },
+    { value: '11', label: 'Noviembre' },
+    { value: '12', label: 'Diciembre' },
   ];
 
-  const años = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
+  const años = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(año => ({
+    value: año.toString(),
+    label: año.toString()
+  }));
 
 
   return (
@@ -70,41 +73,23 @@ export const Filters: FC<FiltersProps> = ({ onFiltersChange, onClearFilters }) =
           {/* Mes */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Mes</label>
-            <Select
+            <SearchableSelect
               value={filtros.mes?.toString() || ''}
               onValueChange={(value) => handleInputChange('mes', parseInt(value))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar mes" />
-              </SelectTrigger>
-              <SelectContent>
-                {meses.map((mes) => (
-                  <SelectItem key={mes.value} value={mes.value.toString()}>
-                    {mes.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Seleccionar mes"
+              options={meses}
+            />
           </div>
 
           {/* Año */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Año</label>
-            <Select
+            <SearchableSelect
               value={filtros.año?.toString() || ''}
               onValueChange={(value) => handleInputChange('año', parseInt(value))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar año" />
-              </SelectTrigger>
-              <SelectContent>
-                {años.map((año) => (
-                  <SelectItem key={año} value={año.toString()}>
-                    {año}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Seleccionar año"
+              options={años}
+            />
           </div>
         </div>
 
