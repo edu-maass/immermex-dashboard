@@ -410,11 +410,14 @@ class DatabaseService:
                 
                 if filtros.get('pedidos'):
                     pedidos_list = filtros['pedidos']
+                    logger.info(f"Filtrando por pedidos: {pedidos_list}")
                     # Filtrar pedidos por pedido (columna C)
                     query_pedidos = query_pedidos.filter(Pedido.pedido.in_(pedidos_list))
                     # Obtener los folio_factura de los pedidos filtrados para relacionar con facturas
                     pedidos_filtrados = query_pedidos.all()
+                    logger.info(f"Pedidos filtrados encontrados: {len(pedidos_filtrados)}")
                     folios_pedidos = [p.folio_factura for p in pedidos_filtrados if p.folio_factura]
+                    logger.info(f"Folios de pedidos: {folios_pedidos}")
                     # Filtrar facturas por los folios de los pedidos
                     query_facturas = query_facturas.filter(Facturacion.folio_factura.in_(folios_pedidos))
             
@@ -424,7 +427,13 @@ class DatabaseService:
             anticipos = query_anticipos.all()
             pedidos = query_pedidos.all()
             
-            if not facturas:
+            logger.info(f"Datos obtenidos - Facturas: {len(facturas)}, Pedidos: {len(pedidos)}, Cobranzas: {len(cobranzas)}")
+            
+            # Si se está filtrando por pedidos y no hay facturas, pero sí hay pedidos, continuar con el cálculo
+            if not facturas and filtros and filtros.get('pedidos') and pedidos:
+                logger.info("No hay facturas pero sí hay pedidos filtrados, continuando con cálculo desde pedidos")
+            elif not facturas:
+                logger.warning("No se encontraron facturas, retornando KPIs por defecto")
                 return self._get_default_kpis()
             
             # Calcular KPIs
