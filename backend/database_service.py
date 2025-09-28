@@ -484,9 +484,43 @@ class DatabaseService:
                     and c.folio_pago and c.folio_pago.strip() 
                     and not c.folio_pago.lower().startswith(('total', 'suma', 'subtotal'))]
                 
-                cobranza_total = sum(c.importe_pagado for c in cobranzas_relacionadas_pedidos)
+                # Paso 5: Calcular cobranza proporcional por pedido
+                cobranza_total = 0
+                cobranza_por_factura = {}
+                
+                # Agrupar cobranzas por factura
+                for cobranza in cobranzas_relacionadas_pedidos:
+                    uuid_factura = cobranza.uuid_factura_relacionada
+                    if uuid_factura not in cobranza_por_factura:
+                        cobranza_por_factura[uuid_factura] = 0
+                    cobranza_por_factura[uuid_factura] += cobranza.importe_pagado
+                
+                # Calcular cobranza proporcional para cada factura
+                for factura in facturas_pedidos_filtrados:
+                    if not factura.uuid_factura:
+                        continue
+                    
+                    uuid_factura = factura.uuid_factura
+                    cobranza_factura = cobranza_por_factura.get(uuid_factura, 0)
+                    
+                    if cobranza_factura > 0 and factura.monto_total > 0:
+                        # Calcular porcentaje cobrado de la factura total
+                        porcentaje_cobrado_factura = cobranza_factura / factura.monto_total
+                        
+                        # Buscar todos los pedidos asociados a esta factura (no solo los filtrados)
+                        pedidos_factura = [p for p in self.db.query(Pedido).filter(Pedido.folio_factura == factura.folio_factura).all()]
+                        total_pedidos_factura = len(pedidos_factura)
+                        
+                        if total_pedidos_factura > 0:
+                            # Calcular cobranza proporcional para los pedidos filtrados de esta factura
+                            pedidos_filtrados_factura = [p for p in pedidos if p.folio_factura == factura.folio_factura]
+                            cobranza_proporcional = (cobranza_factura * len(pedidos_filtrados_factura)) / total_pedidos_factura
+                            cobranza_total += cobranza_proporcional
+                            
+                            logger.info(f"Factura {factura.folio_factura}: {len(pedidos_filtrados_factura)}/{total_pedidos_factura} pedidos filtrados, cobranza proporcional: {cobranza_proporcional:.2f}")
+                
                 cobranzas_relacionadas = cobranzas_relacionadas_pedidos
-                logger.info(f"Cobranza relacionada con pedidos filtrados: {cobranza_total} de {len(cobranzas_relacionadas_pedidos)} cobranzas")
+                logger.info(f"Cobranza total proporcional para pedidos filtrados: {cobranza_total:.2f}")
             else:
                 # Para filtros generales, usar cobranzas relacionadas con facturas
                 facturas_uuids = {f.uuid_factura for f in facturas_validas if f.uuid_factura}
@@ -568,8 +602,8 @@ class DatabaseService:
             
             # Calcular cobranza sin IVA (dividiendo entre 1.16 para quitar IVA)
             if filtros and filtros.get('pedidos'):
-                # Para filtros por pedidos, usar cobranzas relacionadas con pedidos
-                cobranza_sin_iva = sum(c.importe_pagado / 1.16 for c in cobranzas_relacionadas if c.importe_pagado > 0)
+                # Para filtros por pedidos, usar cobranza proporcional calculada arriba
+                cobranza_sin_iva = cobranza_total / 1.16
             else:
                 # Para filtros generales, usar cobranzas relacionadas con facturas
                 cobranza_sin_iva = sum(c.importe_pagado / 1.16 for c in cobranzas_relacionadas if c.importe_pagado > 0)
