@@ -410,12 +410,14 @@ class DatabaseService:
                 
                 if filtros.get('pedidos'):
                     pedidos_list = filtros['pedidos']
-                    logger.info(f"Filtrando por pedidos: {pedidos_list}")
+                    logger.info(f"Filtrando por pedidos: {pedidos_list} (tipos: {[type(p).__name__ for p in pedidos_list]})")
                     # Filtrar pedidos por pedido (columna C)
                     query_pedidos = query_pedidos.filter(Pedido.pedido.in_(pedidos_list))
                     # Obtener los folio_factura de los pedidos filtrados para relacionar con facturas
                     pedidos_filtrados = query_pedidos.all()
                     logger.info(f"Pedidos filtrados encontrados: {len(pedidos_filtrados)}")
+                    if pedidos_filtrados:
+                        logger.info(f"Primer pedido encontrado: pedido='{pedidos_filtrados[0].pedido}', folio_factura='{pedidos_filtrados[0].folio_factura}', importe_sin_iva={pedidos_filtrados[0].importe_sin_iva}")
                     folios_pedidos = [p.folio_factura for p in pedidos_filtrados if p.folio_factura]
                     logger.info(f"Folios de pedidos: {folios_pedidos}")
                     # Filtrar facturas por los folios de los pedidos
