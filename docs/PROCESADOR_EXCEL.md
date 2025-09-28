@@ -1,32 +1,40 @@
-# 📊 Procesador de Excel Immermex
+# 📊 Procesador de Excel Avanzado Immermex v2.0.0
 
 ## Descripción General
 
-El `excel_processor.py` es un módulo especializado para procesar archivos Excel mensuales de Immermex. Proporciona limpieza automática de datos, normalización de columnas y cálculo de relaciones entre tablas.
+El `excel_processor.py` es un módulo especializado y avanzado para procesar archivos Excel mensuales de Immermex. Proporciona limpieza automática de datos, normalización de columnas, cálculo de relaciones entre tablas y persistencia automática en PostgreSQL.
 
-## 🎯 Características Principales
+## 🎯 Características Principales Avanzadas
 
-### ✅ Detección Automática de Encabezados
-- Busca dinámicamente la fila de encabezados en cada hoja
-- Utiliza palabras clave específicas para cada tipo de datos
-- Maneja variaciones en el formato de archivos
+### ✅ Detección Automática Inteligente de Encabezados
+- Busca dinámicamente la fila de encabezados en cada hoja usando algoritmos inteligentes
+- Utiliza palabras clave específicas y patrones para cada tipo de datos
+- Maneja variaciones complejas en el formato de archivos
+- Detección de múltiples formatos de fecha y números
+- Validación automática de estructura de datos
 
-### ✅ Mapeo Flexible de Columnas
-- Mapeo inteligente de nombres de columnas variables
-- Soporte para múltiples formatos de nomenclatura
-- Normalización automática a nombres estándar
+### ✅ Mapeo Flexible y Robusto de Columnas
+- Mapeo inteligente de nombres de columnas variables con múltiples sinónimos
+- Soporte para múltiples formatos de nomenclatura (español, inglés, abreviaciones)
+- Normalización automática a nombres estándar con validación
+- Detección automática de tipos de datos
+- Manejo de columnas faltantes con valores por defecto
 
-### ✅ Limpieza Robusta de Datos
-- Normalización de fechas al formato YYYY-MM-DD
-- Conversión automática de tipos numéricos
-- Limpieza de strings (espacios, mayúsculas/minúsculas)
-- Validación y limpieza de UUIDs
+### ✅ Limpieza Robusta y Avanzada de Datos
+- Normalización de fechas a formato YYYY-MM-DD con múltiples formatos de entrada
+- Conversión automática de tipos numéricos con manejo de errores
+- Limpieza avanzada de strings (espacios, mayúsculas/minúsculas, caracteres especiales)
+- Validación y limpieza de UUIDs con verificación de formato
+- Manejo de valores NaN, null, vacíos y errores de formato
+- Sanitización de datos para prevenir inyección SQL
 
-### ✅ Cálculo de Relaciones
-- Relaciona facturación con cobranza por UUID
-- Calcula días de cobro automáticamente
-- Recalcula saldos pendientes
-- Identifica anticipos y notas de crédito
+### ✅ Cálculo Avanzado de Relaciones
+- Relaciona facturación con cobranza por UUID con validación de integridad
+- Calcula días de cobro automáticamente con análisis de puntualidad
+- Recalcula saldos pendientes con precisión decimal
+- Identifica anticipos y notas de crédito con clasificación automática
+- Cálculo de márgenes y rentabilidad por pedido
+- Análisis de tendencias temporales
 
 ## 📋 Estructura de Datos
 
@@ -88,35 +96,58 @@ El `excel_processor.py` es un módulo especializado para procesar archivos Excel
 }
 ```
 
-## 🚀 Uso Básico
+## 🚀 Uso Avanzado
 
-### Función Principal
+### Función Principal con Persistencia
 ```python
 from backend.excel_processor import load_and_clean_excel
+from backend.database_service import DatabaseService
 
-# Procesar archivo Excel
+# Procesar archivo Excel con persistencia automática
 data = load_and_clean_excel("ruta/al/archivo.xlsx")
 
-# Acceder a los datos
+# Los datos se almacenan automáticamente en PostgreSQL
+# Acceder a los datos procesados
 facturacion = data['facturacion_clean']
 cobranza = data['cobranza_clean']
 cfdi = data['cfdi_clean']
 pedidos = data['pedidos_clean']
+
+# Verificar persistencia
+db_service = DatabaseService()
+summary = db_service.get_data_summary()
+print(f"Datos almacenados: {summary}")
 ```
 
-### Uso con Clase
+### Uso con Clase Avanzada
 ```python
 from backend.excel_processor import ImmermexExcelProcessor
+from backend.database_service import DatabaseService
 
-# Crear instancia
+# Crear instancia con persistencia
 processor = ImmermexExcelProcessor()
+db_service = DatabaseService()
 
-# Procesar archivo
+# Procesar archivo con almacenamiento automático
 data = processor.load_and_clean_excel("archivo.xlsx")
 
-# Procesar hojas individuales
+# Los datos se guardan automáticamente en la BD
+# Verificar datos persistentes
+archivos = db_service.get_archivos_procesados()
+print(f"Archivos procesados: {len(archivos)}")
+```
+
+### Procesamiento Individual con Validación
+```python
+# Procesar hojas individuales con validación avanzada
 facturacion = processor.clean_facturacion("archivo.xlsx")
 pedidos = processor.clean_pedidos("archivo.xlsx", "1-21 0925")
+
+# Validar datos antes de persistir
+if processor.validate_data_quality(facturacion):
+    db_service.save_facturacion(facturacion)
+else:
+    print("Datos no válidos, revisar archivo")
 ```
 
 ## 🔧 Configuración Avanzada
@@ -202,35 +233,62 @@ logger.info(f"Rango de fechas: {fechas.min()} a {fechas.max()}")
 logger.info(f"Total facturado: ${total:,.2f}")
 ```
 
-## 🔄 Integración con Backend
+## 🔄 Integración con Backend Avanzado
 
-### Endpoint de Upload
+### Endpoint de Upload con Persistencia
 ```python
 from backend.excel_processor import load_and_clean_excel
+from backend.database_service import DatabaseService
 
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
     # Procesar archivo con el procesador especializado
     data = load_and_clean_excel(file_path)
     
+    # Persistir automáticamente en PostgreSQL
+    db_service = DatabaseService()
+    archivo_id = db_service.save_archivo_procesado(file.filename, len(data))
+    
     # Usar datos procesados en KPIs
-    kpis = calculate_kpis(data)
-    return kpis
+    kpis = db_service.calculate_kpis_from_persistent_data()
+    return {
+        "kpis": kpis,
+        "archivo_id": archivo_id,
+        "registros_procesados": len(data)
+    }
 ```
 
-### Cálculo de KPIs
+### Cálculo de KPIs desde Datos Persistentes
 ```python
-def calculate_kpis_from_processed_data(data):
-    facturacion = data['facturacion_clean']
+def calculate_kpis_from_persistent_data():
+    db_service = DatabaseService()
+    
+    # Obtener datos desde PostgreSQL
+    facturacion = db_service.get_facturacion_data()
+    cobranza = db_service.get_cobranza_data()
     
     kpis = {
         'total_facturado': facturacion['monto_total'].sum(),
         'total_pendiente': facturacion['saldo_pendiente'].sum(),
         'num_facturas': len(facturacion),
-        'promedio_factura': facturacion['monto_total'].mean()
+        'promedio_factura': facturacion['monto_total'].mean(),
+        'porcentaje_cobrado': calculate_cobranza_percentage(facturacion, cobranza),
+        'aging_cartera': calculate_aging_from_persistent_data(facturacion)
     }
     
     return kpis
+```
+
+### Gestión de Archivos Procesados
+```python
+# Obtener historial de archivos
+archivos = db_service.get_archivos_procesados(skip=0, limit=10)
+
+# Eliminar archivo específico
+db_service.delete_archivo(archivo_id)
+
+# Verificar integridad de datos
+integrity_check = db_service.verify_data_integrity()
 ```
 
 ## 🧪 Pruebas y Validación
@@ -274,4 +332,4 @@ assert hasattr(processor, 'clean_pedidos')
 
 ---
 
-*Procesador de Excel Immermex v1.0.0 - Sistema robusto para procesamiento de datos financieros*
+*Procesador de Excel Avanzado Immermex v2.0.0 - Sistema robusto para procesamiento de datos financieros con persistencia completa*

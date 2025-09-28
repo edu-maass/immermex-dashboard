@@ -1,6 +1,6 @@
 # 📊 Immermex Dashboard
 
-Dashboard financiero y operacional moderno para Immermex, construido con React, FastAPI y Tailwind CSS.
+Sistema web moderno para análisis financiero y operacional de Immermex, construido con React, FastAPI, PostgreSQL y Tailwind CSS. Incluye persistencia de datos en la nube con Supabase.
 
 ## 🌐 Demo en Línea
 
@@ -10,13 +10,16 @@ Dashboard financiero y operacional moderno para Immermex, construido con React, 
 
 ## 🎯 Características Principales
 
-- ✅ **KPIs Financieros**: Facturación, cobranza, inventario, anticipos
-- ✅ **Gráficos Interactivos**: Aging de cartera, top clientes, consumo por material
-- ✅ **Filtros Dinámicos**: Por fecha, cliente, agente, material
-- ✅ **Subida de Archivos**: Drag & drop para archivos Excel mensuales
+- ✅ **KPIs Financieros Avanzados**: Facturación, cobranza, inventario, anticipos, análisis de pedidos
+- ✅ **Gráficos Interactivos**: Aging de cartera, top clientes, consumo por material, expectativa de cobranza
+- ✅ **Filtros Dinámicos**: Por fecha, cliente, agente, material, pedido específico
+- ✅ **Subida de Archivos**: Drag & drop para archivos Excel mensuales con procesamiento avanzado
+- ✅ **Persistencia de Datos**: Almacenamiento en PostgreSQL con Supabase
+- ✅ **Gestión de Datos**: Historial de archivos procesados, eliminación de datos
+- ✅ **Análisis por Pedido**: Dashboard especializado para análisis detallado de pedidos
 - ✅ **Diseño Responsivo**: Funciona en desktop y móvil
-- ✅ **API REST**: Documentación automática con Swagger
-- ✅ **Análisis en Tiempo Real**: Cálculo automático de métricas
+- ✅ **API REST Completa**: Documentación automática con Swagger
+- ✅ **Análisis en Tiempo Real**: Cálculo automático de métricas con persistencia
 
 ## 🚀 Acceso al Sistema
 
@@ -31,23 +34,45 @@ El sistema está desplegado en la nube y no requiere instalación local:
 
 ```
 immermex-dashboard/
-├── frontend/               # Aplicación React
+├── frontend/                    # Aplicación React
 │   ├── src/
-│   │   ├── components/    # Componentes React
-│   │   │   ├── Charts/    # Gráficos especializados
-│   │   │   └── ui/        # Componentes UI base
-│   │   ├── services/      # Servicios API
-│   │   └── types/         # Tipos TypeScript
-│   └── package.json       # Dependencias Node.js
-├── backend/               # API FastAPI
-│   ├── simple_main.py     # Servidor principal
-│   ├── data_processor.py  # Procesador de datos
-│   ├── excel_processor.py # Procesador especializado de Excel
-│   ├── models.py          # Modelos Pydantic
-│   └── requirements.txt   # Dependencias Python
-├── docs/                  # Documentación técnica
-│   └── SISTEMA_IMMERMEX_DASHBOARD.md
-└── README.md              # Este archivo
+│   │   ├── components/         # Componentes React
+│   │   │   ├── Charts/         # Gráficos especializados
+│   │   │   │   ├── AgingChart.tsx
+│   │   │   │   ├── ConsumoMaterialChart.tsx
+│   │   │   │   ├── ExpectativaCobranzaChart.tsx
+│   │   │   │   └── TopClientesChart.tsx
+│   │   │   ├── ui/             # Componentes UI base
+│   │   │   ├── Dashboard.tsx   # Dashboard principal
+│   │   │   ├── DashboardFiltrado.tsx # Dashboard por pedidos
+│   │   │   ├── DataManagement.tsx    # Gestión de datos
+│   │   │   ├── FileUpload.tsx  # Subida de archivos
+│   │   │   ├── Filters.tsx     # Filtros dinámicos
+│   │   │   ├── KPICard.tsx     # Tarjetas de KPIs
+│   │   │   └── MainDashboard.tsx # Componente principal
+│   │   ├── services/           # Servicios API
+│   │   ├── types/             # Tipos TypeScript
+│   │   └── App.tsx            # Punto de entrada
+│   └── package.json            # Dependencias Node.js
+├── backend/                    # API FastAPI con Base de Datos
+│   ├── main_with_db.py        # Servidor principal con persistencia
+│   ├── database_service.py    # Servicio de base de datos
+│   ├── database.py            # Configuración de BD y modelos
+│   ├── data_processor.py       # Procesador de datos avanzado
+│   ├── excel_processor.py     # Procesador especializado de Excel
+│   ├── models.py              # Modelos Pydantic
+│   ├── logging_config.py      # Configuración de logging
+│   ├── create_tables_supabase.sql # Script de migración
+│   ├── migrate_to_supabase.py # Migración a Supabase
+│   └── requirements.txt       # Dependencias Python
+├── docs/                      # Documentación técnica completa
+│   ├── SISTEMA_IMMERMEX_DASHBOARD.md
+│   ├── ESTRUCTURA_PROYECTO.md
+│   ├── PROCESADOR_EXCEL.md
+│   ├── SUPABASE_INTEGRATION.md
+│   ├── DEPLOYMENT_PRODUCTION.md
+│   └── CORRECCIONES_BUGS.md
+└── README.md                  # Este archivo
 ```
 
 ## 📊 Formato de Datos Requerido
@@ -69,12 +94,24 @@ El sistema incluye un procesador especializado (`excel_processor.py`) que:
 - ✅ **Normalización** de fechas, montos y UUIDs
 - ✅ **Cálculo automático** de relaciones entre tablas
 - ✅ **Manejo de errores** con logging detallado
+- ✅ **Persistencia automática** en base de datos PostgreSQL
 
 **Columnas estándar procesadas:**
-- **Facturación**: fecha_factura, cliente, monto_total, saldo_pendiente, uuid_factura
-- **Cobranza**: fecha_pago, importe_pagado, uuid_factura_relacionada
+- **Facturación**: fecha_factura, cliente, monto_total, saldo_pendiente, uuid_factura, agente
+- **Cobranza**: fecha_pago, importe_pagado, uuid_factura_relacionada, forma_pago
 - **CFDI**: tipo_relacion, importe_relacion (filtra anticipos y notas de crédito)
-- **Pedidos**: folio_factura, pedido, kg, material, dias_credito
+- **Pedidos**: folio_factura, pedido, kg, material, dias_credito, precio_unitario
+
+### 🗄️ Base de Datos y Persistencia
+
+El sistema utiliza PostgreSQL con Supabase para:
+
+- ✅ **Almacenamiento persistente** de todos los datos procesados
+- ✅ **Historial de archivos** procesados con metadatos
+- ✅ **KPIs calculados** y almacenados automáticamente
+- ✅ **Filtros persistentes** que se mantienen entre sesiones
+- ✅ **Gestión de datos** con capacidad de eliminación
+- ✅ **Backup automático** y escalabilidad en la nube
 
 ## 🔧 Para Desarrolladores
 
@@ -86,9 +123,11 @@ Consulta la [documentación técnica completa](./docs/SISTEMA_IMMERMEX_DASHBOARD
 - Configuración de despliegue
 
 ### Agregar Nuevas Funcionalidades
-1. **Nuevos KPIs**: Modificar `backend/simple_main.py`
+1. **Nuevos KPIs**: Modificar `backend/database_service.py` y `backend/main_with_db.py`
 2. **Nuevos Gráficos**: Crear componentes en `frontend/src/components/Charts/`
 3. **Nuevos Filtros**: Actualizar `frontend/src/components/Filters.tsx`
+4. **Nuevas Tablas**: Agregar modelos en `backend/database.py` y migrar con Supabase
+5. **Nuevos Endpoints**: Implementar en `backend/main_with_db.py` con documentación automática
 
 ## 📞 Soporte y Contacto
 
@@ -103,4 +142,4 @@ MIT License - Ver archivo LICENSE para más detalles.
 
 ---
 
-*Sistema Immermex Dashboard v1.0.0 - Dashboard financiero y operacional moderno*
+*Sistema Immermex Dashboard v2.0.0 - Sistema completo de análisis financiero con persistencia de datos*

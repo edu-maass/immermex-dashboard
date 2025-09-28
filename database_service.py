@@ -251,8 +251,13 @@ class DatabaseService:
                 
                 if filtros.get('pedidos'):
                     pedidos_list = filtros['pedidos']
-                    query_facturas = query_facturas.filter(Facturacion.folio_factura.in_(pedidos_list))
+                    # Filtrar pedidos por pedido (columna C)
                     query_pedidos = query_pedidos.filter(Pedido.pedido.in_(pedidos_list))
+                    # Obtener los folio_factura de los pedidos filtrados para relacionar con facturas
+                    pedidos_filtrados = query_pedidos.all()
+                    folios_pedidos = [p.folio_factura for p in pedidos_filtrados if p.folio_factura]
+                    # Filtrar facturas por los folios de los pedidos
+                    query_facturas = query_facturas.filter(Facturacion.folio_factura.in_(folios_pedidos))
             
             # Obtener datos
             facturas = query_facturas.all()

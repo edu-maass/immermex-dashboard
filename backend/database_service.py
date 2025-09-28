@@ -462,13 +462,31 @@ class DatabaseService:
                 
                 facturacion_total = sum(f.monto_total for f in facturas_validas)
             
-            # Solo considerar cobranzas relacionadas con las facturas del mismo período
+            # Calcular cobranza relacionada con pedidos filtrados
             if filtros and filtros.get('pedidos'):
-                # Para filtros por pedidos, usar todas las cobranzas válidas (no relacionadas con facturas específicas)
-                cobranzas_validas = [c for c in cobranzas if c.folio_pago and c.folio_pago.strip() and not c.folio_pago.lower().startswith(('total', 'suma', 'subtotal'))]
-                cobranza_total = sum(c.importe_pagado for c in cobranzas_validas)
-                cobranzas_relacionadas = cobranzas_validas  # Para consistencia en logging
-                logger.info(f"Cobranza calculada para pedidos filtrados: {cobranza_total}")
+                logger.info(f"Calculando cobranza para pedidos filtrados: {filtros['pedidos']}")
+                
+                # Paso 1: Obtener folio_factura de los pedidos filtrados
+                folios_pedidos_filtrados = [p.folio_factura for p in pedidos if p.folio_factura and p.folio_factura.strip()]
+                logger.info(f"Folios de pedidos filtrados: {folios_pedidos_filtrados}")
+                
+                # Paso 2: Buscar facturas que coincidan con estos folios
+                facturas_pedidos_filtrados = [f for f in facturas if f.folio_factura in folios_pedidos_filtrados and f.folio_factura and f.folio_factura.strip()]
+                logger.info(f"Facturas encontradas para pedidos filtrados: {len(facturas_pedidos_filtrados)}")
+                
+                # Paso 3: Obtener uuid_factura de estas facturas
+                uuids_facturas_pedidos = {f.uuid_factura for f in facturas_pedidos_filtrados if f.uuid_factura and f.uuid_factura.strip()}
+                logger.info(f"UUIDs de facturas de pedidos: {len(uuids_facturas_pedidos)}")
+                
+                # Paso 4: Buscar cobranzas que tengan uuid_factura_relacionada coincidente
+                cobranzas_relacionadas_pedidos = [c for c in cobranzas 
+                    if c.uuid_factura_relacionada in uuids_facturas_pedidos 
+                    and c.folio_pago and c.folio_pago.strip() 
+                    and not c.folio_pago.lower().startswith(('total', 'suma', 'subtotal'))]
+                
+                cobranza_total = sum(c.importe_pagado for c in cobranzas_relacionadas_pedidos)
+                cobranzas_relacionadas = cobranzas_relacionadas_pedidos
+                logger.info(f"Cobranza relacionada con pedidos filtrados: {cobranza_total} de {len(cobranzas_relacionadas_pedidos)} cobranzas")
             else:
                 # Para filtros generales, usar cobranzas relacionadas con facturas
                 facturas_uuids = {f.uuid_factura for f in facturas_validas if f.uuid_factura}
@@ -548,12 +566,13 @@ class DatabaseService:
             else:
                 facturacion_sin_iva = sum(f.monto_neto for f in facturas_validas)
             
-            # Calcular cobranza sin IVA (de las cobranzas relacionadas)
+            # Calcular cobranza sin IVA (dividiendo entre 1.16 para quitar IVA)
             if filtros and filtros.get('pedidos'):
-                # Para filtros por pedidos, usar todas las cobranzas válidas
-                cobranza_sin_iva = sum(c.importe_pagado / 1.16 for c in cobranzas_validas if c.importe_pagado > 0)  # Dividir por 1.16 para quitar IVA
+                # Para filtros por pedidos, usar cobranzas relacionadas con pedidos
+                cobranza_sin_iva = sum(c.importe_pagado / 1.16 for c in cobranzas_relacionadas if c.importe_pagado > 0)
             else:
-                cobranza_sin_iva = sum(c.importe_pagado / 1.16 for c in cobranzas_relacionadas if c.importe_pagado > 0)  # Dividir por 1.16 para quitar IVA
+                # Para filtros generales, usar cobranzas relacionadas con facturas
+                cobranza_sin_iva = sum(c.importe_pagado / 1.16 for c in cobranzas_relacionadas if c.importe_pagado > 0)
             
             # Calcular porcentaje de anticipos sobre facturación
             porcentaje_anticipos = (anticipos_total / facturacion_total * 100) if facturacion_total > 0 else 0
