@@ -467,6 +467,7 @@ class DatabaseService:
                 # Para filtros por pedidos, usar todas las cobranzas válidas (no relacionadas con facturas específicas)
                 cobranzas_validas = [c for c in cobranzas if c.folio_pago and c.folio_pago.strip() and not c.folio_pago.lower().startswith(('total', 'suma', 'subtotal'))]
                 cobranza_total = sum(c.importe_pagado for c in cobranzas_validas)
+                cobranzas_relacionadas = cobranzas_validas  # Para consistencia en logging
                 logger.info(f"Cobranza calculada para pedidos filtrados: {cobranza_total}")
             else:
                 # Para filtros generales, usar cobranzas relacionadas con facturas
