@@ -545,11 +545,8 @@ class DatabaseService:
             
             # Definir facturas_validas para cálculos posteriores
             if filtros and filtros.get('pedidos'):
-                # Para filtros por pedidos, buscar facturas relacionadas con esos pedidos
-                facturas_validas = []
-                for pedido_num in filtros['pedidos']:
-                    facturas_pedido = [f for f in facturas if f.folio_factura == pedido_num and f.folio_factura and f.folio_factura.strip() and not f.folio_factura.lower().startswith(('total', 'suma', 'subtotal'))]
-                    facturas_validas.extend(facturas_pedido)
+                # Para filtros por pedidos, usar las facturas ya encontradas en el paso anterior
+                facturas_validas = facturas_pedidos_filtrados
                 logger.info(f"Facturas válidas para pedidos filtrados: {len(facturas_validas)}")
             
             # Aging de cartera
