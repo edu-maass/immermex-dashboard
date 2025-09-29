@@ -382,14 +382,6 @@ class DatabaseService:
                     except (ValueError, TypeError):
                         return default
                 
-                def safe_int(value, default=30):
-                    try:
-                        if value is None or value == '' or str(value).strip() == '':
-                            return default
-                        return int(float(str(value).replace(',', '').strip()))
-                    except (ValueError, TypeError):
-                        return default
-                
                 def safe_string(value, default=''):
                     """Convierte valor a string seguro, manejando NaN"""
                     try:
