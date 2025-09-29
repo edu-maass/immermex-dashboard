@@ -1331,7 +1331,13 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
         'documentos relacionados al pago',
         'recibo electrónico',
         'contpaq',
-        'immermex'
+        'immermex',
+        'del:',
+        'al:',
+        'fecha',
+        'periodo',
+        'reporte',
+        'resumen'
     ]
     
     # Filtrar filas que contienen texto de encabezado en cualquier columna
@@ -1339,12 +1345,22 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
     
     for col in df_mapped.columns:
         if df_mapped[col].dtype == 'object':  # Solo columnas de texto
+            # Filtro por keywords
             col_mask = df_mapped[col].astype(str).str.lower().str.contains(
                 '|'.join(header_keywords), 
                 na=False, 
                 regex=True
             )
             mask = mask & ~col_mask  # Excluir filas que contienen keywords de encabezado
+            
+            # Filtro adicional para fechas de período (ej: "Del: 01/SEP/2025 Al: 28/SEP/2025")
+            period_mask = df_mapped[col].astype(str).str.contains(
+                r'del:\s*\d{1,2}/[a-z]{3}/\d{4}\s*al:\s*\d{1,2}/[a-z]{3}/\d{4}',
+                na=False,
+                regex=True,
+                case=False
+            )
+            mask = mask & ~period_mask  # Excluir filas con fechas de período
     
     df_mapped = df_mapped[mask]
     logger.info(f"Filas después del filtro de encabezados: {len(df_mapped)}")
