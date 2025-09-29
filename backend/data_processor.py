@@ -627,6 +627,77 @@ class ImmermexDataProcessor:
             logger.error(f"Error normalizando pedidos: {str(e)}")
             return pd.DataFrame()
     
+    def ensure_credit_days_consistency(self, facturacion_df: pd.DataFrame, pedidos_df: pd.DataFrame) -> tuple:
+        """
+        Garantiza que los días de crédito sean congruentes entre facturas y pedidos relacionados.
+        Usa la factura como fuente de verdad para los días de crédito.
+        
+        Args:
+            facturacion_df: DataFrame de facturación
+            pedidos_df: DataFrame de pedidos
+            
+        Returns:
+            tuple: (facturacion_df_corregida, pedidos_df_corregida, discrepancias_corregidas)
+        """
+        try:
+            if facturacion_df.empty or pedidos_df.empty:
+                logger.info("No hay datos para verificar congruencia de días de crédito")
+                return facturacion_df, pedidos_df, 0
+            
+            # Crear una copia para trabajar
+            facturacion_corregida = facturacion_df.copy()
+            pedidos_corregidos = pedidos_df.copy()
+            
+            # Crear un diccionario de días de crédito por folio de factura
+            dias_credito_por_folio = {}
+            
+            # Usar facturas como fuente de verdad
+            for _, factura in facturacion_corregida.iterrows():
+                folio = factura.get('folio_factura')
+                dias_credito = factura.get('dias_credito')
+                
+                if folio and pd.notna(dias_credito):
+                    dias_credito_por_folio[folio] = dias_credito
+            
+            logger.info(f"Se encontraron {len(dias_credito_por_folio)} facturas con días de crédito definidos")
+            
+            # Corregir días de crédito en pedidos
+            discrepancias_corregidas = 0
+            
+            for idx, pedido in pedidos_corregidos.iterrows():
+                folio = pedido.get('folio_factura')
+                dias_credito_pedido = pedido.get('dias_credito')
+                
+                if folio in dias_credito_por_folio:
+                    dias_credito_factura = dias_credito_por_folio[folio]
+                    
+                    # Si hay discrepancia, corregir usando la factura como fuente de verdad
+                    if pd.notna(dias_credito_pedido) and dias_credito_pedido != dias_credito_factura:
+                        pedidos_corregidos.at[idx, 'dias_credito'] = dias_credito_factura
+                        discrepancias_corregidas += 1
+                        
+                        logger.debug(f"Corregido pedido {pedido.get('pedido', 'N/A')} "
+                                   f"(folio {folio}): {dias_credito_pedido} → {dias_credito_factura}")
+                    
+                    # Si el pedido no tiene días de crédito, usar el de la factura
+                    elif pd.isna(dias_credito_pedido):
+                        pedidos_corregidos.at[idx, 'dias_credito'] = dias_credito_factura
+                        discrepancias_corregidas += 1
+                        
+                        logger.debug(f"Asignado días de crédito a pedido {pedido.get('pedido', 'N/A')} "
+                                   f"(folio {folio}): {dias_credito_factura}")
+            
+            if discrepancias_corregidas > 0:
+                logger.info(f"✅ Se corrigieron {discrepancias_corregidas} discrepancias de días de crédito")
+            else:
+                logger.info("✅ Los días de crédito ya eran congruentes entre pedidos y facturas")
+            
+            return facturacion_corregida, pedidos_corregidos, discrepancias_corregidas
+            
+        except Exception as e:
+            logger.error(f"Error garantizando congruencia de días de crédito: {str(e)}")
+            return facturacion_df, pedidos_df, 0
+    
     def calculate_relationships(self, facturacion: pd.DataFrame, cobranza: pd.DataFrame) -> pd.DataFrame:
         """
         Calcula relaciones entre facturación y cobranza
@@ -854,6 +925,18 @@ class ImmermexDataProcessor:
             # Calcular relaciones entre facturación y cobranza
             if self.facturacion_df is not None and self.cobranza_df is not None:
                 self.facturacion_df = self.calculate_relationships(self.facturacion_df, self.cobranza_df)
+            
+            # Garantizar congruencia de días de crédito entre facturas y pedidos
+            if self.facturacion_df is not None and self.pedidos_df is not None:
+                logger.info("🔍 Verificando congruencia de días de crédito...")
+                self.facturacion_df, self.pedidos_df, discrepancias_corregidas = self.ensure_credit_days_consistency(
+                    self.facturacion_df, self.pedidos_df
+                )
+                
+                if discrepancias_corregidas > 0:
+                    logger.info(f"✅ Se corrigieron {discrepancias_corregidas} discrepancias de días de crédito durante el procesamiento")
+                else:
+                    logger.info("✅ Los días de crédito ya eran congruentes")
             
             # Crear DataFrame maestro
             master_df = self.create_master_dataframe()
