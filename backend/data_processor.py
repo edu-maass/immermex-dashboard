@@ -1318,14 +1318,23 @@ def _map_facturacion_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Mapea columnas de cobranza basado en estructura visual: Documentos Relacionados al Pago"""
+    logger.info("=== EJECUTANDO _map_cobranza_columns ===")
+    logger.info(f"Columnas originales en _map_cobranza_columns: {list(df.columns)}")
+    
     df_mapped = df.copy()
     
     # Manejar columnas especiales (datetime, etc.)
+    datetime_found = False
     for col in df_mapped.columns:
         if isinstance(col, datetime):
             # Mapear columnas datetime a fecha_pago
+            logger.info(f"✅ Detectada columna datetime en _map_cobranza_columns: {col} -> fecha_pago")
             df_mapped['fecha_pago'] = df_mapped[col]
+            datetime_found = True
             break
+    
+    if not datetime_found:
+        logger.info("⚠️ No se encontraron columnas datetime en _map_cobranza_columns")
     
     # Mapeo completo basado en la referencia visual
     # RECIBO ELECTRÓNICO DE PAGO section
