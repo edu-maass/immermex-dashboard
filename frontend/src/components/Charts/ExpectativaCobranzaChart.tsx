@@ -31,7 +31,7 @@ export const ExpectativaCobranzaChart: FC<ExpectativaCobranzaChartProps> = ({ da
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Expectativa de Cobranza por Semana</CardTitle>
+        <CardTitle>Cobranza</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-80">
@@ -56,7 +56,7 @@ export const ExpectativaCobranzaChart: FC<ExpectativaCobranzaChartProps> = ({ da
               <Tooltip 
                 formatter={(value: number, name: string) => [
                   formatCurrency(value), 
-                  name === 'cobranza_esperada' ? 'Esperada' : name === 'cobranza_real' ? 'Real' : name
+                  name === 'cobranza_esperada' ? 'Esperada' : name === 'cobranza_real' ? 'Cobrado' : name
                 ]}
                 labelStyle={{ color: '#374151' }}
                 contentStyle={{ 
@@ -74,7 +74,7 @@ export const ExpectativaCobranzaChart: FC<ExpectativaCobranzaChartProps> = ({ da
               <Bar 
                 dataKey="cobranza_real" 
                 fill="#10b981"
-                name="Real"
+                name="Cobrado"
                 radius={[4, 4, 0, 0]}
               />
             </BarChart>

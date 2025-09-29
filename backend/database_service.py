@@ -719,18 +719,18 @@ class DatabaseService:
         return dict(sorted_materiales[:10])
     
     def _calculate_expectativa_cobranza(self, facturas: list, pedidos: list, anticipos: list = None, cobranzas: list = None) -> dict:
-        """Calcula expectativa de cobranza futura basada en facturas pendientes y sus días de crédito"""
+        """Calcula expectativa de cobranza futura basada en pedidos y sus días de crédito"""
         from datetime import datetime, timedelta
         
         expectativa = {}
         
-        logger.info(f"Calculando expectativa de cobranza con {len(facturas)} facturas")
+        logger.info(f"Calculando expectativa de cobranza con {len(pedidos)} pedidos")
         
-        # Log de debug para días de crédito
-        facturas_con_credito_info = []
-        for factura in facturas[:5]:  # Solo las primeras 5 para no saturar logs
-            facturas_con_credito_info.append(f"ID:{factura.id}, dias_credito:{factura.dias_credito}, fecha:{factura.fecha_factura}")
-        logger.info(f"Muestra de facturas con crédito: {facturas_con_credito_info}")
+        # Log de debug para días de crédito en pedidos
+        pedidos_con_credito_info = []
+        for pedido in pedidos[:5]:  # Solo los primeros 5 para no saturar logs
+            pedidos_con_credito_info.append(f"ID:{pedido.id}, dias_credito:{pedido.dias_credito}, fecha_factura:{pedido.fecha_factura}")
+        logger.info(f"Muestra de pedidos con crédito: {pedidos_con_credito_info}")
         
         # Obtener fecha actual
         hoy = datetime.now()
@@ -755,40 +755,46 @@ class DatabaseService:
             semana_key = f"Semana {i+1} ({semana_inicio.strftime('%d/%m')} - {semana_fin.strftime('%d/%m')})"
             
             cobranza_esperada = 0
+            cobranza_real = 0
             pedidos_pendientes = 0
             
-            # Calcular cobranza esperada basada en facturas que vencen en esa semana
-            facturas_con_credito = 0
-            facturas_vencen_semana = 0
+            # Calcular cobranza esperada basada en pedidos que vencen en esa semana
+            pedidos_con_credito = 0
+            pedidos_vencen_semana = 0
             
-            for factura in facturas:
-                if not factura.fecha_factura or not factura.dias_credito:
+            for pedido in pedidos:
+                if not pedido.fecha_factura or not pedido.dias_credito:
                     continue
                 
-                facturas_con_credito += 1
+                pedidos_con_credito += 1
                 
                 try:
-                    # Calcular fecha de vencimiento
-                    fecha_vencimiento = factura.fecha_factura + timedelta(days=factura.dias_credito)
+                    # Calcular fecha de vencimiento usando fecha_factura + dias_credito del pedido
+                    fecha_vencimiento = pedido.fecha_factura + timedelta(days=pedido.dias_credito)
                     
-                    # Si la factura vence en esta semana
+                    # Si el pedido vence en esta semana
                     if semana_inicio <= fecha_vencimiento <= semana_fin:
-                        facturas_vencen_semana += 1
+                        pedidos_vencen_semana += 1
                         
-                        # Calcular monto pendiente real
-                        anticipo_factura = anticipos_por_factura.get(factura.uuid_factura, 0)
-                        cobranza_factura = cobranzas_por_factura.get(factura.uuid_factura, 0)
+                        # Usar el importe_sin_iva del pedido como base para la cobranza esperada
+                        monto_pedido = getattr(pedido, 'importe_sin_iva', 0) or 0
                         
-                        # Monto pendiente = facturación total - anticipos - cobranzas ya recibidas
-                        monto_pendiente = factura.monto_total - anticipo_factura - cobranza_factura
-                        
-                        # Solo considerar si hay monto pendiente positivo
-                        if monto_pendiente > 0:
-                            # Sin ponderación por probabilidad - mostrar monto exacto esperado
-                            cobranza_esperada += monto_pendiente
+                        # Solo considerar si hay monto positivo
+                        if monto_pedido > 0:
+                            cobranza_esperada += monto_pedido
+                            
                 except Exception as e:
-                    logger.warning(f"Error procesando factura {factura.id}: {str(e)}")
+                    logger.warning(f"Error procesando pedido {pedido.id}: {str(e)}")
                     continue
+            
+            # Calcular cobranza real para esta semana usando datos de cobranza filtrada
+            try:
+                for cobranza in cobranzas or []:
+                    if cobranza.fecha_pago and semana_inicio <= cobranza.fecha_pago <= semana_fin:
+                        cobranza_real += cobranza.importe_pagado
+            except Exception as e:
+                logger.warning(f"Error calculando cobranza real para semana {i+1}: {str(e)}")
+                cobranza_real = 0
             
             # Contar pedidos pendientes para esa semana (pedidos que se esperan facturar)
             try:
@@ -800,7 +806,7 @@ class DatabaseService:
             
             expectativa[semana_key] = {
                 'cobranza_esperada': round(cobranza_esperada, 2),
-                'cobranza_real': 0,  # Se llenará con datos reales cuando estén disponibles
+                'cobranza_real': round(cobranza_real, 2),  # Datos reales de cobranza filtrada
                 'pedidos_pendientes': pedidos_pendientes
             }
         

@@ -698,6 +698,63 @@ class ImmermexDataProcessor:
             logger.error(f"Error garantizando congruencia de días de crédito: {str(e)}")
             return facturacion_df, pedidos_df, 0
     
+    def fill_pedidos_fecha_factura(self, facturacion_df: pd.DataFrame, pedidos_df: pd.DataFrame) -> int:
+        """
+        Llena automáticamente la columna fecha_factura en pedidos usando la fecha de la factura asociada.
+        
+        Args:
+            facturacion_df: DataFrame de facturación
+            pedidos_df: DataFrame de pedidos
+            
+        Returns:
+            int: Número de fechas asignadas
+        """
+        try:
+            if facturacion_df.empty or pedidos_df.empty:
+                logger.info("No hay datos para asignar fechas de factura")
+                return 0
+            
+            # Crear un diccionario de fechas de factura por folio
+            fechas_por_folio = {}
+            
+            for _, factura in facturacion_df.iterrows():
+                folio = factura.get('folio_factura')
+                fecha_factura = factura.get('fecha_factura')
+                
+                if folio and pd.notna(fecha_factura):
+                    fechas_por_folio[folio] = fecha_factura
+            
+            logger.info(f"Se encontraron {len(fechas_por_folio)} facturas con fechas definidas")
+            
+            # Asignar fechas a pedidos
+            fechas_asignadas = 0
+            
+            for idx, pedido in pedidos_df.iterrows():
+                folio = pedido.get('folio_factura')
+                fecha_actual = pedido.get('fecha_factura')
+                
+                if folio in fechas_por_folio:
+                    fecha_factura = fechas_por_folio[folio]
+                    
+                    # Si el pedido no tiene fecha_factura o es diferente, asignar la de la factura
+                    if pd.isna(fecha_actual) or fecha_actual != fecha_factura:
+                        pedidos_df.at[idx, 'fecha_factura'] = fecha_factura
+                        fechas_asignadas += 1
+                        
+                        logger.debug(f"Asignada fecha de factura a pedido {pedido.get('pedido', 'N/A')} "
+                                   f"(folio {folio}): {fecha_factura}")
+            
+            if fechas_asignadas > 0:
+                logger.info(f"✅ Se asignaron {fechas_asignadas} fechas de factura a pedidos")
+            else:
+                logger.info("✅ Las fechas de factura ya estaban asignadas correctamente")
+            
+            return fechas_asignadas
+            
+        except Exception as e:
+            logger.error(f"Error asignando fechas de factura a pedidos: {str(e)}")
+            return 0
+    
     def calculate_relationships(self, facturacion: pd.DataFrame, cobranza: pd.DataFrame) -> pd.DataFrame:
         """
         Calcula relaciones entre facturación y cobranza
@@ -937,6 +994,11 @@ class ImmermexDataProcessor:
                     logger.info(f"✅ Se corrigieron {discrepancias_corregidas} discrepancias de días de crédito durante el procesamiento")
                 else:
                     logger.info("✅ Los días de crédito ya eran congruentes")
+                
+                # Llenar automáticamente fecha_factura en pedidos usando la fecha de la factura asociada
+                logger.info("📅 Llenando fecha_factura en pedidos usando datos de facturas...")
+                fechas_asignadas = self.fill_pedidos_fecha_factura(self.facturacion_df, self.pedidos_df)
+                logger.info(f"✅ Se asignaron {fechas_asignadas} fechas de factura a pedidos")
             
             # Crear DataFrame maestro
             master_df = self.create_master_dataframe()
