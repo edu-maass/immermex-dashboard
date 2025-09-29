@@ -1323,6 +1323,32 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
     
     df_mapped = df.copy()
     
+    # Filtrar filas de encabezado que contienen texto descriptivo
+    logger.info(f"Total filas antes del filtro: {len(df_mapped)}")
+    
+    # Identificar filas que contienen texto de encabezado
+    header_keywords = [
+        'documentos relacionados al pago',
+        'recibo electrónico',
+        'contpaq',
+        'immermex'
+    ]
+    
+    # Filtrar filas que contienen texto de encabezado en cualquier columna
+    mask = pd.Series([True] * len(df_mapped))
+    
+    for col in df_mapped.columns:
+        if df_mapped[col].dtype == 'object':  # Solo columnas de texto
+            col_mask = df_mapped[col].astype(str).str.lower().str.contains(
+                '|'.join(header_keywords), 
+                na=False, 
+                regex=True
+            )
+            mask = mask & ~col_mask  # Excluir filas que contienen keywords de encabezado
+    
+    df_mapped = df_mapped[mask]
+    logger.info(f"Filas después del filtro de encabezados: {len(df_mapped)}")
+    
     # Manejar columnas especiales (datetime, etc.)
     datetime_found = False
     for col in df_mapped.columns:
