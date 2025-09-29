@@ -281,8 +281,20 @@ class DatabaseService:
         return count
     
     def _save_pedidos(self, pedidos_data: list, archivo_id: int) -> int:
-        """Guarda datos de pedidos"""
+        """Guarda datos de pedidos con asignación automática de fecha_factura"""
         count = 0
+        
+        # Obtener facturas para asignar fechas automáticamente
+        facturas = self.db.query(Facturacion).all()
+        fechas_por_folio = {}
+        
+        for factura in facturas:
+            if factura.folio_factura and factura.fecha_factura:
+                fechas_por_folio[factura.folio_factura] = factura.fecha_factura
+        
+        logger.info(f"Se encontraron {len(fechas_por_folio)} facturas con fechas para asignar a pedidos")
+        
+        fechas_asignadas = 0
         for pedido_data in pedidos_data:
             try:
                 def safe_date(value):
@@ -308,6 +320,14 @@ class DatabaseService:
                 # Convertir fechas de forma segura
                 fecha_factura = safe_date(pedido_data.get('fecha_factura'))
                 fecha_pago = safe_date(pedido_data.get('fecha_pago'))
+                
+                # Si no hay fecha_factura, intentar asignarla desde la factura relacionada
+                if not fecha_factura:
+                    folio_factura = safe_string(pedido_data.get('folio_factura', ''))
+                    if folio_factura and folio_factura in fechas_por_folio:
+                        fecha_factura = fechas_por_folio[folio_factura]
+                        fechas_asignadas += 1
+                        logger.debug(f"Asignada fecha de factura automáticamente a pedido {safe_string(pedido_data.get('pedido', ''))}: {fecha_factura}")
                 
                 # Limpiar y validar datos numéricos
                 def safe_float(value, default=0.0):
@@ -372,6 +392,12 @@ class DatabaseService:
                 continue
         
         self.db.commit()
+        
+        if fechas_asignadas > 0:
+            logger.info(f"✅ Se asignaron automáticamente {fechas_asignadas} fechas de factura a pedidos durante el procesamiento")
+        else:
+            logger.info("✅ Las fechas de factura ya estaban asignadas o no hay coincidencias")
+        
         return count
     
     def _clear_existing_data(self):
