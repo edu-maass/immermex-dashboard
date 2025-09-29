@@ -458,6 +458,7 @@ class DatabaseService:
             self.db.query(Cobranza).delete()
             self.db.query(Facturacion).delete()
             self.db.query(KPI).delete()
+            self.db.query(ArchivoProcesado).delete()  # Limpiar también archivos procesados
             self.db.commit()
             logger.info("Datos existentes limpiados")
         except Exception as e:
