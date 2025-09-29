@@ -290,44 +290,41 @@ class DatabaseService:
         
         for factura in facturas:
             if factura.folio_factura and factura.fecha_factura:
-                fechas_por_folio[factura.folio_factura] = factura.fecha_factura
+                # Limpiar el folio para evitar problemas de espacios o formato
+                folio_limpio = str(factura.folio_factura).strip()
+                fechas_por_folio[folio_limpio] = factura.fecha_factura
         
         logger.info(f"Se encontraron {len(fechas_por_folio)} facturas con fechas para asignar a pedidos")
+        
+        # Log de muestra de folios disponibles para debugging
+        sample_folios = list(fechas_por_folio.keys())[:5]
+        logger.info(f"Muestra de folios de facturas disponibles: {sample_folios}")
+        
+        # Log de muestra de folios de pedidos para debugging
+        sample_pedidos_folios = [p.get('folio_factura', '') for p in pedidos_data[:5] if p.get('folio_factura')]
+        logger.info(f"Muestra de folios de pedidos: {sample_pedidos_folios}")
         
         fechas_asignadas = 0
         for pedido_data in pedidos_data:
             try:
-                def safe_date(value):
-                    """Convierte valor a fecha segura, manejando NaN"""
-                    try:
-                        if value is None:
-                            return None
-                        if isinstance(value, (int, float)):
-                            if np.isnan(value):
-                                return None
-                            return None  # Los números no son fechas válidas
-                        if isinstance(value, str):
-                            value = value.strip()
-                            if not value or value.lower() in ['nan', 'none', 'null']:
-                                return None
-                            # Solo convertir si parece una fecha válida (formato YYYY-MM-DD)
-                            if len(value) == 10 and value.count('-') == 2:
-                                return datetime.strptime(value, '%Y-%m-%d')
-                        return None
-                    except (ValueError, TypeError):
-                        return None
-                
-                # Convertir fechas de forma segura
+                # Convertir fechas de forma segura usando la función global
                 fecha_factura = safe_date(pedido_data.get('fecha_factura'))
                 fecha_pago = safe_date(pedido_data.get('fecha_pago'))
                 
                 # Si no hay fecha_factura, intentar asignarla desde la factura relacionada
                 if not fecha_factura:
                     folio_factura = pedido_data.get('folio_factura', '')
-                    if folio_factura and folio_factura in fechas_por_folio:
-                        fecha_factura = fechas_por_folio[folio_factura]
-                        fechas_asignadas += 1
-                        logger.debug(f"Asignada fecha de factura automáticamente a pedido {pedido_data.get('pedido', '')}: {fecha_factura}")
+                    if folio_factura:
+                        # Limpiar el folio para hacer la comparación
+                        folio_limpio = str(folio_factura).strip()
+                        if folio_limpio in fechas_por_folio:
+                            fecha_factura = fechas_por_folio[folio_limpio]
+                            fechas_asignadas += 1
+                            logger.info(f"✅ Asignada fecha de factura automáticamente a pedido {pedido_data.get('pedido', '')} (folio {folio_limpio}): {fecha_factura}")
+                        else:
+                            logger.debug(f"⚠️ No se encontró factura con folio '{folio_limpio}' para pedido {pedido_data.get('pedido', '')}")
+                    else:
+                        logger.debug(f"⚠️ Pedido {pedido_data.get('pedido', '')} no tiene folio_factura para asignar fecha")
                 
                 # Limpiar y validar datos numéricos
                 def safe_float(value, default=0.0):
