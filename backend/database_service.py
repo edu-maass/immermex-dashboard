@@ -281,30 +281,44 @@ class DatabaseService:
         return count
     
     def _save_pedidos(self, pedidos_data: list, archivo_id: int) -> int:
-        """Guarda datos de pedidos con asignación automática de fecha_factura"""
+        """Guarda datos de pedidos con asignación automática de fecha_factura y dias_credito"""
         count = 0
         
-        # Obtener facturas para asignar fechas automáticamente
+        # Obtener facturas para asignar fechas y días de crédito automáticamente
         facturas = self.db.query(Facturacion).all()
         fechas_por_folio = {}
+        dias_credito_por_folio = {}
         
         for factura in facturas:
-            if factura.folio_factura and factura.fecha_factura:
+            if factura.folio_factura:
                 # Limpiar el folio para evitar problemas de espacios o formato
                 folio_limpio = str(factura.folio_factura).strip()
-                fechas_por_folio[folio_limpio] = factura.fecha_factura
+                
+                # Asignar fecha si existe
+                if factura.fecha_factura:
+                    fechas_por_folio[folio_limpio] = factura.fecha_factura
+                
+                # Asignar días de crédito si existe
+                if factura.dias_credito is not None:
+                    dias_credito_por_folio[folio_limpio] = factura.dias_credito
         
         logger.info(f"Se encontraron {len(fechas_por_folio)} facturas con fechas para asignar a pedidos")
+        logger.info(f"Se encontraron {len(dias_credito_por_folio)} facturas con días de crédito para asignar a pedidos")
         
         # Log de muestra de folios disponibles para debugging
         sample_folios = list(fechas_por_folio.keys())[:5]
         logger.info(f"Muestra de folios de facturas disponibles: {sample_folios}")
+        
+        # Log de muestra de días de crédito disponibles para debugging
+        sample_dias_credito = {k: v for k, v in list(dias_credito_por_folio.items())[:5]}
+        logger.info(f"Muestra de días de crédito disponibles: {sample_dias_credito}")
         
         # Log de muestra de folios de pedidos para debugging
         sample_pedidos_folios = [p.get('folio_factura', '') for p in pedidos_data[:5] if p.get('folio_factura')]
         logger.info(f"Muestra de folios de pedidos: {sample_pedidos_folios}")
         
         fechas_asignadas = 0
+        dias_credito_asignados = 0
         for pedido_data in pedidos_data:
             try:
                 # Convertir fechas de forma segura usando la función global
@@ -325,6 +339,25 @@ class DatabaseService:
                             logger.debug(f"⚠️ No se encontró factura con folio '{folio_limpio}' para pedido {pedido_data.get('pedido', '')}")
                     else:
                         logger.debug(f"⚠️ Pedido {pedido_data.get('pedido', '')} no tiene folio_factura para asignar fecha")
+                
+                # Asignar días de crédito desde la factura relacionada
+                # Obtener el folio_factura del pedido
+                folio_factura = pedido_data.get('folio_factura', '')
+                dias_credito_pedido = safe_int(pedido_data.get('dias_credito', 30))  # Usar función global
+                
+                if folio_factura:
+                    # Limpiar el folio para hacer la comparación
+                    folio_limpio = str(folio_factura).strip()
+                    if folio_limpio in dias_credito_por_folio:
+                        dias_credito_factura = dias_credito_por_folio[folio_limpio]
+                        # Siempre sobrescribir con el valor de la factura (fuente de verdad)
+                        dias_credito_pedido = dias_credito_factura
+                        dias_credito_asignados += 1
+                        logger.info(f"✅ Asignados días de crédito automáticamente a pedido {pedido_data.get('pedido', '')} (folio {folio_limpio}): {dias_credito_factura}")
+                    else:
+                        logger.debug(f"⚠️ No se encontró factura con folio '{folio_limpio}' para asignar días de crédito a pedido {pedido_data.get('pedido', '')}")
+                else:
+                    logger.debug(f"⚠️ Pedido {pedido_data.get('pedido', '')} no tiene folio_factura para asignar días de crédito")
                 
                 # Limpiar y validar datos numéricos
                 def safe_float(value, default=0.0):
@@ -377,7 +410,7 @@ class DatabaseService:
                     precio_unitario=safe_float(pedido_data.get('precio_unitario', 0)),
                     importe_sin_iva=safe_float(pedido_data.get('importe_sin_iva', 0)),
                     material=safe_string(pedido_data.get('material', '')),
-                    dias_credito=safe_int(pedido_data.get('dias_credito', 30)),
+                    dias_credito=dias_credito_pedido,  # Usar el valor procesado
                     fecha_factura=fecha_factura,
                     fecha_pago=fecha_pago,
                     archivo_id=archivo_id
@@ -394,6 +427,11 @@ class DatabaseService:
             logger.info(f"✅ Se asignaron automáticamente {fechas_asignadas} fechas de factura a pedidos durante el procesamiento")
         else:
             logger.info("✅ Las fechas de factura ya estaban asignadas o no hay coincidencias")
+        
+        if dias_credito_asignados > 0:
+            logger.info(f"✅ Se asignaron automáticamente {dias_credito_asignados} días de crédito de facturas a pedidos durante el procesamiento")
+        else:
+            logger.info("✅ Los días de crédito ya estaban asignados o no hay coincidencias")
         
         return count
     
