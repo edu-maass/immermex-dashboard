@@ -1394,6 +1394,36 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
     df_mapped = df_mapped[additional_mask]
     logger.info(f"Filas después del filtro adicional de encabezados múltiples: {len(df_mapped)}")
     
+    # Filtro para eliminar filas con valor cero o no numérico en monto
+    monto_mask = pd.Series([True] * len(df_mapped))
+    
+    # Buscar columnas que podrían contener montos
+    monto_columns = ['importe_pagado', 'monto', 'importe', 'total', 'valor']
+    
+    for idx, row in df_mapped.iterrows():
+        valid_monto = False
+        
+        for col in df_mapped.columns:
+            col_lower = str(col).lower()
+            # Verificar si la columna parece ser de monto
+            if any(monto_keyword in col_lower for monto_keyword in monto_columns):
+                try:
+                    # Intentar convertir a número
+                    value = pd.to_numeric(row[col], errors='coerce')
+                    # Si es un número válido y mayor que 0
+                    if not pd.isna(value) and value > 0:
+                        valid_monto = True
+                        break
+                except (ValueError, TypeError):
+                    continue
+        
+        # Si no se encontró un monto válido, eliminar la fila
+        if not valid_monto:
+            monto_mask.loc[idx] = False
+    
+    df_mapped = df_mapped[monto_mask]
+    logger.info(f"Filas después del filtro de monto válido (mayor a 0): {len(df_mapped)}")
+    
     # Manejar columnas especiales (datetime, etc.)
     datetime_found = False
     for col in df_mapped.columns:
