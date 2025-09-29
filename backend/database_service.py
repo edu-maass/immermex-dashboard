@@ -538,7 +538,24 @@ class DatabaseService:
                 cobranzas_validas = cobranzas
                 cobranza_general_total = sum(c.importe_pagado for c in cobranzas)
             
-            anticipos_total = sum(a.importe_relacion for a in anticipos)
+            # Calcular anticipos relacionados con pedidos filtrados
+            if filtros and filtros.get('pedidos'):
+                logger.info(f"Calculando anticipos para pedidos filtrados: {filtros['pedidos']}")
+                
+                # Obtener UUIDs de facturas de pedidos filtrados
+                uuids_facturas_pedidos = {f.uuid_factura for f in facturas_pedidos_filtrados if f.uuid_factura and f.uuid_factura.strip()}
+                logger.info(f"UUIDs de facturas para anticipos: {len(uuids_facturas_pedidos)}")
+                
+                # Filtrar anticipos que tengan uuid_factura_relacionada coincidente
+                anticipos_relacionados = [a for a in anticipos 
+                    if a.uuid_factura_relacionada in uuids_facturas_pedidos 
+                    and a.uuid_factura_relacionada and a.uuid_factura_relacionada.strip()]
+                
+                anticipos_total = sum(a.importe_relacion for a in anticipos_relacionados)
+                logger.info(f"Anticipos relacionados con pedidos filtrados: {anticipos_total:.2f} de {len(anticipos_relacionados)} anticipos")
+            else:
+                # Para filtros generales, usar todos los anticipos
+                anticipos_total = sum(a.importe_relacion for a in anticipos)
             
             porcentaje_cobrado = (cobranza_total / facturacion_total * 100) if facturacion_total > 0 else 0
             porcentaje_cobrado_general = (cobranza_general_total / facturacion_total * 100) if facturacion_total > 0 else 0
@@ -605,8 +622,8 @@ class DatabaseService:
                 # Para filtros generales, usar cobranzas relacionadas con facturas
                 cobranza_sin_iva = sum(c.importe_pagado / 1.16 for c in cobranzas_relacionadas if c.importe_pagado > 0)
             
-            # Calcular porcentaje de anticipos sobre facturación
-            porcentaje_anticipos = (anticipos_total / facturacion_total * 100) if facturacion_total > 0 else 0
+            # Calcular porcentaje de anticipos sobre facturación sin IVA
+            porcentaje_anticipos = (anticipos_total / facturacion_sin_iva * 100) if facturacion_sin_iva > 0 else 0
             
             return {
                 "facturacion_total": round(facturacion_total, 2),
