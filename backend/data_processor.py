@@ -1330,6 +1330,7 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
     header_keywords = [
         'documentos relacionados al pago',
         'recibo electrónico',
+        'recibo electronico de pago',
         'contpaq',
         'immermex',
         'del:',
@@ -1337,7 +1338,11 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
         'fecha',
         'periodo',
         'reporte',
-        'resumen'
+        'resumen',
+        'encabezado xml',
+        'documento relacionado',
+        'xml',
+        'encabezado'
     ]
     
     # Filtrar filas que contienen texto de encabezado en cualquier columna
@@ -1364,6 +1369,30 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
     
     df_mapped = df_mapped[mask]
     logger.info(f"Filas después del filtro de encabezados: {len(df_mapped)}")
+    
+    # Filtro adicional: eliminar filas que contienen múltiples valores de encabezado
+    # (indica que es una fila de encabezado con múltiples columnas de texto)
+    header_count_threshold = 3  # Si una fila tiene 3+ valores que parecen encabezados, eliminarla
+    
+    additional_mask = pd.Series([True] * len(df_mapped))
+    
+    for idx, row in df_mapped.iterrows():
+        header_count = 0
+        for col in df_mapped.columns:
+            if df_mapped[col].dtype == 'object':  # Solo columnas de texto
+                cell_value = str(row[col]).lower().strip()
+                # Contar si el valor parece un encabezado (texto descriptivo, no datos)
+                if (cell_value and 
+                    cell_value not in ['nan', 'none', 'null', ''] and
+                    any(keyword in cell_value for keyword in ['recibo', 'documento', 'encabezado', 'xml', 'relacionado', 'electronico'])):
+                    header_count += 1
+        
+        # Si tiene muchos valores que parecen encabezados, eliminarla
+        if header_count >= header_count_threshold:
+            additional_mask.loc[idx] = False
+    
+    df_mapped = df_mapped[additional_mask]
+    logger.info(f"Filas después del filtro adicional de encabezados múltiples: {len(df_mapped)}")
     
     # Manejar columnas especiales (datetime, etc.)
     datetime_found = False
