@@ -218,11 +218,22 @@ class DatabaseService:
     
     def _save_cobranzas(self, cobranzas_data: list, archivo_id: int) -> int:
         """Guarda datos de cobranza"""
+        logger.info(f"_save_cobranzas: Procesando {len(cobranzas_data)} registros de cobranza")
+        
         count = 0
-        for cobranza_data in cobranzas_data:
+        for i, cobranza_data in enumerate(cobranzas_data):
             try:
+                # Log del primer registro para debugging
+                if i == 0:
+                    logger.info(f"_save_cobranzas: Primer registro - fecha_pago raw: {cobranza_data.get('fecha_pago')} (tipo: {type(cobranza_data.get('fecha_pago'))})")
+                    logger.info(f"_save_cobranzas: Primer registro completo: {cobranza_data}")
+                
                 # Convertir fecha de forma segura
                 fecha_pago = safe_date(cobranza_data.get('fecha_pago'))
+                
+                # Log del resultado de safe_date
+                if i == 0:
+                    logger.info(f"_save_cobranzas: Primer registro - fecha_pago procesada: {fecha_pago} (tipo: {type(fecha_pago)})")
                 
                 cobranza = Cobranza(
                     fecha_pago=fecha_pago,
@@ -244,6 +255,7 @@ class DatabaseService:
                 continue
         
         self.db.commit()
+        logger.info(f"_save_cobranzas: Guardados {count} registros de cobranza")
         return count
     
     def _save_anticipos(self, anticipos_data: list, archivo_id: int) -> int:
