@@ -1396,36 +1396,6 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
     df_mapped = df_mapped.drop(index=rows_to_remove)
     logger.info(f"Filas después del filtro adicional de encabezados múltiples: {len(df_mapped)}")
     
-    # Filtro para eliminar filas con valor cero o no numérico en monto
-    # Buscar columnas que podrían contener montos
-    monto_columns = ['importe_pagado', 'monto', 'importe', 'total', 'valor']
-    rows_to_remove_monto = []
-    
-    for idx, row in df_mapped.iterrows():
-        valid_monto = False
-        
-        for col in df_mapped.columns:
-            col_lower = str(col).lower()
-            # Verificar si la columna parece ser de monto
-            if any(monto_keyword in col_lower for monto_keyword in monto_columns):
-                try:
-                    # Intentar convertir a número
-                    value = pd.to_numeric(row[col], errors='coerce')
-                    # Si es un número válido y mayor que 0
-                    if not pd.isna(value) and value > 0:
-                        valid_monto = True
-                        break
-                except (ValueError, TypeError):
-                    continue
-        
-        # Si no se encontró un monto válido, marcarla para eliminar
-        if not valid_monto:
-            rows_to_remove_monto.append(idx)
-    
-    # Eliminar filas marcadas
-    df_mapped = df_mapped.drop(index=rows_to_remove_monto)
-    logger.info(f"Filas después del filtro de monto válido (mayor a 0): {len(df_mapped)}")
-    
     # Manejar columnas especiales (datetime, etc.)
     datetime_found = False
     for col in df_mapped.columns:
@@ -1627,6 +1597,31 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
     # Log para debugging
     mapped_cols = [col for col in df_mapped.columns if col in default_values.keys()]
     logger.info(f"Mapeo final cobranza: {len(mapped_cols)} columnas mapeadas: {mapped_cols}")
+    
+    # Filtro para eliminar filas con valor cero o no numérico en monto (DESPUÉS del mapeo completo)
+    rows_to_remove_monto = []
+    
+    for idx, row in df_mapped.iterrows():
+        valid_monto = False
+        
+        # Verificar específicamente la columna importe_pagado que ya está mapeada
+        if 'importe_pagado' in df_mapped.columns:
+            try:
+                # Intentar convertir a número
+                value = pd.to_numeric(row['importe_pagado'], errors='coerce')
+                # Si es un número válido y mayor que 0
+                if not pd.isna(value) and value > 0:
+                    valid_monto = True
+            except (ValueError, TypeError):
+                pass
+        
+        # Si no se encontró un monto válido, marcarla para eliminar
+        if not valid_monto:
+            rows_to_remove_monto.append(idx)
+    
+    # Eliminar filas marcadas
+    df_mapped = df_mapped.drop(index=rows_to_remove_monto)
+    logger.info(f"Filas después del filtro de monto válido (mayor a 0): {len(df_mapped)}")
     
     return df_mapped
 
