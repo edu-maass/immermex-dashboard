@@ -232,13 +232,25 @@ class ImmermexDataProcessor:
                     col_data = pd.Series([col_data])
                 clean_df[col] = pd.to_numeric(col_data, errors='coerce').fillna(0)
             
-            # Condiciones de pago (extraer días de crédito)
-            condiciones = df_renamed.get('condiciones_pago', pd.Series())
-            if isinstance(condiciones, str):
-                condiciones = pd.Series([condiciones])
-            clean_df['dias_credito'] = pd.to_numeric(
-                condiciones.astype(str).str.extract(r'(\d+)')[0], errors='coerce'
-            ).fillna(30)  # Default 30 días
+            # Días de crédito - usar la misma lógica que pedidos
+            # Primero intentar obtener de la columna dias_credito directamente
+            dias_credito_col = df_renamed.get('dias_credito', pd.Series())
+            if isinstance(dias_credito_col, str):
+                dias_credito_col = pd.Series([dias_credito_col])
+            
+            # Si no hay columna dias_credito, extraer de condiciones_pago
+            if dias_credito_col.empty or dias_credito_col.isna().all():
+                condiciones = df_renamed.get('condiciones_pago', pd.Series())
+                if isinstance(condiciones, str):
+                    condiciones = pd.Series([condiciones])
+                clean_df['dias_credito'] = pd.to_numeric(
+                    condiciones.astype(str).str.extract(r'(\d+)')[0], errors='coerce'
+                ).fillna(30)  # Default 30 días
+            else:
+                # Usar la columna dias_credito directamente
+                clean_df['dias_credito'] = pd.to_numeric(
+                    dias_credito_col, errors='coerce'
+                ).fillna(30)
             
             # Agente
             agente_col = df_renamed.get('agente', pd.Series())
