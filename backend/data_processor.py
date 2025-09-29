@@ -1397,17 +1397,35 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
     logger.info(f"Filas después del filtro adicional de encabezados múltiples: {len(df_mapped)}")
     
     # Manejar columnas especiales (datetime, etc.)
+    # Buscar la columna que contiene la fecha real de pago (no UUID)
     datetime_found = False
     for col in df_mapped.columns:
         if isinstance(col, datetime):
-            # Mapear columnas datetime a fecha_pago
-            logger.info(f"✅ Detectada columna datetime en _map_cobranza_columns: {col} -> fecha_pago")
-            df_mapped['fecha_pago'] = df_mapped[col]
-            datetime_found = True
-            break
+            # Verificar si esta columna datetime contiene fechas reales o UUID
+            sample_values = df_mapped[col].dropna().head(3)
+            # Si los valores parecen fechas (datetime objects), usar esta columna
+            if len(sample_values) > 0 and all(isinstance(val, datetime) for val in sample_values):
+                logger.info(f"✅ Detectada columna datetime con fechas reales en _map_cobranza_columns: {col} -> fecha_pago")
+                df_mapped['fecha_pago'] = df_mapped[col]
+                datetime_found = True
+                break
+            else:
+                logger.info(f"⚠️ Columna datetime {col} contiene UUID, buscando otra columna con fechas reales")
+    
+    # Si no encontramos columna datetime con fechas reales, buscar en columnas regulares
+    if not datetime_found:
+        # Buscar en columnas regulares que puedan contener fechas
+        for col in df_mapped.columns:
+            if str(col).lower() == 'contpaq i':  # Esta columna contiene las fechas reales
+                sample_values = df_mapped[col].dropna().head(3)
+                if len(sample_values) > 0 and all(isinstance(val, datetime) for val in sample_values):
+                    logger.info(f"✅ Detectada columna 'CONTPAQ i' con fechas reales -> fecha_pago")
+                    df_mapped['fecha_pago'] = df_mapped[col]
+                    datetime_found = True
+                    break
     
     if not datetime_found:
-        logger.info("⚠️ No se encontraron columnas datetime en _map_cobranza_columns")
+        logger.info("⚠️ No se encontraron columnas con fechas reales en _map_cobranza_columns")
     
     # Mapeo completo basado en la referencia visual
     # RECIBO ELECTRÓNICO DE PAGO section
