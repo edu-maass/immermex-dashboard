@@ -1374,7 +1374,8 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
     # (indica que es una fila de encabezado con múltiples columnas de texto)
     header_count_threshold = 3  # Si una fila tiene 3+ valores que parecen encabezados, eliminarla
     
-    additional_mask = pd.Series([True] * len(df_mapped))
+    # Usar índices del DataFrame actual para evitar problemas de alineación
+    rows_to_remove = []
     
     for idx, row in df_mapped.iterrows():
         header_count = 0
@@ -1387,18 +1388,18 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
                     any(keyword in cell_value for keyword in ['recibo', 'documento', 'encabezado', 'xml', 'relacionado', 'electronico'])):
                     header_count += 1
         
-        # Si tiene muchos valores que parecen encabezados, eliminarla
+        # Si tiene muchos valores que parecen encabezados, marcarla para eliminar
         if header_count >= header_count_threshold:
-            additional_mask.loc[idx] = False
+            rows_to_remove.append(idx)
     
-    df_mapped = df_mapped[additional_mask]
+    # Eliminar filas marcadas
+    df_mapped = df_mapped.drop(index=rows_to_remove)
     logger.info(f"Filas después del filtro adicional de encabezados múltiples: {len(df_mapped)}")
     
     # Filtro para eliminar filas con valor cero o no numérico en monto
-    monto_mask = pd.Series([True] * len(df_mapped))
-    
     # Buscar columnas que podrían contener montos
     monto_columns = ['importe_pagado', 'monto', 'importe', 'total', 'valor']
+    rows_to_remove_monto = []
     
     for idx, row in df_mapped.iterrows():
         valid_monto = False
@@ -1417,11 +1418,12 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
                 except (ValueError, TypeError):
                     continue
         
-        # Si no se encontró un monto válido, eliminar la fila
+        # Si no se encontró un monto válido, marcarla para eliminar
         if not valid_monto:
-            monto_mask.loc[idx] = False
+            rows_to_remove_monto.append(idx)
     
-    df_mapped = df_mapped[monto_mask]
+    # Eliminar filas marcadas
+    df_mapped = df_mapped.drop(index=rows_to_remove_monto)
     logger.info(f"Filas después del filtro de monto válido (mayor a 0): {len(df_mapped)}")
     
     # Manejar columnas especiales (datetime, etc.)
