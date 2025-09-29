@@ -975,17 +975,27 @@ class ImmermexDataProcessor:
                 logger.info(f"Procesando hoja: {sheet_name}")
                 
                 if 'facturacion' in sheet_lower:
-                    self.normalize_facturacion(df, file_path)
+                    processed_df = self.normalize_facturacion(df, file_path)
+                    if not processed_df.empty:
+                        self.facturacion_clean = processed_df
                 elif 'cobranza' in sheet_lower:
-                    self.normalize_cobranza(df, file_path)
+                    processed_df = self.normalize_cobranza(df, file_path)
+                    if not processed_df.empty:
+                        self.cobranza_clean = processed_df
                 elif 'cfdi' in sheet_lower or 'relacionado' in sheet_lower:
-                    self.normalize_cfdi_relacionados(df, file_path)
+                    processed_df = self.normalize_cfdi_relacionados(df, file_path)
+                    if not processed_df.empty:
+                        self.cfdi_clean = processed_df
                 elif any(month in sheet_lower for month in ['sep', 'oct', 'nov', 'dic', 'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago']):
                     # Hoja de pedidos por mes
-                    self.normalize_pedidos(df, file_path, sheet_name)
+                    processed_df = self.normalize_pedidos(df, file_path, sheet_name)
+                    if not processed_df.empty:
+                        self.pedidos_clean = processed_df
                 elif any(keyword in sheet_lower for keyword in ['pedido', 'material', 'kg']):
                     # Otra hoja de pedidos
-                    self.normalize_pedidos(df, file_path, sheet_name)
+                    processed_df = self.normalize_pedidos(df, file_path, sheet_name)
+                    if not processed_df.empty:
+                        self.pedidos_clean = processed_df
                 elif 'inventario' in sheet_lower:
                     # Hoja de inventario
                     self.normalize_inventario(df)
