@@ -31,25 +31,36 @@ def safe_date(value):
     """Convierte valor a fecha segura, manejando NaN"""
     try:
         if is_nan_value(value):
+            logger.debug(f"safe_date: valor NaN detectado: {value}")
             return None
         if isinstance(value, datetime):
+            logger.debug(f"safe_date: ya es datetime: {value} -> {type(value)}")
             return value  # Ya es un objeto datetime, devolverlo tal como está
         if isinstance(value, (int, float)):
+            logger.debug(f"safe_date: número no válido para fecha: {value}")
             return None  # Los números no son fechas válidas
         if isinstance(value, str):
             value = value.strip()
             if not value or value.lower() in ['nan', 'none', 'null']:
+                logger.debug(f"safe_date: string vacío o null: '{value}'")
                 return None
             # Intentar parsear como fecha
             try:
-                return datetime.strptime(value, '%Y-%m-%d').date()
+                result = datetime.strptime(value, '%Y-%m-%d')
+                logger.debug(f"safe_date: parseado como Y-m-d: '{value}' -> {result} ({type(result)})")
+                return result
             except ValueError:
                 try:
-                    return datetime.strptime(value, '%d/%m/%Y').date()
+                    result = datetime.strptime(value, '%d/%m/%Y')
+                    logger.debug(f"safe_date: parseado como d/m/Y: '{value}' -> {result} ({type(result)})")
+                    return result
                 except ValueError:
+                    logger.debug(f"safe_date: no se pudo parsear: '{value}'")
                     return None
+        logger.debug(f"safe_date: tipo no manejado: {value} ({type(value)})")
         return None
-    except (ValueError, TypeError):
+    except (ValueError, TypeError) as e:
+        logger.debug(f"safe_date: error procesando {value}: {e}")
         return None
 
 def safe_float(value, default=0.0):
