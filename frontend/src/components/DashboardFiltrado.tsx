@@ -8,6 +8,7 @@ import { AgingChart } from './Charts/AgingChart';
 import { TopClientesChart } from './Charts/TopClientesChart';
 import { ConsumoMaterialChart } from './Charts/ConsumoMaterialChart';
 import { ExpectativaCobranzaChart } from './Charts/ExpectativaCobranzaChart';
+import { CobranzaPedidosChart } from './Charts/CobranzaPedidosChart';
 
 interface DashboardFiltradoProps {
   onUploadSuccess?: () => void;
@@ -300,7 +301,7 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
         )}
         
         {kpis.expectativa_cobranza && Object.keys(kpis.expectativa_cobranza).length > 0 && (
-          <ExpectativaCobranzaChart data={formatExpectativaCobranzaData(kpis.expectativa_cobranza)} />
+          <CobranzaPedidosChart data={formatExpectativaCobranzaData(kpis.expectativa_cobranza)} />
         )}
       </div>
     </div>
