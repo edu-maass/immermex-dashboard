@@ -241,7 +241,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
               </div>
             </div>
             <div className="mt-2">
-              <p className="text-3xl font-bold text-gray-900">{Math.round(kpis.toneladas_total || 0)} kg</p>
+              <p className="text-2xl font-bold text-gray-900">{Math.round((kpis.toneladas_total || 0) * 1000)} kg</p>
               <div className="mt-2 space-y-1">
                 <p className="text-sm text-gray-500">{kpis.pedidos_unicos} pedidos únicos</p>
                 <p className="text-xs text-gray-400">${kpis.total_pedidos?.toLocaleString()}</p>

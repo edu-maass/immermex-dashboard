@@ -264,7 +264,7 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
             </div>
           </div>
           <div className="mt-2">
-            <p className="text-3xl font-bold text-gray-900">{Math.round(kpis.toneladas_total || 0)} kg</p>
+            <p className="text-2xl font-bold text-gray-900">{Math.round((kpis.toneladas_total || 0) * 1000)} kg</p>
             <p className="text-sm text-gray-500">{kpis.pedidos_unicos || 0} pedidos únicos</p>
           </div>
         </div>

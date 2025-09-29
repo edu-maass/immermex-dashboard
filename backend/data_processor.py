@@ -348,6 +348,15 @@ class ImmermexDataProcessor:
                 if old_name in df.columns:
                     df_renamed = df_renamed.rename(columns={old_name: new_name})
             
+            # Detectar automáticamente columnas datetime que no fueron mapeadas
+            for col in df_renamed.columns:
+                if col not in column_mapping.values():  # Si no fue mapeada
+                    # Verificar si la columna contiene objetos datetime
+                    if df_renamed[col].dtype == 'datetime64[ns]' or any(isinstance(val, pd.Timestamp) for val in df_renamed[col].dropna().head(5)):
+                        logger.info(f"Detectada columna datetime automáticamente: {col} -> fecha_pago")
+                        df_renamed = df_renamed.rename(columns={col: 'fecha_pago'})
+                        break  # Solo tomar la primera columna datetime encontrada
+            
             # Crear DataFrame con columnas estándar
             clean_df = pd.DataFrame()
             
