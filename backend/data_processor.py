@@ -1524,6 +1524,7 @@ def _map_cobranza_columns(df: pd.DataFrame) -> pd.DataFrame:
     columns = list(df_mapped.columns)
     
     # RECIBO ELECTRÓNICO DE PAGO (columnas 0-11)
+    # Solo mapear fecha_pago si no se detectó automáticamente como datetime
     if 'fecha_pago' not in df_mapped.columns and len(columns) >= 1:
         df_mapped['fecha_pago'] = df_mapped.iloc[:, 0]  # "Fecha Pago"
     if 'serie_pago' not in df_mapped.columns and len(columns) >= 2:
