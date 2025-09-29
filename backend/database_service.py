@@ -587,12 +587,12 @@ class DatabaseService:
                         facturas_relacionadas.extend(facturas_pedido)
                         logger.info(f"Pedido {pedido_num}: {len(facturas_pedido)} facturas encontradas")
                     
-                    # Usar facturas relacionadas para calcular expectativa
+                    # Usar pedidos para calcular expectativa de cobranza
                     expectativa_cobranza = self._calculate_expectativa_cobranza(facturas_relacionadas, pedidos, anticipos, cobranzas)
-                    logger.info(f"Expectativa de cobranza calculada con {len(facturas_relacionadas)} facturas relacionadas: {len(expectativa_cobranza)} semanas")
+                    logger.info(f"Expectativa de cobranza calculada con {len(pedidos)} pedidos: {len(expectativa_cobranza)} semanas")
                 else:
                     expectativa_cobranza = self._calculate_expectativa_cobranza(facturas_validas, pedidos, anticipos, cobranzas)
-                    logger.info(f"Expectativa de cobranza calculada: {len(expectativa_cobranza)} semanas")
+                    logger.info(f"Expectativa de cobranza calculada con {len(pedidos)} pedidos: {len(expectativa_cobranza)} semanas")
             except Exception as e:
                 logger.error(f"Error calculando expectativa de cobranza: {str(e)}")
                 expectativa_cobranza = {}
@@ -728,9 +728,13 @@ class DatabaseService:
         
         # Log de debug para días de crédito en pedidos
         pedidos_con_credito_info = []
+        pedidos_con_fecha_info = []
         for pedido in pedidos[:5]:  # Solo los primeros 5 para no saturar logs
             pedidos_con_credito_info.append(f"ID:{pedido.id}, dias_credito:{pedido.dias_credito}, fecha_factura:{pedido.fecha_factura}")
+            if hasattr(pedido, 'importe_sin_iva'):
+                pedidos_con_fecha_info.append(f"ID:{pedido.id}, importe_sin_iva:{pedido.importe_sin_iva}")
         logger.info(f"Muestra de pedidos con crédito: {pedidos_con_credito_info}")
+        logger.info(f"Muestra de pedidos con importe: {pedidos_con_fecha_info}")
         
         # Obtener fecha actual
         hoy = datetime.now()
@@ -782,10 +786,15 @@ class DatabaseService:
                         # Solo considerar si hay monto positivo
                         if monto_pedido > 0:
                             cobranza_esperada += monto_pedido
+                            logger.debug(f"Pedido {pedido.id} vence en semana {i+1}: ${monto_pedido}")
                             
                 except Exception as e:
                     logger.warning(f"Error procesando pedido {pedido.id}: {str(e)}")
                     continue
+            
+            # Log de debug para cada semana
+            if i < 3:  # Solo las primeras 3 semanas para no saturar logs
+                logger.info(f"Semana {i+1}: {pedidos_con_credito} pedidos con crédito, {pedidos_vencen_semana} vencen, cobranza esperada: ${cobranza_esperada}")
             
             # Calcular cobranza real para esta semana usando datos de cobranza filtrada
             try:
@@ -815,6 +824,10 @@ class DatabaseService:
         # Si no hay datos, agregar datos de prueba para verificar que el gráfico funcione
         if len(expectativa) == 0 or sum(d['cobranza_esperada'] for d in expectativa.values()) == 0:
             logger.warning("No hay datos de expectativa de cobranza, agregando datos de prueba")
+            logger.info(f"Total de pedidos procesados: {len(pedidos)}")
+            logger.info(f"Pedidos con fecha_factura: {sum(1 for p in pedidos if p.fecha_factura)}")
+            logger.info(f"Pedidos con dias_credito: {sum(1 for p in pedidos if p.dias_credito)}")
+            
             from datetime import datetime, timedelta
             hoy = datetime.now()
             
