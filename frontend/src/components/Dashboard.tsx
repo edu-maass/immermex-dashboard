@@ -237,14 +237,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Package className="h-5 w-5 text-orange-600" />
-                <h3 className="text-sm font-medium text-gray-500">Pedidos Utilizados</h3>
+                <h3 className="text-sm font-medium text-gray-500">Material Utilizado</h3>
               </div>
             </div>
             <div className="mt-2">
-              <p className="text-2xl font-bold text-gray-900">${kpis.total_pedidos?.toLocaleString()}</p>
+              <p className="text-3xl font-bold text-gray-900">{Math.round(kpis.toneladas_total || 0)} kg</p>
               <div className="mt-2 space-y-1">
-                <p className="text-lg font-semibold text-gray-700">{kpis.toneladas_total?.toFixed(1)} toneladas</p>
                 <p className="text-sm text-gray-500">{kpis.pedidos_unicos} pedidos únicos</p>
+                <p className="text-xs text-gray-400">${kpis.total_pedidos?.toLocaleString()}</p>
               </div>
             </div>
           </div>

@@ -251,7 +251,7 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
           </div>
           <div className="mt-2">
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(kpis.anticipos_total || 0)}</p>
-            <p className="text-sm text-gray-500">{kpis.anticipos_porcentaje?.toFixed(1)}% sobre facturación</p>
+            <p className="text-sm text-gray-500">{kpis.porcentaje_anticipos?.toFixed(1)}% sobre facturación</p>
           </div>
         </div>
 
@@ -260,12 +260,12 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Package className="h-5 w-5 text-orange-600" />
-              <h3 className="text-sm font-medium text-gray-500">Pedidos Utilizados</h3>
+              <h3 className="text-sm font-medium text-gray-500">Material Utilizado</h3>
             </div>
           </div>
           <div className="mt-2">
-            <p className="text-2xl font-bold text-gray-900">{kpis.pedidos_unicos || 0}</p>
-            <p className="text-sm text-gray-500">{(kpis.toneladas_total || 0).toFixed(1)} toneladas</p>
+            <p className="text-3xl font-bold text-gray-900">{Math.round(kpis.toneladas_total || 0)} kg</p>
+            <p className="text-sm text-gray-500">{kpis.pedidos_unicos || 0} pedidos únicos</p>
           </div>
         </div>
 
