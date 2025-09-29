@@ -281,24 +281,8 @@ class DatabaseService:
         return count
     
     def _save_pedidos(self, pedidos_data: list, archivo_id: int) -> int:
-        """Guarda datos de pedidos con asignación automática de fecha_factura y congruencia de días de crédito"""
+        """Guarda datos de pedidos"""
         count = 0
-        
-        # Obtener facturas para asignar fechas automáticamente y verificar congruencia
-        facturas = self.db.query(Facturacion).all()
-        fechas_por_folio = {}
-        dias_credito_por_folio = {}
-        
-        for factura in facturas:
-            if factura.folio_factura and factura.fecha_factura:
-                fechas_por_folio[factura.folio_factura] = factura.fecha_factura
-            if factura.folio_factura and factura.dias_credito:
-                dias_credito_por_folio[factura.folio_factura] = factura.dias_credito
-        
-        logger.info(f"Se encontraron {len(fechas_por_folio)} facturas con fechas y {len(dias_credito_por_folio)} con días de crédito")
-        
-        fechas_asignadas = 0
-        dias_credito_corregidos = 0
         for pedido_data in pedidos_data:
             try:
                 def safe_date(value):
@@ -324,27 +308,6 @@ class DatabaseService:
                 # Convertir fechas de forma segura
                 fecha_factura = safe_date(pedido_data.get('fecha_factura'))
                 fecha_pago = safe_date(pedido_data.get('fecha_pago'))
-                
-                # Si no hay fecha_factura, intentar asignarla desde la factura relacionada
-                if not fecha_factura:
-                    folio_factura = safe_string(pedido_data.get('folio_factura', ''))
-                    if folio_factura in fechas_por_folio:
-                        fecha_factura = fechas_por_folio[folio_factura]
-                        fechas_asignadas += 1
-                        logger.debug(f"Asignada fecha de factura automáticamente a pedido {safe_string(pedido_data.get('pedido', ''))}: {fecha_factura}")
-                
-                # Verificar y corregir congruencia de días de crédito con la factura relacionada
-                folio_factura = safe_string(pedido_data.get('folio_factura', ''))
-                dias_credito_pedido = safe_int(pedido_data.get('dias_credito', 30))
-                
-                if folio_factura in dias_credito_por_folio:
-                    dias_credito_factura = dias_credito_por_folio[folio_factura]
-                    if dias_credito_pedido != dias_credito_factura:
-                        # Usar los días de crédito de la factura como fuente de verdad
-                        pedido_data['dias_credito'] = dias_credito_factura
-                        dias_credito_corregidos += 1
-                        logger.debug(f"Corregidos días de crédito para pedido {safe_string(pedido_data.get('pedido', ''))}: "
-                                   f"{dias_credito_pedido} → {dias_credito_factura}")
                 
                 # Limpiar y validar datos numéricos
                 def safe_float(value, default=0.0):
@@ -409,17 +372,6 @@ class DatabaseService:
                 continue
         
         self.db.commit()
-        
-        if fechas_asignadas > 0:
-            logger.info(f"✅ Se asignaron automáticamente {fechas_asignadas} fechas de factura a pedidos durante el procesamiento")
-        else:
-            logger.info("✅ Las fechas de factura ya estaban asignadas o no hay coincidencias")
-        
-        if dias_credito_corregidos > 0:
-            logger.info(f"✅ Se corrigieron {dias_credito_corregidos} discrepancias de días de crédito durante el procesamiento")
-        else:
-            logger.info("✅ Los días de crédito ya eran congruentes entre pedidos y facturas")
-        
         return count
     
     def _clear_existing_data(self):
