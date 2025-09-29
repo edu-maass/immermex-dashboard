@@ -323,11 +323,11 @@ class DatabaseService:
                 
                 # Si no hay fecha_factura, intentar asignarla desde la factura relacionada
                 if not fecha_factura:
-                    folio_factura = safe_string(pedido_data.get('folio_factura', ''))
+                    folio_factura = pedido_data.get('folio_factura', '')
                     if folio_factura and folio_factura in fechas_por_folio:
                         fecha_factura = fechas_por_folio[folio_factura]
                         fechas_asignadas += 1
-                        logger.debug(f"Asignada fecha de factura automáticamente a pedido {safe_string(pedido_data.get('pedido', ''))}: {fecha_factura}")
+                        logger.debug(f"Asignada fecha de factura automáticamente a pedido {pedido_data.get('pedido', '')}: {fecha_factura}")
                 
                 # Limpiar y validar datos numéricos
                 def safe_float(value, default=0.0):
