@@ -164,3 +164,46 @@ class DatabaseService:
             logger.error(f"Error eliminando archivo {archivo_id}: {str(e)}")
             self.db.rollback()
             return False
+    
+    def get_filtros_disponibles(self) -> dict:
+        """Obtiene opciones disponibles para filtros"""
+        try:
+            from sqlalchemy import and_
+            
+            # Pedidos disponibles - usar pedido (columna C) para filtrado
+            pedidos = self.db.query(Pedido.pedido).filter(Pedido.pedido.isnot(None)).distinct().all()
+            pedidos_list = [p[0] for p in pedidos if p[0]]
+            
+            # Clientes disponibles
+            clientes = self.db.query(Facturacion.cliente).filter(Facturacion.cliente.isnot(None)).distinct().all()
+            clientes_list = [c[0] for c in clientes if c[0]]
+            
+            # Materiales disponibles
+            materiales = self.db.query(Pedido.material).filter(Pedido.material.isnot(None)).distinct().all()
+            materiales_list = [m[0] for m in materiales if m[0]]
+            
+            # Meses y años disponibles
+            meses_años = self.db.query(Facturacion.mes, Facturacion.año).filter(
+                and_(Facturacion.mes.isnot(None), Facturacion.año.isnot(None))
+            ).distinct().all()
+            
+            meses_disponibles = sorted(set(m[0] for m in meses_años if m[0]))
+            años_disponibles = sorted(set(m[1] for m in meses_años if m[1]))
+            
+            return {
+                "pedidos": pedidos_list,
+                "clientes": clientes_list,
+                "materiales": materiales_list,
+                "meses": meses_disponibles,
+                "años": años_disponibles
+            }
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo filtros disponibles: {str(e)}")
+            return {
+                "pedidos": [],
+                "clientes": [],
+                "materiales": [],
+                "meses": [],
+                "años": []
+            }
