@@ -312,16 +312,41 @@ class KPIAggregator:
             # Calcular cobranza real para esta semana
             if cobranzas:
                 if aplicar_filtro_proporcional:
-                    # Solo considerar cobranzas relacionadas con facturas de pedidos filtrados
+                    # Calcular cobranza proporcional basada en la lógica: 
+                    # Monto_Factura × %_Cobrado × %_Proporción_Pedido
                     for cobranza in cobranzas:
                         if cobranza.fecha_pago and semana_inicio <= cobranza.fecha_pago <= semana_fin:
-                            # Verificar si esta cobranza está relacionada con una factura de los pedidos filtrados
                             uuid_factura = cobranza.uuid_factura_relacionada
                             if uuid_factura:
-                                # Buscar si hay una factura en los pedidos filtrados con este UUID
+                                # Buscar la factura relacionada
                                 factura_relacionada = next((f for f in facturas if f.uuid_factura == uuid_factura), None)
                                 if factura_relacionada:
-                                    cobranza_real += cobranza.importe_pagado
+                                    # Calcular el porcentaje cobrado de esta factura
+                                    if factura_relacionada.monto_total > 0:
+                                        porcentaje_cobrado = cobranza.importe_pagado / factura_relacionada.monto_total
+                                    else:
+                                        porcentaje_cobrado = 0
+                                    
+                                    # Calcular la proporción de pedidos filtrados en esta factura
+                                    # Sumar todos los pedidos filtrados que pertenecen a esta factura
+                                    monto_pedidos_filtrados_factura = 0
+                                    for pedido in pedidos:
+                                        if pedido.folio_factura == factura_relacionada.folio_factura:
+                                            monto_pedidos_filtrados_factura += pedido.importe_sin_iva or 0
+                                    
+                                    # Calcular la proporción del pedido en la factura
+                                    if factura_relacionada.monto_total > 0:
+                                        proporcion_pedido = monto_pedidos_filtrados_factura / factura_relacionada.monto_total
+                                    else:
+                                        proporcion_pedido = 0
+                                    
+                                    # Aplicar la fórmula: Monto_Factura × %_Cobrado × %_Proporción_Pedido
+                                    cobranza_proporcional = factura_relacionada.monto_total * porcentaje_cobrado * proporcion_pedido
+                                    cobranza_real += cobranza_proporcional
+                                    
+                                    logger.debug(f"Factura {factura_relacionada.folio_factura}: monto_total=${factura_relacionada.monto_total}, "
+                                               f"porcentaje_cobrado={porcentaje_cobrado:.2%}, proporcion_pedido={proporcion_pedido:.2%}, "
+                                               f"cobranza_proporcional=${cobranza_proporcional:.2f}")
                 else:
                     # Sin filtro, considerar todas las cobranzas
                     for cobranza in cobranzas:
