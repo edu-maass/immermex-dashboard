@@ -232,7 +232,6 @@ async def aplicar_filtros_pedido(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/upload")
-@handle_api_error
 async def upload_file(
     file: UploadFile = File(...),
     reemplazar_datos: bool = Query(True, description="Si true, reemplaza todos los datos existentes"),
