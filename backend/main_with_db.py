@@ -17,7 +17,8 @@ from typing import List, Optional
 # Imports locales
 from database import get_db, init_db, ArchivoProcesado
 from database_service_refactored import DatabaseService
-from utils import setup_logging, handle_api_error, FileProcessingError, DatabaseError
+from utils import setup_logging, FileProcessingError, DatabaseError
+# handle_api_error comentado temporalmente
 # Comentado temporalmente para evitar problemas en Vercel
 # from utils.error_middleware import ErrorHandlingMiddleware, RequestLoggingMiddleware
 # from utils.error_tracker import error_tracker, ErrorCategory, ErrorSeverity
