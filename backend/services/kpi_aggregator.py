@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from .facturacion_service import FacturacionService
 from .cobranza_service import CobranzaService
 from .pedidos_service import PedidosService
-from database import CFDIRelacionado
+from database import CFDIRelacionado, Cobranza
 from utils.logging_config import log_performance
 import time
 import logging
@@ -31,8 +31,8 @@ class KPIAggregator:
         try:
             # Obtener datos base
             facturas = self.facturacion_service.get_facturas_by_filtros(filtros)
-            cobranzas = self.db.query(CobranzaService).all() if hasattr(self.db, 'query') else []
-            anticipos = self.db.query(CFDIRelacionado).all() if hasattr(self.db, 'query') else []
+            cobranzas = self.db.query(Cobranza).all()
+            anticipos = self.db.query(CFDIRelacionado).all()
             pedidos = self.pedidos_service.get_pedidos_by_filtros(filtros)
             
             logger.info(f"Datos obtenidos - Facturas: {len(facturas)}, Pedidos: {len(pedidos)}, Cobranzas: {len(cobranzas)}")
