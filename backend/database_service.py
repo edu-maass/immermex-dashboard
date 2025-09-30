@@ -838,11 +838,11 @@ class DatabaseService:
                 if cobranza.uuid_factura_relacionada:
                     cobranzas_por_factura[cobranza.uuid_factura_relacionada] = cobranzas_por_factura.get(cobranza.uuid_factura_relacionada, 0) + cobranza.importe_pagado
         
-        # Agrupar por semana (próximas 8 semanas)
-        for i in range(8):
+        # Agrupar por semana (4 semanas pasadas + 4 semanas futuras)
+        for i in range(-4, 4):
             semana_inicio = hoy + timedelta(weeks=i)
             semana_fin = semana_inicio + timedelta(days=6)
-            semana_key = f"Semana {i+1} ({semana_inicio.strftime('%d/%m')} - {semana_fin.strftime('%d/%m')})"
+            semana_key = f"Semana {i+5} ({semana_inicio.strftime('%d/%m')} - {semana_fin.strftime('%d/%m')})"
             
             cobranza_esperada = 0
             cobranza_real = 0
@@ -879,8 +879,8 @@ class DatabaseService:
                     continue
             
             # Log de debug para cada semana
-            if i < 3:  # Solo las primeras 3 semanas para no saturar logs
-                logger.info(f"Semana {i+1}: {pedidos_con_credito} pedidos con crédito, {pedidos_vencen_semana} vencen, cobranza esperada: ${cobranza_esperada}")
+            if abs(i) <= 2:  # Solo semanas cercanas para no saturar logs
+                logger.info(f"Semana {i+5}: {pedidos_con_credito} pedidos con crédito, {pedidos_vencen_semana} vencen, cobranza esperada: ${cobranza_esperada}")
             
             # Calcular cobranza real para esta semana usando datos de cobranza filtrada
             try:
@@ -888,7 +888,7 @@ class DatabaseService:
                     if cobranza.fecha_pago and semana_inicio <= cobranza.fecha_pago <= semana_fin:
                         cobranza_real += cobranza.importe_pagado
             except Exception as e:
-                logger.warning(f"Error calculando cobranza real para semana {i+1}: {str(e)}")
+                logger.warning(f"Error calculando cobranza real para semana {i+5}: {str(e)}")
                 cobranza_real = 0
             
             # Contar pedidos pendientes para esa semana (pedidos que se esperan facturar)
@@ -896,7 +896,7 @@ class DatabaseService:
                 pedidos_semana = [p for p in pedidos if p.fecha_factura and semana_inicio <= p.fecha_factura <= semana_fin]
                 pedidos_pendientes = len(pedidos_semana)
             except Exception as e:
-                logger.warning(f"Error contando pedidos para semana {i+1}: {str(e)}")
+                logger.warning(f"Error contando pedidos para semana {i+5}: {str(e)}")
                 pedidos_pendientes = 0
             
             expectativa[semana_key] = {
