@@ -586,15 +586,24 @@ class DatabaseService:
                         
                         # Buscar todos los pedidos asociados a esta factura (no solo los filtrados)
                         pedidos_factura = [p for p in self.db.query(Pedido).filter(Pedido.folio_factura == factura.folio_factura).all()]
-                        total_pedidos_factura = len(pedidos_factura)
                         
-                        if total_pedidos_factura > 0:
-                            # Calcular cobranza proporcional para los pedidos filtrados de esta factura
-                            pedidos_filtrados_factura = [p for p in pedidos if p.folio_factura == factura.folio_factura]
-                            cobranza_proporcional = (cobranza_factura * len(pedidos_filtrados_factura)) / total_pedidos_factura
-                            cobranza_total += cobranza_proporcional
+                        if pedidos_factura:
+                            # Calcular monto total de todos los pedidos de esta factura
+                            monto_total_pedidos_factura = sum(p.importe_sin_iva for p in pedidos_factura if p.importe_sin_iva)
                             
-                            logger.info(f"Factura {factura.folio_factura}: {len(pedidos_filtrados_factura)}/{total_pedidos_factura} pedidos filtrados, cobranza proporcional: {cobranza_proporcional:.2f}")
+                            # Calcular monto de los pedidos filtrados de esta factura
+                            pedidos_filtrados_factura = [p for p in pedidos if p.folio_factura == factura.folio_factura]
+                            monto_pedidos_filtrados_factura = sum(p.importe_sin_iva for p in pedidos_filtrados_factura if p.importe_sin_iva)
+                            
+                            if monto_total_pedidos_factura > 0:
+                                # Calcular cobranza proporcional basada en monto (no conteo)
+                                porcentaje_monto_pedidos_filtrados = monto_pedidos_filtrados_factura / monto_total_pedidos_factura
+                                cobranza_proporcional = cobranza_factura * porcentaje_monto_pedidos_filtrados
+                                cobranza_total += cobranza_proporcional
+                                
+                                logger.info(f"Factura {factura.folio_factura}: ${monto_pedidos_filtrados_factura:.2f}/${monto_total_pedidos_factura:.2f} ({porcentaje_monto_pedidos_filtrados:.1%}) pedidos filtrados, cobranza proporcional: ${cobranza_proporcional:.2f}")
+                            else:
+                                logger.warning(f"Factura {factura.folio_factura}: monto total de pedidos es 0, no se puede calcular proporción")
                 
                 cobranzas_relacionadas = cobranzas_relacionadas_pedidos
                 logger.info(f"Cobranza total proporcional para pedidos filtrados: {cobranza_total:.2f}")
