@@ -123,49 +123,63 @@ class AdvancedLogger:
         console_handler.setFormatter(console_formatter)
         self.logger.addHandler(console_handler)
         
-        # Handler para archivo general (JSON estructurado)
-        general_file = self.log_dir / f"{self.name}_general.log"
-        general_handler = logging.handlers.RotatingFileHandler(
-            general_file, maxBytes=10*1024*1024, backupCount=5, encoding='utf-8'
+        # Solo agregar handlers de archivo si no estamos en Vercel (sistema de solo lectura)
+        if not self._is_vercel_environment():
+            try:
+                # Handler para archivo general (JSON estructurado)
+                general_file = self.log_dir / f"{self.name}_general.log"
+                general_handler = logging.handlers.RotatingFileHandler(
+                    general_file, maxBytes=10*1024*1024, backupCount=5, encoding='utf-8'
+                )
+                general_handler.setLevel(logging.DEBUG)
+                general_handler.setFormatter(StructuredFormatter())
+                self.logger.addHandler(general_handler)
+                
+                # Handler para errores (solo ERROR y CRITICAL)
+                error_file = self.log_dir / f"{self.name}_errors.log"
+                error_handler = logging.handlers.RotatingFileHandler(
+                    error_file, maxBytes=5*1024*1024, backupCount=10, encoding='utf-8'
+                )
+                error_handler.setLevel(logging.ERROR)
+                error_handler.setFormatter(StructuredFormatter())
+                self.logger.addHandler(error_handler)
+                
+                # Handler para performance (archivo separado)
+                perf_file = self.log_dir / f"{self.name}_performance.log"
+                perf_handler = logging.handlers.RotatingFileHandler(
+                    perf_file, maxBytes=5*1024*1024, backupCount=5, encoding='utf-8'
+                )
+                perf_handler.setLevel(logging.DEBUG)
+                perf_handler.setFormatter(StructuredFormatter())
+                
+                # Filtrar solo logs de performance
+                perf_filter = PerformanceFilter()
+                perf_handler.addFilter(perf_filter)
+                self.logger.addHandler(perf_handler)
+                
+                # Handler para auditoría (archivo separado)
+                audit_file = self.log_dir / f"{self.name}_audit.log"
+                audit_handler = logging.handlers.RotatingFileHandler(
+                    audit_file, maxBytes=10*1024*1024, backupCount=20, encoding='utf-8'
+                )
+                audit_handler.setLevel(logging.INFO)
+                audit_handler.setFormatter(StructuredFormatter())
+                
+                # Filtrar solo logs de auditoría
+                audit_filter = AuditFilter()
+                audit_handler.addFilter(audit_filter)
+                self.logger.addHandler(audit_handler)
+            except (OSError, PermissionError) as e:
+                # Si no se pueden crear archivos de log, solo usar consola
+                self.logger.warning(f"Could not create file handlers: {e}. Using console logging only.")
+    
+    def _is_vercel_environment(self) -> bool:
+        """Verifica si estamos en un entorno Vercel"""
+        return (
+            os.environ.get('VERCEL') == '1' or 
+            os.environ.get('VERCEL_ENV') is not None or
+            os.environ.get('VCAP_APPLICATION') is not None  # También para otros PaaS
         )
-        general_handler.setLevel(logging.DEBUG)
-        general_handler.setFormatter(StructuredFormatter())
-        self.logger.addHandler(general_handler)
-        
-        # Handler para errores (solo ERROR y CRITICAL)
-        error_file = self.log_dir / f"{self.name}_errors.log"
-        error_handler = logging.handlers.RotatingFileHandler(
-            error_file, maxBytes=5*1024*1024, backupCount=10, encoding='utf-8'
-        )
-        error_handler.setLevel(logging.ERROR)
-        error_handler.setFormatter(StructuredFormatter())
-        self.logger.addHandler(error_handler)
-        
-        # Handler para performance (archivo separado)
-        perf_file = self.log_dir / f"{self.name}_performance.log"
-        perf_handler = logging.handlers.RotatingFileHandler(
-            perf_file, maxBytes=5*1024*1024, backupCount=5, encoding='utf-8'
-        )
-        perf_handler.setLevel(logging.DEBUG)
-        perf_handler.setFormatter(StructuredFormatter())
-        
-        # Filtrar solo logs de performance
-        perf_filter = PerformanceFilter()
-        perf_handler.addFilter(perf_filter)
-        self.logger.addHandler(perf_handler)
-        
-        # Handler para auditoría (archivo separado)
-        audit_file = self.log_dir / f"{self.name}_audit.log"
-        audit_handler = logging.handlers.RotatingFileHandler(
-            audit_file, maxBytes=10*1024*1024, backupCount=20, encoding='utf-8'
-        )
-        audit_handler.setLevel(logging.INFO)
-        audit_handler.setFormatter(StructuredFormatter())
-        
-        # Filtrar solo logs de auditoría
-        audit_filter = AuditFilter()
-        audit_handler.addFilter(audit_filter)
-        self.logger.addHandler(audit_handler)
     
     def log_with_context(
         self,

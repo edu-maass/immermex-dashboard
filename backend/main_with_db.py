@@ -20,13 +20,14 @@ from database_service_refactored import DatabaseService
 from utils import setup_logging, handle_api_error, FileProcessingError, DatabaseError
 from utils.error_middleware import ErrorHandlingMiddleware, RequestLoggingMiddleware
 from utils.error_tracker import error_tracker, ErrorCategory, ErrorSeverity
-from utils.advanced_logging import (
-    setup_global_logging, system_logger, api_logger, database_logger,
-    processing_logger, security_logger, log_execution_time, log_api_call
-)
-from utils.logging_middleware import (
-    AdvancedLoggingMiddleware, PerformanceLoggingMiddleware, AuditLoggingMiddleware
-)
+# Comentado temporalmente para evitar problemas en Vercel
+# from utils.advanced_logging import (
+#     setup_global_logging, system_logger, api_logger, database_logger,
+#     processing_logger, security_logger, log_execution_time, log_api_call
+# )
+# from utils.logging_middleware import (
+#     AdvancedLoggingMiddleware, PerformanceLoggingMiddleware, AuditLoggingMiddleware
+# )
 from utils.security import (
     require_rate_limit, validate_file_upload, validate_input_data, 
     validate_filters, SecurityMiddleware, SecurityValidator
@@ -35,12 +36,11 @@ from utils.data_validator import AdvancedDataValidator, ValidationLevel
 from datetime import datetime
 from data_processor import process_immermex_file_advanced
 
-# Importar endpoints de compras
-from services.compras_api import compras_router
+# Importar endpoints de compras (comentado temporalmente por problemas de dependencias)
+# from services.compras_api import compras_router
 
-# Configurar logging avanzado
-setup_global_logging(log_level="INFO", log_dir="logs")
-logger = system_logger
+# Configurar logging básico
+logger = setup_logging()
 
 # Crear aplicación FastAPI
 app = FastAPI(
@@ -80,8 +80,8 @@ app.add_middleware(ErrorHandlingMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(SecurityMiddleware)
 
-# Incluir router de compras
-app.include_router(compras_router)
+# Incluir router de compras (comentado temporalmente)
+# app.include_router(compras_router)
 
 @app.on_event("startup")
 async def startup_event():
