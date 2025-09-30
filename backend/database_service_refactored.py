@@ -69,13 +69,25 @@ class DatabaseService:
             raise
     
     def _create_archivo_record(self, archivo_info: dict) -> ArchivoProcesado:
-        """Crea registro de archivo procesado"""
+        """Crea registro de archivo procesado o retorna el existente si ya fue procesado"""
+        file_hash = self._calculate_file_hash(archivo_info.get("contenido", ""))
+        
+        # Verificar si el archivo ya existe
+        existing_archivo = self.db.query(ArchivoProcesado).filter(
+            ArchivoProcesado.hash_archivo == file_hash
+        ).first()
+        
+        if existing_archivo:
+            logger.info(f"Archivo ya existe: {existing_archivo.nombre_archivo}, usando registro existente")
+            return existing_archivo
+        
+        # Crear nuevo registro
         archivo = ArchivoProcesado(
             nombre_archivo=archivo_info.get("nombre_archivo", ""),
             fecha_procesamiento=datetime.now(),
             estado="procesando",
             registros_procesados=0,
-            hash_archivo=self._calculate_file_hash(archivo_info.get("contenido", "")),
+            hash_archivo=file_hash,
             tamaño_archivo=len(archivo_info.get("contenido", "")),
             algoritmo_usado="refactored_processing"
         )
