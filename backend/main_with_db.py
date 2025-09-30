@@ -20,8 +20,16 @@ from database_service_refactored import DatabaseService
 from utils import setup_logging, handle_api_error, FileProcessingError, DatabaseError
 from utils.error_middleware import ErrorHandlingMiddleware, RequestLoggingMiddleware
 from utils.error_tracker import error_tracker, ErrorCategory, ErrorSeverity
+from utils.security import (
+    require_rate_limit, validate_file_upload, validate_input_data, 
+    validate_filters, SecurityMiddleware, SecurityValidator
+)
+from utils.data_validator import AdvancedDataValidator, ValidationLevel
 from datetime import datetime
 from data_processor import process_immermex_file_advanced
+
+# Importar endpoints de compras
+from services.compras_api import compras_router
 
 # Configurar logging
 logger = setup_logging()
@@ -62,6 +70,10 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 # Agregar middlewares de manejo de errores y logging
 app.add_middleware(ErrorHandlingMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(SecurityMiddleware)
+
+# Incluir router de compras
+app.include_router(compras_router)
 
 @app.on_event("startup")
 async def startup_event():
@@ -241,6 +253,7 @@ async def aplicar_filtros_pedido(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/upload")
+@require_rate_limit("upload")
 async def upload_file(
     file: UploadFile = File(...),
     reemplazar_datos: bool = Query(True, description="Si true, reemplaza todos los datos existentes"),
@@ -248,17 +261,20 @@ async def upload_file(
 ):
     """Endpoint para subir archivos Excel con persistencia en base de datos"""
     try:
-        # Validar tipo de archivo
-        if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
-            raise FileProcessingError("Solo se permiten archivos Excel (.xlsx, .xls)")
+        # Validación de seguridad del archivo
+        SecurityValidator.validate_file_type(file.filename)
+        
+        # Leer contenido para validar tamaño
+        content = await file.read()
+        SecurityValidator.validate_file_size(len(content))
+        
+        # Sanitizar nombre del archivo
+        file.filename = SecurityValidator.sanitize_filename(file.filename)
         
         logger.info(f"Procesando archivo con persistencia: {file.filename}")
         
-        # Leer contenido del archivo
-        contents = await file.read()
-        
         # Validar tamaño del archivo (máximo 10MB)
-        if len(contents) > 10 * 1024 * 1024:
+        if len(content) > 10 * 1024 * 1024:
             raise FileProcessingError("El archivo es demasiado grande. Máximo 10MB permitido.")
         
         # Procesar archivo directamente desde memoria (compatible con Vercel)
@@ -267,17 +283,45 @@ async def upload_file(
             from data_processor import process_excel_from_bytes
             
             logger.info(f"Procesando archivo desde memoria: {file.filename}")
-            logger.info(f"Tamaño del archivo: {len(contents)} bytes")
+            logger.info(f"Tamaño del archivo: {len(content)} bytes")
             
             # Procesar usando la nueva función desde bytes
-            processed_data_dict, kpis = process_excel_from_bytes(contents, file.filename)
+            processed_data_dict, kpis = process_excel_from_bytes(content, file.filename)
             logger.info(f"Datos procesados exitosamente. Claves: {list(processed_data_dict.keys())}")
             
-            # Verificar estructura de datos procesados
+            # Validar datos procesados con el validador avanzado
+            validator = AdvancedDataValidator(ValidationLevel.MODERATE)
+            validation_results = {}
+            
+            # Verificar estructura de datos procesados y validar
             for key, data in processed_data_dict.items():
                 logger.info(f"{key}: {len(data)} registros")
                 if len(data) > 0:
                     logger.info(f"  Primer registro de {key}: {list(data[0].keys()) if isinstance(data, list) else 'No es lista'}")
+                    
+                    # Convertir a DataFrame para validación si es necesario
+                    if isinstance(data, list) and len(data) > 0:
+                        try:
+                            import pandas as pd
+                            df = pd.DataFrame(data)
+                            validation_result = validator.validate_dataframe(df, key)
+                            validation_results[key] = validation_result
+                            
+                            # Trackear errores de validación
+                            if not validation_result.is_valid:
+                                for error in validation_result.errors:
+                                    error_tracker.track_error(
+                                        error=Exception(f"Data validation error in {key}: {error}"),
+                                        category=ErrorCategory.VALIDATION,
+                                        severity=ErrorSeverity.MEDIUM,
+                                        metadata={
+                                            "sheet": key,
+                                            "validation_error": error,
+                                            "filename": file.filename
+                                        }
+                                    )
+                        except Exception as e:
+                            logger.warning(f"Error validando datos de {key}: {str(e)}")
             
             # Preparar información del archivo
             archivo_info = {
@@ -318,6 +362,28 @@ async def upload_file(
                     "persistencia_base_datos": True,
                     "filtros_dinamicos": True
                 }
+            }
+            
+            # Retornar respuesta exitosa con información de validación
+            return {
+                "success": True,
+                "message": "Archivo procesado y guardado exitosamente",
+                "filename": file.filename,
+                "summary": {
+                    "facturas": result["facturas"],
+                    "cobranzas": result["cobranzas"],
+                    "anticipos": result["anticipos"],
+                    "pedidos": result["pedidos"]
+                },
+                "validation_results": {
+                    sheet: {
+                        "is_valid": vr.is_valid,
+                        "errors_count": len(vr.errors),
+                        "warnings_count": len(vr.warnings),
+                        "stats": vr.validation_stats
+                    } for sheet, vr in validation_results.items()
+                },
+                "archivo_info": archivo_info
             }
             
         finally:

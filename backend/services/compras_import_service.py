@@ -15,6 +15,7 @@ import hashlib
 from services.onedrive_service import OneDriveService, OneDriveSyncService, OneDriveFile
 from database_service_refactored import DatabaseService
 from excel_processor import ExcelProcessor
+from immermex_compras_mapping import apply_immermex_mapping, IMMERMEX_COLUMN_MAPPING, REQUIRED_FIELDS
 
 logger = logging.getLogger(__name__)
 
@@ -27,29 +28,8 @@ class ComprasImportService:
         self.db_service = DatabaseService()
         self.excel_processor = ExcelProcessor()
         
-        # Configuración de mapeo de columnas para compras
-        self.column_mapping = {
-            'fecha_compra': ['fecha', 'fecha_compra', 'date', 'fecha_factura'],
-            'numero_factura': ['factura', 'numero_factura', 'folio', 'invoice'],
-            'proveedor': ['proveedor', 'supplier', 'vendor', 'cliente'],
-            'concepto': ['concepto', 'descripcion', 'description', 'detalle'],
-            'categoria': ['categoria', 'category', 'tipo', 'clasificacion'],
-            'subcategoria': ['subcategoria', 'subcategory', 'sub_tipo'],
-            'cantidad': ['cantidad', 'quantity', 'qty', 'unidades'],
-            'unidad': ['unidad', 'unit', 'medida', 'uom'],
-            'precio_unitario': ['precio_unitario', 'unit_price', 'precio', 'costo_unitario'],
-            'subtotal': ['subtotal', 'sub_total', 'importe_sin_iva'],
-            'iva': ['iva', 'tax', 'impuesto'],
-            'total': ['total', 'importe_total', 'amount'],
-            'moneda': ['moneda', 'currency', 'curr'],
-            'forma_pago': ['forma_pago', 'payment_method', 'metodo_pago'],
-            'dias_credito': ['dias_credito', 'credit_days', 'dias'],
-            'fecha_vencimiento': ['fecha_vencimiento', 'due_date', 'vencimiento'],
-            'fecha_pago': ['fecha_pago', 'payment_date', 'fecha_cobro'],
-            'centro_costo': ['centro_costo', 'cost_center', 'departamento'],
-            'proyecto': ['proyecto', 'project', 'obra'],
-            'notas': ['notas', 'notes', 'observaciones', 'comentarios']
-        }
+        # Usar mapeo personalizado para Immermex
+        self.column_mapping = IMMERMEX_COLUMN_MAPPING
     
     async def import_compras_from_onedrive(self, folder_path: str = None) -> Dict[str, any]:
         """Importa compras desde archivos de OneDrive"""
@@ -137,11 +117,11 @@ class ComprasImportService:
                     "records_imported": 0
                 }
             
-            # Mapear columnas
-            mapped_df = self.map_columns(df)
+            # Usar mapeo personalizado para Immermex
+            mapped_df = apply_immermex_mapping(df)
             
             # Validar datos requeridos
-            validation_result = self.validate_compras_data(mapped_df)
+            validation_result = self.validate_immermex_data(mapped_df)
             if not validation_result["valid"]:
                 return {
                     "success": False,
@@ -149,8 +129,8 @@ class ComprasImportService:
                     "records_imported": 0
                 }
             
-            # Procesar y limpiar datos
-            processed_df = self.clean_compras_data(mapped_df)
+            # Los datos ya están procesados por apply_immermex_mapping
+            processed_df = mapped_df
             
             # Registrar archivo procesado
             archivo_id = await self.register_processed_file(filename, len(processed_df))
@@ -197,19 +177,30 @@ class ComprasImportService:
         
         return mapped_df
     
-    def validate_compras_data(self, df: pd.DataFrame) -> Dict[str, any]:
-        """Valida los datos de compras"""
+    def validate_immermex_data(self, df: pd.DataFrame) -> Dict[str, any]:
+        """Valida los datos de compras de importación Immermex"""
         errors = []
         
-        # Verificar campos requeridos
-        required_fields = ['fecha_compra', 'proveedor', 'total']
-        for field in required_fields:
+        # Verificar campos requeridos específicos para Immermex
+        for field in REQUIRED_FIELDS:
             if field not in df.columns or df[field].isna().all():
                 errors.append(f"Campo requerido '{field}' no encontrado o vacío")
         
         # Verificar que hay al menos una fila
         if len(df) == 0:
             errors.append("No hay datos para procesar")
+        
+        # Verificar que hay datos de proveedor válidos
+        if 'proveedor' in df.columns:
+            valid_proveedores = df['proveedor'].notna().sum()
+            if valid_proveedores == 0:
+                errors.append("No hay proveedores válidos")
+        
+        # Verificar que hay datos de cantidad válidos
+        if 'cantidad' in df.columns:
+            valid_cantidades = df['cantidad'].notna().sum()
+            if valid_cantidades == 0:
+                errors.append("No hay cantidades válidas")
         
         return {
             "valid": len(errors) == 0,
@@ -304,7 +295,7 @@ class ComprasImportService:
             
             for _, row in df.iterrows():
                 try:
-                    # Preparar datos para inserción
+                    # Preparar datos para inserción específicos para Immermex
                     compra_data = {
                         'fecha_compra': row.get('fecha_compra'),
                         'numero_factura': row.get('numero_factura'),
@@ -313,12 +304,12 @@ class ComprasImportService:
                         'categoria': row.get('categoria'),
                         'subcategoria': row.get('subcategoria'),
                         'cantidad': row.get('cantidad', 0),
-                        'unidad': row.get('unidad'),
+                        'unidad': row.get('unidad', 'KG'),
                         'precio_unitario': row.get('precio_unitario', 0),
                         'subtotal': row.get('subtotal', 0),
                         'iva': row.get('iva', 0),
                         'total': row.get('total', 0),
-                        'moneda': row.get('moneda', 'MXN'),
+                        'moneda': row.get('moneda', 'USD'),
                         'tipo_cambio': row.get('tipo_cambio', 1.0),
                         'forma_pago': row.get('forma_pago'),
                         'dias_credito': row.get('dias_credito', 0),
@@ -326,7 +317,7 @@ class ComprasImportService:
                         'fecha_pago': row.get('fecha_pago'),
                         'centro_costo': row.get('centro_costo'),
                         'proyecto': row.get('proyecto'),
-                        'notas': row.get('notas'),
+                        'notas': f"IMI: {row.get('categoria', '')} | Puerto: {row.get('puerto_origen', '')} | Pedimento: {row.get('pedimento', '')}",
                         'archivo_origen': f"OneDrive/{archivo_id}",
                         'archivo_id': archivo_id,
                         'mes': row.get('mes'),
