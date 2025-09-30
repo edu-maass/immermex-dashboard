@@ -688,16 +688,13 @@ class DatabaseService:
             # Expectativa de cobranza futura
             try:
                 if filtros and filtros.get('pedidos'):
-                    # Para filtros por pedidos, buscar facturas relacionadas con esos pedidos
+                    # Para filtros por pedidos, usar la nueva función para obtener todas las facturas relacionadas
                     logger.info(f"Buscando facturas relacionadas con pedidos: {filtros['pedidos']}")
-                    facturas_relacionadas = []
-                    for pedido_num in filtros['pedidos']:
-                        # Buscar facturas que tengan el mismo folio que el pedido
-                        facturas_pedido = [f for f in facturas if f.folio_factura == pedido_num]
-                        facturas_relacionadas.extend(facturas_pedido)
-                        logger.info(f"Pedido {pedido_num}: {len(facturas_pedido)} facturas encontradas")
+                    facturas_relacionadas = self._get_facturas_related_to_pedidos(pedidos)
+                    logger.info(f"Facturas relacionadas encontradas: {len(facturas_relacionadas)}")
                     
                     # Usar pedidos para calcular expectativa de cobranza con cobranzas filtradas proporcionalmente
+                    logger.info(f"Pasando a _calculate_expectativa_cobranza: {len(facturas_relacionadas)} facturas, {len(pedidos)} pedidos, {len(cobranzas_relacionadas_pedidos)} cobranzas")
                     expectativa_cobranza = self._calculate_expectativa_cobranza(facturas_relacionadas, pedidos, anticipos, cobranzas_relacionadas_pedidos, aplicar_filtro_proporcional=True)
                     logger.info(f"Expectativa de cobranza calculada con {len(pedidos)} pedidos y {len(cobranzas_relacionadas_pedidos)} cobranzas filtradas: {len(expectativa_cobranza)} semanas")
                 else:
@@ -834,7 +831,7 @@ class DatabaseService:
         
         expectativa = {}
         
-        logger.info(f"Calculando expectativa de cobranza con {len(pedidos)} pedidos")
+        logger.info(f"Calculando expectativa de cobranza con {len(pedidos)} pedidos, {len(facturas)} facturas, {len(cobranzas or [])} cobranzas, aplicar_filtro_proporcional={aplicar_filtro_proporcional}")
         
         # Log de debug para días de crédito en pedidos
         pedidos_con_credito_info = []
@@ -862,9 +859,21 @@ class DatabaseService:
                 if cobranza.uuid_factura_relacionada:
                     cobranzas_por_factura[cobranza.uuid_factura_relacionada] = cobranzas_por_factura.get(cobranza.uuid_factura_relacionada, 0) + cobranza.importe_pagado
         
+        # Calcular fecha de referencia basada en los pedidos
+        fechas_pedidos = [p.fecha_factura for p in pedidos if p.fecha_factura]
+        if fechas_pedidos:
+            fecha_referencia = min(fechas_pedidos)
+            # Ajustar al lunes de esa semana
+            dias_hasta_lunes = fecha_referencia.weekday()
+            fecha_referencia = fecha_referencia - timedelta(days=dias_hasta_lunes)
+        else:
+            fecha_referencia = hoy
+        
+        logger.info(f"Fecha de referencia para semanas: {fecha_referencia.strftime('%Y-%m-%d')}")
+        
         # Agrupar por semana (4 semanas pasadas + 18 semanas futuras para cubrir créditos de 120 días)
         for i in range(-4, 18):
-            semana_inicio = hoy + timedelta(weeks=i)
+            semana_inicio = fecha_referencia + timedelta(weeks=i)
             semana_fin = semana_inicio + timedelta(days=6)
             semana_key = f"Semana {i+5} ({semana_inicio.strftime('%d/%m')} - {semana_fin.strftime('%d/%m')})"
             
@@ -904,7 +913,7 @@ class DatabaseService:
             
             # Log de debug para cada semana
             if abs(i) <= 2:  # Solo semanas cercanas para no saturar logs
-                logger.info(f"Semana {i+5}: {pedidos_con_credito} pedidos con crédito, {pedidos_vencen_semana} vencen, cobranza esperada: ${cobranza_esperada}")
+                logger.info(f"Semana {i+5} ({semana_inicio.strftime('%d/%m')} - {semana_fin.strftime('%d/%m')}): {pedidos_con_credito} pedidos con crédito, {pedidos_vencen_semana} vencen, cobranza esperada: ${cobranza_esperada}")
             
             # Calcular cobranza real para esta semana usando datos de cobranza filtrada
             try:
@@ -920,6 +929,7 @@ class DatabaseService:
                             if uuid_factura not in cobranzas_por_uuid:
                                 cobranzas_por_uuid[uuid_factura] = 0
                             cobranzas_por_uuid[uuid_factura] += cobranza.importe_pagado
+                            logger.debug(f"Semana {i+5}: Cobranza encontrada - UUID: {uuid_factura}, Monto: {cobranza.importe_pagado}, Fecha: {cobranza.fecha_pago}")
                     
                     # Calcular cobranza proporcional para cada factura
                     for factura in facturas:
@@ -930,22 +940,23 @@ class DatabaseService:
                         cobranza_factura = cobranzas_por_uuid.get(uuid_factura, 0)
                         
                         if cobranza_factura > 0 and factura.monto_total > 0:
-                            # Buscar todos los pedidos asociados a esta factura (no solo los filtrados)
-                            pedidos_factura = [p for p in self.db.query(Pedido).filter(Pedido.folio_factura == factura.folio_factura).all()]
+                            # Calcular proporción basada en el monto de los pedidos filtrados vs total de la factura
+                            # Usar el monto de la factura como base
+                            monto_total_factura = factura.monto_total
                             
-                            if pedidos_factura:
-                                # Calcular monto total de todos los pedidos de esta factura
-                                monto_total_pedidos_factura = sum(p.importe_sin_iva for p in pedidos_factura if p.importe_sin_iva)
+                            # Calcular monto de pedidos filtrados en esta factura
+                            monto_pedidos_filtrados_factura = 0
+                            for pedido in pedidos:
+                                if pedido.folio_factura == factura.folio_factura:
+                                    monto_pedidos_filtrados_factura += pedido.importe_sin_iva or 0
+                            
+                            if monto_total_factura > 0:
+                                # Calcular cobranza proporcional basada en monto
+                                porcentaje_monto_pedidos_filtrados = monto_pedidos_filtrados_factura / monto_total_factura
+                                cobranza_proporcional = cobranza_factura * porcentaje_monto_pedidos_filtrados
+                                cobranza_real_proporcional += cobranza_proporcional
                                 
-                                # Calcular monto de los pedidos filtrados de esta factura
-                                pedidos_filtrados_factura = [p for p in pedidos if p.folio_factura == factura.folio_factura]
-                                monto_pedidos_filtrados_factura = sum(p.importe_sin_iva for p in pedidos_filtrados_factura if p.importe_sin_iva)
-                                
-                                if monto_total_pedidos_factura > 0:
-                                    # Calcular cobranza proporcional basada en monto
-                                    porcentaje_monto_pedidos_filtrados = monto_pedidos_filtrados_factura / monto_total_pedidos_factura
-                                    cobranza_proporcional = cobranza_factura * porcentaje_monto_pedidos_filtrados
-                                    cobranza_real_proporcional += cobranza_proporcional
+                                logger.info(f"Factura {factura.folio_factura}: ${monto_pedidos_filtrados_factura:.2f}/${monto_total_factura:.2f} ({porcentaje_monto_pedidos_filtrados:.1%}) pedidos filtrados, cobranza proporcional: ${cobranza_proporcional:.2f}")
                     
                     cobranza_real = cobranza_real_proporcional
                 else:
