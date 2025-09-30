@@ -5,6 +5,7 @@ Integra el procesador avanzado con almacenamiento persistente
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -52,6 +53,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Agregar compresión GZIP para optimizar el ancho de banda
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 @app.on_event("startup")
 async def startup_event():
@@ -620,11 +624,20 @@ async def get_system_performance(db: Session = Depends(get_db)):
         cache_stats = cache.get_stats()
         
         # Estadísticas de memoria
-        memory_stats = {
-            "total_memory_mb": round(psutil.virtual_memory().total / (1024 * 1024), 2),
-            "available_memory_mb": round(psutil.virtual_memory().available / (1024 * 1024), 2),
-            "memory_usage_percent": psutil.virtual_memory().percent
-        }
+        try:
+            memory_stats = {
+                "total_memory_mb": round(psutil.virtual_memory().total / (1024 * 1024), 2),
+                "available_memory_mb": round(psutil.virtual_memory().available / (1024 * 1024), 2),
+                "memory_usage_percent": psutil.virtual_memory().percent
+            }
+        except Exception:
+            # Fallback si psutil no está disponible
+            memory_stats = {
+                "total_memory_mb": 0,
+                "available_memory_mb": 0,
+                "memory_usage_percent": 0,
+                "note": "Memory stats not available in this environment"
+            }
         
         # Estadísticas de base de datos
         db_service = DatabaseService(db)
