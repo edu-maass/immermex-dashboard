@@ -72,11 +72,12 @@ class DatabaseService:
         """Crea registro de archivo procesado"""
         archivo = ArchivoProcesado(
             nombre_archivo=archivo_info.get("nombre_archivo", ""),
-            tipo_archivo=archivo_info.get("tipo_archivo", ""),
             fecha_procesamiento=datetime.now(),
             estado="procesando",
             registros_procesados=0,
-            hash_archivo=self._calculate_file_hash(archivo_info.get("contenido", ""))
+            hash_archivo=self._calculate_file_hash(archivo_info.get("contenido", "")),
+            tamaño_archivo=len(archivo_info.get("contenido", "")),
+            algoritmo_usado="refactored_processing"
         )
         self.db.add(archivo)
         self.db.commit()
