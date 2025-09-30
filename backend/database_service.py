@@ -1,6 +1,6 @@
 """
-Servicio de base de datos para Immermex Dashboard
-Maneja todas las operaciones CRUD y cálculos de KPIs
+Servicio de base de datos refactorizado para Immermex Dashboard
+Utiliza servicios especializados para operaciones específicas
 """
 
 from sqlalchemy.orm import Session
@@ -9,107 +9,24 @@ from database import (
     Facturacion, Cobranza, CFDIRelacionado, Inventario, Pedido, 
     ArchivoProcesado, KPI, get_latest_data_summary
 )
+from services import FacturacionService, CobranzaService, PedidosService, KPIAggregator
+from utils.validators import DataValidator
+from utils.logging_config import setup_logging, log_performance
 from datetime import datetime, timedelta
 import logging
 import hashlib
-import numpy as np
+import time
 
-logger = logging.getLogger(__name__)
-
-def is_nan_value(value):
-    """Detecta si un valor es NaN de cualquier tipo"""
-    if value is None:
-        return True
-    if isinstance(value, (int, float)):
-        return np.isnan(value)
-    if isinstance(value, str):
-        value_lower = value.lower().strip()
-        return value_lower in ['nan', 'none', 'null', '']
-    return False
-
-def safe_date(value):
-    """Convierte valor a fecha segura, manejando NaN"""
-    try:
-        if is_nan_value(value):
-            logger.debug(f"safe_date: valor NaN detectado: {value}")
-            return None
-        if isinstance(value, datetime):
-            logger.debug(f"safe_date: ya es datetime: {value} -> {type(value)}")
-            return value  # Ya es un objeto datetime, devolverlo tal como está
-        if isinstance(value, (int, float)):
-            logger.debug(f"safe_date: número no válido para fecha: {value}")
-            return None  # Los números no son fechas válidas
-        if isinstance(value, str):
-            value = value.strip()
-            if not value or value.lower() in ['nan', 'none', 'null']:
-                logger.debug(f"safe_date: string vacío o null: '{value}'")
-                return None
-            # Intentar parsear como fecha
-            try:
-                result = datetime.strptime(value, '%Y-%m-%d')
-                logger.debug(f"safe_date: parseado como Y-m-d: '{value}' -> {result} ({type(result)})")
-                return result
-            except ValueError:
-                try:
-                    result = datetime.strptime(value, '%d/%m/%Y')
-                    logger.debug(f"safe_date: parseado como d/m/Y: '{value}' -> {result} ({type(result)})")
-                    return result
-                except ValueError:
-                    logger.debug(f"safe_date: no se pudo parsear: '{value}'")
-                    return None
-        logger.debug(f"safe_date: tipo no manejado: {value} ({type(value)})")
-        return None
-    except (ValueError, TypeError) as e:
-        logger.debug(f"safe_date: error procesando {value}: {e}")
-        return None
-
-def safe_float(value, default=0.0):
-    """Convierte valor a float seguro, manejando NaN"""
-    try:
-        if is_nan_value(value):
-            return default
-        if isinstance(value, str):
-            value = value.strip()
-            if not value or value.lower() in ['nan', 'none', 'null']:
-                return default
-            # Remover caracteres no numéricos excepto punto y coma
-            import re
-            value = re.sub(r'[^\d.,-]', '', value)
-            if not value:
-                return default
-            # Reemplazar coma por punto para decimales
-            value = value.replace(',', '.')
-            return float(value)
-        return float(value)
-    except (ValueError, TypeError):
-        return default
-
-def safe_int(value, default=30):
-    """Convierte valor a int seguro, manejando NaN"""
-    try:
-        if is_nan_value(value):
-            return default
-        if isinstance(value, str):
-            value = value.strip()
-            if not value or value.lower() in ['nan', 'none', 'null']:
-                return default
-        return int(float(str(value).replace(',', '').strip()))
-    except (ValueError, TypeError):
-        return default
-
-def safe_string(value, default=''):
-    """Convierte valor a string seguro, manejando NaN"""
-    try:
-        if is_nan_value(value):
-            return default
-        result = str(value).strip()
-        return result if result else default
-    except (ValueError, TypeError):
-        return default
+logger = setup_logging()
 
 class DatabaseService:
     def __init__(self, db: Session):
         self.db = db
+        # Inicializar servicios especializados
+        self.facturacion_service = FacturacionService(db)
+        self.cobranza_service = CobranzaService(db)
+        self.pedidos_service = PedidosService(db)
+        self.kpi_aggregator = KPIAggregator(db)
     
     def save_processed_data(self, processed_data_dict: dict, archivo_info: dict) -> dict:
         """
@@ -123,11 +40,11 @@ class DatabaseService:
             if archivo_info.get("reemplazar_datos", False):
                 self._clear_existing_data()
             
-            # Guardar cada tipo de datos
-            facturas_count = self._save_facturas(processed_data_dict.get("facturacion_clean", []), archivo.id)
-            cobranzas_count = self._save_cobranzas(processed_data_dict.get("cobranza_clean", []), archivo.id)
+            # Guardar cada tipo de datos usando servicios especializados
+            facturas_count = self.facturacion_service.save_facturas(processed_data_dict.get("facturacion_clean", []), archivo.id)
+            cobranzas_count = self.cobranza_service.save_cobranzas(processed_data_dict.get("cobranza_clean", []), archivo.id)
             anticipos_count = self._save_anticipos(processed_data_dict.get("cfdi_clean", []), archivo.id)
-            pedidos_count = self._save_pedidos(processed_data_dict.get("pedidos_clean", []), archivo.id)
+            pedidos_count = self.pedidos_service.save_pedidos(processed_data_dict.get("pedidos_clean", []), archivo.id)
             
             # Actualizar registro de archivo
             total_registros = facturas_count + cobranzas_count + anticipos_count + pedidos_count
@@ -184,114 +101,19 @@ class DatabaseService:
         self.db.refresh(archivo)
         return archivo
     
-    def _save_facturas(self, facturas_data: list, archivo_id: int) -> int:
-        """Guarda datos de facturación"""
-        count = 0
-        for factura_data in facturas_data:
-            try:
-                # Convertir fecha de forma segura
-                fecha_factura = safe_date(factura_data.get('fecha_factura'))
-                
-                factura = Facturacion(
-                    serie_factura=safe_string(factura_data.get('serie_factura', '')),
-                    folio_factura=safe_string(factura_data.get('folio_factura', '')),
-                    fecha_factura=fecha_factura,
-                    cliente=safe_string(factura_data.get('cliente', '')),
-                    agente=safe_string(factura_data.get('agente', '')),
-                    monto_neto=safe_float(factura_data.get('monto_neto', 0)),
-                    monto_total=safe_float(factura_data.get('monto_total', 0)),
-                    saldo_pendiente=safe_float(factura_data.get('saldo_pendiente', 0)),
-                    dias_credito=safe_int(factura_data.get('dias_credito', 30)),
-                    uuid_factura=safe_string(factura_data.get('uuid_factura', '')),
-                    archivo_id=archivo_id,
-                    mes=fecha_factura.month if fecha_factura else None,
-                    año=fecha_factura.year if fecha_factura else None
-                )
-                self.db.add(factura)
-                count += 1
-            except Exception as e:
-                logger.warning(f"Error guardando factura: {str(e)}")
-                continue
-        
-        self.db.commit()
-        return count
     
-    def _save_cobranzas(self, cobranzas_data: list, archivo_id: int) -> int:
-        """Guarda datos de cobranza"""
-        logger.info(f"_save_cobranzas: Procesando {len(cobranzas_data)} registros de cobranza")
-        
-        count = 0
-        for i, cobranza_data in enumerate(cobranzas_data):
-            try:
-                # Log del primer registro para debugging
-                if i == 0:
-                    logger.info(f"_save_cobranzas: Primer registro - fecha_pago raw: {cobranza_data.get('fecha_pago')} (tipo: {type(cobranza_data.get('fecha_pago'))})")
-                    logger.info(f"_save_cobranzas: Primer registro completo: {cobranza_data}")
-                
-                # Convertir fecha de forma segura
-                fecha_pago = safe_date(cobranza_data.get('fecha_pago'))
-                
-                # Log del resultado de safe_date
-                if i == 0:
-                    logger.info(f"_save_cobranzas: Primer registro - fecha_pago procesada: {fecha_pago} (tipo: {type(fecha_pago)})")
-                
-                cobranza = Cobranza(
-                    fecha_pago=fecha_pago,
-                    serie_pago=safe_string(cobranza_data.get('serie_pago', '')),
-                    folio_pago=safe_string(cobranza_data.get('folio_pago', '')),
-                    cliente=safe_string(cobranza_data.get('cliente', '')),
-                    moneda=safe_string(cobranza_data.get('moneda', 'MXN')),
-                    tipo_cambio=safe_float(cobranza_data.get('tipo_cambio', 1.0)),
-                    forma_pago=safe_string(cobranza_data.get('forma_pago', '')),
-                    parcialidad=safe_int(cobranza_data.get('numero_parcialidades', cobranza_data.get('parcialidad', 1))),
-                    importe_pagado=safe_float(cobranza_data.get('importe_pagado', 0)),
-                    uuid_factura_relacionada=safe_string(cobranza_data.get('uuid_relacionado', cobranza_data.get('uuid_factura_relacionada', ''))),
-                    archivo_id=archivo_id
-                )
-                self.db.add(cobranza)
-                count += 1
-            except Exception as e:
-                logger.warning(f"Error guardando cobranza: {str(e)}")
-                continue
-        
-        self.db.commit()
-        logger.info(f"_save_cobranzas: Guardados {count} registros de cobranza")
-        return count
     
     def _save_anticipos(self, anticipos_data: list, archivo_id: int) -> int:
         """Guarda datos de anticipos (CFDI relacionados)"""
         count = 0
         for anticipo_data in anticipos_data:
             try:
-                # Limpiar y validar datos numéricos
-                def safe_float(value, default=0.0):
-                    try:
-                        if value is None or value == '' or str(value).strip() == '':
-                            return default
-                        # Verificar si es NaN usando numpy
-                        if np.isnan(float(value)) if isinstance(value, (int, float)) else False:
-                            return default
-                        # Verificar si es NaN como string
-                        if str(value).lower() in ['nan', 'none', 'null']:
-                            return default
-                        # Remover caracteres no numéricos excepto punto y coma
-                        clean_value = str(value).replace(',', '').replace('$', '').strip()
-                        if clean_value and clean_value != 'nan':
-                            result = float(clean_value)
-                            # Verificar si el resultado es NaN
-                            if np.isnan(result):
-                                return default
-                            return result
-                        return default
-                    except (ValueError, TypeError):
-                        return default
-                
                 anticipo = CFDIRelacionado(
-                    xml=str(anticipo_data.get('xml', '')).strip(),
-                    cliente_receptor=str(anticipo_data.get('cliente_receptor', '')).strip(),
-                    tipo_relacion=str(anticipo_data.get('tipo_relacion', '')).strip(),
-                    importe_relacion=safe_float(anticipo_data.get('importe_relacion', 0)),
-                    uuid_factura_relacionada=str(anticipo_data.get('uuid_factura_relacionada', '')).strip(),
+                    xml=DataValidator.safe_string(anticipo_data.get('xml', '')),
+                    cliente_receptor=DataValidator.safe_string(anticipo_data.get('cliente_receptor', '')),
+                    tipo_relacion=DataValidator.safe_string(anticipo_data.get('tipo_relacion', '')),
+                    importe_relacion=DataValidator.safe_float(anticipo_data.get('importe_relacion', 0)),
+                    uuid_factura_relacionada=DataValidator.safe_string(anticipo_data.get('uuid_factura_relacionada', '')),
                     archivo_id=archivo_id
                 )
                 self.db.add(anticipo)
@@ -493,271 +315,9 @@ class DatabaseService:
 
     def calculate_kpis(self, filtros: dict = None) -> dict:
         """
-        Calcula KPIs basados en los datos de la base de datos
+        Calcula KPIs usando el agregador especializado
         """
-        try:
-            # Aplicar filtros base
-            query_facturas = self.db.query(Facturacion)
-            query_cobranzas = self.db.query(Cobranza)
-            query_anticipos = self.db.query(CFDIRelacionado)
-            query_pedidos = self.db.query(Pedido)
-            
-            if filtros:
-                if filtros.get('mes'):
-                    query_facturas = query_facturas.filter(Facturacion.mes == filtros['mes'])
-                    query_pedidos = query_pedidos.filter(func.extract('month', Pedido.fecha_factura) == filtros['mes'])
-                
-                if filtros.get('año'):
-                    query_facturas = query_facturas.filter(Facturacion.año == filtros['año'])
-                    query_pedidos = query_pedidos.filter(func.extract('year', Pedido.fecha_factura) == filtros['año'])
-                
-                if filtros.get('pedidos'):
-                    pedidos_list = filtros['pedidos']
-                    logger.info(f"Filtrando por pedidos: {pedidos_list} (tipos: {[type(p).__name__ for p in pedidos_list]})")
-                    # Filtrar pedidos por pedido (columna C)
-                    query_pedidos = query_pedidos.filter(Pedido.pedido.in_(pedidos_list))
-                    # Obtener los folio_factura de los pedidos filtrados para relacionar con facturas
-                    pedidos_filtrados = query_pedidos.all()
-                    logger.info(f"Pedidos filtrados encontrados: {len(pedidos_filtrados)}")
-                    if pedidos_filtrados:
-                        logger.info(f"Primer pedido encontrado: pedido='{pedidos_filtrados[0].pedido}', folio_factura='{pedidos_filtrados[0].folio_factura}', importe_sin_iva={pedidos_filtrados[0].importe_sin_iva}")
-                    folios_pedidos = [p.folio_factura for p in pedidos_filtrados if p.folio_factura]
-                    logger.info(f"Folios de pedidos: {folios_pedidos}")
-                    # Filtrar facturas por los folios de los pedidos
-                    query_facturas = query_facturas.filter(Facturacion.folio_factura.in_(folios_pedidos))
-            
-            # Obtener datos
-            facturas = query_facturas.all()
-            cobranzas = query_cobranzas.all()
-            anticipos = query_anticipos.all()
-            pedidos = query_pedidos.all()
-            
-            logger.info(f"Datos obtenidos - Facturas: {len(facturas)}, Pedidos: {len(pedidos)}, Cobranzas: {len(cobranzas)}")
-            
-            # Si se está filtrando por pedidos y no hay facturas, pero sí hay pedidos, continuar con el cálculo
-            if not facturas and filtros and filtros.get('pedidos') and pedidos:
-                logger.info("No hay facturas pero sí hay pedidos filtrados, continuando con cálculo desde pedidos")
-            elif not facturas:
-                logger.warning("No se encontraron facturas, retornando KPIs por defecto")
-                return self._get_default_kpis()
-            
-            # Calcular KPIs
-            # Si se está filtrando por pedidos específicos, usar facturación de pedidos
-            if filtros and filtros.get('pedidos'):
-                logger.info(f"Filtrando por pedidos específicos: {filtros['pedidos']}")
-                # Calcular facturación desde pedidos: importe_sin_iva * 1.16 (con IVA)
-                facturacion_total = sum(p.importe_sin_iva * 1.16 for p in pedidos if p.importe_sin_iva)
-                # Facturación sin IVA: importe_sin_iva
-                facturacion_sin_iva = sum(p.importe_sin_iva for p in pedidos if p.importe_sin_iva)
-                # Contar facturas únicas por folio_factura
-                folios_unicos = len(set(p.folio_factura for p in pedidos if p.folio_factura))
-                total_facturas = folios_unicos
-                logger.info(f"Facturación calculada desde pedidos: {facturacion_total} (con IVA), {facturacion_sin_iva} (sin IVA), {total_facturas} facturas únicas")
-            else:
-                # Filtrar solo facturas con folio válido (no filas de totales)
-                facturas_validas = [f for f in facturas if f.folio_factura and f.folio_factura.strip() and not f.folio_factura.lower().startswith(('total', 'suma', 'subtotal'))]
-                
-                # Debug: Log para verificar el filtrado
-                logger.info(f"Total facturas: {len(facturas)}, Facturas válidas: {len(facturas_validas)}")
-                if len(facturas_validas) == 0:
-                    logger.warning("No hay facturas válidas después del filtrado, usando todas las facturas")
-                    facturas_validas = facturas
-                
-                facturacion_total = sum(f.monto_total for f in facturas_validas)
-            
-            # Calcular cobranza relacionada con pedidos filtrados
-            if filtros and filtros.get('pedidos'):
-                logger.info(f"Calculando cobranza para pedidos filtrados: {filtros['pedidos']}")
-                
-                # Usar la nueva función para obtener todas las facturas relacionadas
-                facturas_pedidos_filtrados = self._get_facturas_related_to_pedidos(pedidos)
-                
-                # Obtener UUIDs de estas facturas
-                uuids_facturas_pedidos = {f.uuid_factura for f in facturas_pedidos_filtrados if f.uuid_factura and f.uuid_factura.strip()}
-                logger.info(f"UUIDs de facturas de pedidos: {len(uuids_facturas_pedidos)}")
-                
-                # Buscar cobranzas que tengan uuid_factura_relacionada coincidente
-                cobranzas_relacionadas_pedidos = [c for c in cobranzas 
-                    if c.uuid_factura_relacionada in uuids_facturas_pedidos 
-                    and c.folio_pago and c.folio_pago.strip() 
-                    and not c.folio_pago.lower().startswith(('total', 'suma', 'subtotal'))]
-                
-                logger.info(f"Cobranzas relacionadas encontradas: {len(cobranzas_relacionadas_pedidos)}")
-                
-                # Paso 5: Calcular cobranza proporcional por pedido
-                cobranza_total = 0
-                cobranza_por_factura = {}
-                
-                # Agrupar cobranzas por factura
-                for cobranza in cobranzas_relacionadas_pedidos:
-                    uuid_factura = cobranza.uuid_factura_relacionada
-                    if uuid_factura not in cobranza_por_factura:
-                        cobranza_por_factura[uuid_factura] = 0
-                    cobranza_por_factura[uuid_factura] += cobranza.importe_pagado
-                
-                # Calcular cobranza proporcional para cada factura
-                for factura in facturas_pedidos_filtrados:
-                    if not factura.uuid_factura:
-                        continue
-                    
-                    uuid_factura = factura.uuid_factura
-                    cobranza_factura = cobranza_por_factura.get(uuid_factura, 0)
-                    
-                    if cobranza_factura > 0 and factura.monto_total > 0:
-                        # Calcular porcentaje cobrado de la factura total
-                        porcentaje_cobrado_factura = cobranza_factura / factura.monto_total
-                        
-                        # Buscar todos los pedidos asociados a esta factura (no solo los filtrados)
-                        pedidos_factura = [p for p in self.db.query(Pedido).filter(Pedido.folio_factura == factura.folio_factura).all()]
-                        
-                        if pedidos_factura:
-                            # Calcular monto total de todos los pedidos de esta factura
-                            monto_total_pedidos_factura = sum(p.importe_sin_iva for p in pedidos_factura if p.importe_sin_iva)
-                            
-                            # Calcular monto de los pedidos filtrados de esta factura
-                            # Un pedido puede aparecer múltiples veces en la misma factura con diferentes materiales
-                            pedidos_filtrados_factura = [p for p in pedidos if p.folio_factura == factura.folio_factura]
-                            monto_pedidos_filtrados_factura = sum(p.importe_sin_iva for p in pedidos_filtrados_factura if p.importe_sin_iva)
-                            
-                            if monto_total_pedidos_factura > 0:
-                                # Calcular cobranza proporcional basada en monto (no conteo)
-                                porcentaje_monto_pedidos_filtrados = monto_pedidos_filtrados_factura / monto_total_pedidos_factura
-                                cobranza_proporcional = cobranza_factura * porcentaje_monto_pedidos_filtrados
-                                cobranza_total += cobranza_proporcional
-                                
-                                logger.info(f"Factura {factura.folio_factura}: ${monto_pedidos_filtrados_factura:.2f}/${monto_total_pedidos_factura:.2f} ({porcentaje_monto_pedidos_filtrados:.1%}) pedidos filtrados, cobranza proporcional: ${cobranza_proporcional:.2f}")
-                            else:
-                                logger.warning(f"Factura {factura.folio_factura}: monto total de pedidos es 0, no se puede calcular proporción")
-                
-                cobranzas_relacionadas = cobranzas_relacionadas_pedidos
-                logger.info(f"Cobranza total proporcional para pedidos filtrados: {cobranza_total:.2f}")
-            else:
-                # Para filtros generales, usar cobranzas relacionadas con facturas
-                facturas_uuids = {f.uuid_factura for f in facturas_validas if f.uuid_factura}
-                cobranzas_relacionadas = [c for c in cobranzas if c.uuid_factura_relacionada in facturas_uuids and c.folio_pago and c.folio_pago.strip() and not c.folio_pago.lower().startswith(('total', 'suma', 'subtotal'))]
-                cobranza_total = sum(c.importe_pagado for c in cobranzas_relacionadas)
-            
-            # Cobranza general (todas las cobranzas con folio válido, sin filtro de facturas)
-            cobranzas_validas = [c for c in cobranzas if c.folio_pago and c.folio_pago.strip() and not c.folio_pago.lower().startswith(('total', 'suma', 'subtotal'))]
-            cobranza_general_total = sum(c.importe_pagado for c in cobranzas_validas)
-            
-            # Debug: Log para verificar cobranzas
-            logger.info(f"Total cobranzas: {len(cobranzas)}, Cobranzas válidas: {len(cobranzas_validas)}, Cobranzas relacionadas: {len(cobranzas_relacionadas)}")
-            if len(cobranzas_validas) == 0:
-                logger.warning("No hay cobranzas válidas después del filtrado, usando todas las cobranzas")
-                cobranzas_validas = cobranzas
-                cobranza_general_total = sum(c.importe_pagado for c in cobranzas)
-            
-            # Calcular anticipos relacionados con pedidos filtrados
-            if filtros and filtros.get('pedidos'):
-                logger.info(f"Calculando anticipos para pedidos filtrados: {filtros['pedidos']}")
-                
-                # Usar las mismas facturas relacionadas
-                uuids_facturas_pedidos = {f.uuid_factura for f in facturas_pedidos_filtrados if f.uuid_factura and f.uuid_factura.strip()}
-                logger.info(f"UUIDs de facturas para anticipos: {len(uuids_facturas_pedidos)}")
-                
-                # Filtrar anticipos que tengan uuid_factura_relacionada coincidente
-                anticipos_relacionados = [a for a in anticipos 
-                    if a.uuid_factura_relacionada in uuids_facturas_pedidos 
-                    and a.uuid_factura_relacionada and a.uuid_factura_relacionada.strip()]
-                
-                anticipos_total = sum(a.importe_relacion for a in anticipos_relacionados)
-                logger.info(f"Anticipos relacionados con pedidos filtrados: {anticipos_total:.2f} de {len(anticipos_relacionados)} anticipos")
-            else:
-                # Para filtros generales, usar todos los anticipos
-                anticipos_total = sum(a.importe_relacion for a in anticipos)
-            
-            porcentaje_cobrado = (cobranza_total / facturacion_total * 100) if facturacion_total > 0 else 0
-            porcentaje_cobrado_general = (cobranza_general_total / facturacion_total * 100) if facturacion_total > 0 else 0
-            
-            # Definir facturas_validas para cálculos posteriores
-            if filtros and filtros.get('pedidos'):
-                # Para filtros por pedidos, usar las facturas ya encontradas en el paso anterior
-                facturas_validas = facturas_pedidos_filtrados
-                logger.info(f"Facturas válidas para pedidos filtrados: {len(facturas_validas)}")
-            
-            # Aging de cartera
-            aging_cartera = self._calculate_aging_cartera(facturas_validas)
-            
-            # Top clientes
-            top_clientes = self._calculate_top_clientes(facturas_validas)
-            
-            # Consumo por material
-            consumo_material = self._calculate_consumo_material(pedidos)
-            
-            # Expectativa de cobranza futura
-            try:
-                if filtros and filtros.get('pedidos'):
-                    # Para filtros por pedidos, usar la nueva función para obtener todas las facturas relacionadas
-                    logger.info(f"Buscando facturas relacionadas con pedidos: {filtros['pedidos']}")
-                    facturas_relacionadas = self._get_facturas_related_to_pedidos(pedidos)
-                    logger.info(f"Facturas relacionadas encontradas: {len(facturas_relacionadas)}")
-                    
-                    # Usar pedidos para calcular expectativa de cobranza con cobranzas filtradas proporcionalmente
-                    logger.info(f"Pasando a _calculate_expectativa_cobranza: {len(facturas_relacionadas)} facturas, {len(pedidos)} pedidos, {len(cobranzas_relacionadas_pedidos)} cobranzas")
-                    expectativa_cobranza = self._calculate_expectativa_cobranza(facturas_relacionadas, pedidos, anticipos, cobranzas_relacionadas_pedidos, aplicar_filtro_proporcional=True)
-                    logger.info(f"Expectativa de cobranza calculada con {len(pedidos)} pedidos y {len(cobranzas_relacionadas_pedidos)} cobranzas filtradas: {len(expectativa_cobranza)} semanas")
-                else:
-                    expectativa_cobranza = self._calculate_expectativa_cobranza(facturas_validas, pedidos, anticipos, cobranzas)
-                    logger.info(f"Expectativa de cobranza calculada con {len(pedidos)} pedidos: {len(expectativa_cobranza)} semanas")
-            except Exception as e:
-                logger.error(f"Error calculando expectativa de cobranza: {str(e)}")
-                expectativa_cobranza = {}
-            
-            # Métricas adicionales
-            if not (filtros and filtros.get('pedidos')):
-                # Solo calcular total_facturas si no se está filtrando por pedidos
-                total_facturas = len(facturas_validas)
-            clientes_unicos = len(set(f.cliente for f in facturas_validas if f.cliente))
-            
-            # Pedidos únicos y toneladas
-            pedidos_unicos = len(set(p.pedido for p in pedidos if p.pedido))
-            toneladas_total = sum(p.kg for p in pedidos)
-            
-            # Calcular facturación sin IVA (monto_neto es sin IVA, monto_total es con IVA)
-            if filtros and filtros.get('pedidos'):
-                # Para filtros por pedidos, ya se calculó arriba
-                pass  # facturacion_sin_iva ya se calculó en el bloque anterior
-            else:
-                facturacion_sin_iva = sum(f.monto_neto for f in facturas_validas)
-            
-            # Calcular cobranza sin IVA (dividiendo entre 1.16 para quitar IVA)
-            if filtros and filtros.get('pedidos'):
-                # Para filtros por pedidos, usar cobranza proporcional calculada arriba
-                cobranza_sin_iva = cobranza_total / 1.16
-            else:
-                # Para filtros generales, usar cobranzas relacionadas con facturas
-                cobranza_sin_iva = sum(c.importe_pagado / 1.16 for c in cobranzas_relacionadas if c.importe_pagado > 0)
-            
-            # Calcular porcentaje de anticipos sobre facturación sin IVA
-            porcentaje_anticipos = (anticipos_total / facturacion_sin_iva * 100) if facturacion_sin_iva > 0 else 0
-            
-            return {
-                "facturacion_total": round(facturacion_total, 2),
-                "facturacion_sin_iva": round(facturacion_sin_iva, 2),
-                "cobranza_total": round(cobranza_total, 2),
-                "cobranza_general_total": round(cobranza_general_total, 2),
-                "cobranza_sin_iva": round(cobranza_sin_iva, 2),
-                "anticipos_total": round(anticipos_total, 2),
-                "porcentaje_anticipos": round(porcentaje_anticipos, 2),
-                "porcentaje_cobrado": round(porcentaje_cobrado, 2),
-                "porcentaje_cobrado_general": round(porcentaje_cobrado_general, 2),
-                "total_facturas": total_facturas,
-                "clientes_unicos": clientes_unicos,
-                "pedidos_unicos": pedidos_unicos,
-                "toneladas_total": round(toneladas_total / 1000, 2),  # Convertir kg a toneladas
-                "aging_cartera": aging_cartera,
-                "top_clientes": top_clientes,
-                "consumo_material": consumo_material,
-                "expectativa_cobranza": expectativa_cobranza,
-                "rotacion_inventario": 0,  # Se calcularía con datos de inventario
-                "dias_cxc_ajustado": 0,    # Se calcularía con datos de inventario
-                "ciclo_efectivo": 0        # Se calcularía con datos de inventario
-            }
-            
-        except Exception as e:
-            logger.error(f"Error calculando KPIs: {str(e)}")
-            return self._get_default_kpis()
+        return self.kpi_aggregator.calculate_kpis(filtros)
     
     def _calculate_aging_cartera(self, facturas: list) -> dict:
         """Calcula aging de cartera por monto pendiente"""

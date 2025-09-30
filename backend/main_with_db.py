@@ -15,8 +15,8 @@ from typing import List, Optional
 
 # Imports locales
 from database import get_db, init_db, ArchivoProcesado
-from database_service import DatabaseService
-from logging_config import setup_logging
+from database_service_refactored import DatabaseService
+from utils import setup_logging, handle_api_error, FileProcessingError, DatabaseError
 from data_processor import process_immermex_file_advanced
 
 # Configurar logging
@@ -231,6 +231,7 @@ async def aplicar_filtros_pedido(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/upload")
+@handle_api_error
 async def upload_file(
     file: UploadFile = File(...),
     reemplazar_datos: bool = Query(True, description="Si true, reemplaza todos los datos existentes"),
@@ -240,7 +241,7 @@ async def upload_file(
     try:
         # Validar tipo de archivo
         if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
-            raise HTTPException(status_code=400, detail="Solo se permiten archivos Excel (.xlsx, .xls)")
+            raise FileProcessingError("Solo se permiten archivos Excel (.xlsx, .xls)")
         
         logger.info(f"Procesando archivo con persistencia: {file.filename}")
         
@@ -249,7 +250,7 @@ async def upload_file(
         
         # Validar tamaño del archivo (máximo 10MB)
         if len(contents) > 10 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="El archivo es demasiado grande. Máximo 10MB permitido.")
+            raise FileProcessingError("El archivo es demasiado grande. Máximo 10MB permitido.")
         
         # Procesar archivo directamente desde memoria (compatible con Vercel)
         try:
