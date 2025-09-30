@@ -167,9 +167,9 @@ class Pedido(Base):
     __table_args__ = (
         Index('idx_pedido_material', 'material'),
         Index('idx_pedido_fecha', 'fecha_factura'),
-        Index('idx_pedido_cliente_material', 'cliente', 'material'),
         Index('idx_pedido_folio_archivo', 'folio_factura', 'archivo_id'),
         Index('idx_pedido_fecha_credito', 'fecha_factura', 'dias_credito'),
+        Index('idx_pedido_material_fecha', 'material', 'fecha_factura'),
     )
 
 class ArchivoProcesado(Base):
