@@ -47,11 +47,17 @@ class KPIAggregator:
             # Calcular KPIs según el tipo de filtro
             if filtros and filtros.get('pedidos'):
                 kpis_result = self._calculate_kpis_filtered_by_pedidos(facturas, pedidos, cobranzas, anticipos, filtros)
+                # Para filtros de pedidos, aplicar filtro proporcional a la expectativa de cobranza
+                aplicar_filtro_proporcional = True
             else:
                 kpis_result = self._calculate_kpis_general(facturas, pedidos, cobranzas, anticipos)
+                # Sin filtros, mostrar todos los datos
+                aplicar_filtro_proporcional = False
             
             # Calcular expectativa de cobranza
-            kpis_result['expectativa_cobranza'] = self._calculate_expectativa_cobranza(facturas, pedidos, anticipos, cobranzas)
+            kpis_result['expectativa_cobranza'] = self._calculate_expectativa_cobranza(
+                facturas, pedidos, anticipos, cobranzas, aplicar_filtro_proporcional
+            )
             
             return kpis_result
                 
@@ -217,13 +223,13 @@ class KPIAggregator:
             "ciclo_efectivo": 0.0
         }
     
-    def _calculate_expectativa_cobranza(self, facturas: list, pedidos: list, anticipos: list = None, cobranzas: list = None) -> dict:
+    def _calculate_expectativa_cobranza(self, facturas: list, pedidos: list, anticipos: list = None, cobranzas: list = None, aplicar_filtro_proporcional: bool = False) -> dict:
         """Calcula expectativa de cobranza futura basada en pedidos y sus días de crédito"""
         from datetime import datetime, timedelta
         
         expectativa = {}
         
-        logger.info(f"Calculando expectativa de cobranza con {len(pedidos)} pedidos, {len(facturas)} facturas, {len(cobranzas or [])} cobranzas")
+        logger.info(f"Calculando expectativa de cobranza con {len(pedidos)} pedidos, {len(facturas)} facturas, {len(cobranzas or [])} cobranzas, aplicar_filtro_proporcional={aplicar_filtro_proporcional}")
         
         # Obtener fecha actual
         hoy = datetime.now()
@@ -305,9 +311,22 @@ class KPIAggregator:
             
             # Calcular cobranza real para esta semana
             if cobranzas:
-                for cobranza in cobranzas:
-                    if cobranza.fecha_pago and semana_inicio <= cobranza.fecha_pago <= semana_fin:
-                        cobranza_real += cobranza.importe_pagado
+                if aplicar_filtro_proporcional:
+                    # Solo considerar cobranzas relacionadas con facturas de pedidos filtrados
+                    for cobranza in cobranzas:
+                        if cobranza.fecha_pago and semana_inicio <= cobranza.fecha_pago <= semana_fin:
+                            # Verificar si esta cobranza está relacionada con una factura de los pedidos filtrados
+                            uuid_factura = cobranza.uuid_factura_relacionada
+                            if uuid_factura:
+                                # Buscar si hay una factura en los pedidos filtrados con este UUID
+                                factura_relacionada = next((f for f in facturas if f.uuid_factura == uuid_factura), None)
+                                if factura_relacionada:
+                                    cobranza_real += cobranza.importe_pagado
+                else:
+                    # Sin filtro, considerar todas las cobranzas
+                    for cobranza in cobranzas:
+                        if cobranza.fecha_pago and semana_inicio <= cobranza.fecha_pago <= semana_fin:
+                            cobranza_real += cobranza.importe_pagado
             
             # Solo incluir semanas con datos
             if cobranza_esperada > 0 or cobranza_real > 0:
