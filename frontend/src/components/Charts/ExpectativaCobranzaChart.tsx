@@ -16,14 +16,31 @@ export const ExpectativaCobranzaChart: FC<ExpectativaCobranzaChartProps> = ({ da
     }).format(value);
   };
 
-  // Función para formatear las etiquetas del eje X
-  const formatXAxisLabel = (semana: string) => {
+  // Función para formatear las etiquetas del eje X con información de cobranza
+  const formatXAxisLabel = (semana: string, data: any) => {
     // Formato: "Semana X (DD/MM - DD/MM)" -> extraer semana del año y fecha de inicio
     const match = semana.match(/Semana (\d+) \((\d{2}\/\d{2})/);
     if (match) {
       const semanaNum = match[1];
       const fechaInicio = match[2]; // "DD/MM"
-      return `S${semanaNum} (${fechaInicio})`;
+      
+      // Buscar los datos de esta semana para mostrar información de cobranza
+      const semanaData = data.find((item: any) => item.semana === semana);
+      if (semanaData) {
+        const cobranzaReal = semanaData.cobranza_real || 0;
+        const cobranzaEsperada = semanaData.cobranza_esperada || 0;
+        
+        // Formatear montos para mostrar en el eje X
+        const formatShortCurrency = (value: number) => {
+          if (value >= 1000000) return `${Math.round(value / 1000000)}M`;
+          if (value >= 1000) return `${Math.round(value / 1000)}K`;
+          return `${Math.round(value)}`;
+        };
+        
+        return `S${semanaNum}\n${fechaInicio}\nReal: $${formatShortCurrency(cobranzaReal)}`;
+      }
+      
+      return `S${semanaNum}\n${fechaInicio}`;
     }
     return semana;
   };
@@ -43,11 +60,11 @@ export const ExpectativaCobranzaChart: FC<ExpectativaCobranzaChartProps> = ({ da
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 dataKey="semana"
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 10 }}
                 angle={-45}
                 textAnchor="end"
-                height={80}
-                tickFormatter={formatXAxisLabel}
+                height={100}
+                tickFormatter={(value) => formatXAxisLabel(value, data)}
               />
               <YAxis 
                 tick={{ fontSize: 12 }}
@@ -56,8 +73,15 @@ export const ExpectativaCobranzaChart: FC<ExpectativaCobranzaChartProps> = ({ da
               <Tooltip 
                 formatter={(value: number, name: string) => [
                   formatCurrency(value), 
-                  name === 'cobranza_esperada' ? 'Esperada' : name === 'cobranza_real' ? 'Real' : name
+                  name === 'cobranza_esperada' ? 'Cobranza Esperada' : name === 'cobranza_real' ? 'Cobranza Real' : name
                 ]}
+                labelFormatter={(label: string) => {
+                  const match = label.match(/Semana (\d+) \((\d{2}\/\d{2}) - (\d{2}\/\d{2})\)/);
+                  if (match) {
+                    return `Semana ${match[1]} (${match[2]} - ${match[3]})`;
+                  }
+                  return label;
+                }}
                 labelStyle={{ color: '#374151' }}
                 contentStyle={{ 
                   backgroundColor: '#fff', 
