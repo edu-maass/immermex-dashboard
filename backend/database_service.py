@@ -902,13 +902,31 @@ class DatabaseService:
                     if semana_inicio <= fecha_vencimiento <= semana_fin:
                         pedidos_vencen_semana += 1
                         
-                        # Usar el importe_sin_iva del pedido como base para la cobranza esperada
-                        monto_pedido = getattr(pedido, 'importe_sin_iva', 0) or 0
+                        # Verificar si el pedido ya está cobrado
+                        pedido_cobrado = False
+                        if pedido.folio_factura:
+                            # Buscar factura relacionada
+                            factura_pedido = next((f for f in facturas if f.folio_factura == pedido.folio_factura), None)
+                            if factura_pedido and factura_pedido.uuid_factura:
+                                # Buscar cobranzas de esta factura
+                                cobranzas_factura = [c for c in cobranzas or [] if c.uuid_factura_relacionada == factura_pedido.uuid_factura]
+                                if cobranzas_factura:
+                                    total_cobrado_factura = sum(c.importe_pagado for c in cobranzas_factura)
+                                    if factura_pedido.monto_total > 0:
+                                        porcentaje_cobrado = total_cobrado_factura / factura_pedido.monto_total
+                                        if porcentaje_cobrado >= 0.99:  # 99% o más cobrado
+                                            pedido_cobrado = True
                         
-                        # Solo considerar si hay monto positivo
-                        if monto_pedido > 0:
-                            cobranza_esperada += monto_pedido
-                            logger.debug(f"Pedido {pedido.id} vence en semana {i+1}: ${monto_pedido}")
+                        # Solo incluir en cobranza esperada si NO está cobrado
+                        if not pedido_cobrado:
+                            monto_pedido = getattr(pedido, 'importe_sin_iva', 0) or 0
+                            
+                            # Solo considerar si hay monto positivo
+                            if monto_pedido > 0:
+                                cobranza_esperada += monto_pedido
+                                logger.debug(f"Pedido {pedido.id} vence en semana {i+1}: ${monto_pedido} (pendiente)")
+                        else:
+                            logger.debug(f"Pedido {pedido.id} vence en semana {i+1}: ya cobrado, excluido de esperada")
                             
                 except Exception as e:
                     logger.warning(f"Error procesando pedido {pedido.id}: {str(e)}")
