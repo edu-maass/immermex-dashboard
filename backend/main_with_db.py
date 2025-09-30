@@ -20,6 +20,13 @@ from database_service_refactored import DatabaseService
 from utils import setup_logging, handle_api_error, FileProcessingError, DatabaseError
 from utils.error_middleware import ErrorHandlingMiddleware, RequestLoggingMiddleware
 from utils.error_tracker import error_tracker, ErrorCategory, ErrorSeverity
+from utils.advanced_logging import (
+    setup_global_logging, system_logger, api_logger, database_logger,
+    processing_logger, security_logger, log_execution_time, log_api_call
+)
+from utils.logging_middleware import (
+    AdvancedLoggingMiddleware, PerformanceLoggingMiddleware, AuditLoggingMiddleware
+)
 from utils.security import (
     require_rate_limit, validate_file_upload, validate_input_data, 
     validate_filters, SecurityMiddleware, SecurityValidator
@@ -31,8 +38,9 @@ from data_processor import process_immermex_file_advanced
 # Importar endpoints de compras
 from services.compras_api import compras_router
 
-# Configurar logging
-logger = setup_logging()
+# Configurar logging avanzado
+setup_global_logging(log_level="INFO", log_dir="logs")
+logger = system_logger
 
 # Crear aplicación FastAPI
 app = FastAPI(

@@ -44,7 +44,7 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.1",
     "vite": "^7.1.2",
-    "vite-plugin-pwa": "^0.21.1",
+    "vite-plugin-pwa": "^0.22.1",
     "workbox-window": "^7.2.0"
   }
 }
