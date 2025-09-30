@@ -18,6 +18,8 @@ from typing import List, Optional
 from database import get_db, init_db, ArchivoProcesado
 from database_service_refactored import DatabaseService
 from utils import setup_logging, handle_api_error, FileProcessingError, DatabaseError
+from utils.error_middleware import ErrorHandlingMiddleware, RequestLoggingMiddleware
+from utils.error_tracker import error_tracker, ErrorCategory, ErrorSeverity
 from datetime import datetime
 from data_processor import process_immermex_file_advanced
 
@@ -56,6 +58,10 @@ app.add_middleware(
 
 # Agregar compresión GZIP para optimizar el ancho de banda
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Agregar middlewares de manejo de errores y logging
+app.add_middleware(ErrorHandlingMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
 
 @app.on_event("startup")
 async def startup_event():
@@ -672,6 +678,71 @@ async def clear_cache():
     except Exception as e:
         logger.error(f"Error limpiando caché: {str(e)}")
         return {"error": str(e), "status": "error"}
+
+# Endpoints de monitoreo de errores
+@app.get("/api/system/errors/stats")
+async def get_error_stats():
+    """Obtiene estadísticas de errores del sistema"""
+    try:
+        stats = error_tracker.get_error_stats()
+        return {
+            "success": True,
+            "stats": stats,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error obteniendo estadísticas de errores: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/system/errors/recent")
+async def get_recent_errors(limit: int = Query(20, ge=1, le=100)):
+    """Obtiene errores recientes del sistema"""
+    try:
+        recent_errors = error_tracker.get_recent_errors(limit)
+        return {
+            "success": True,
+            "errors": recent_errors,
+            "count": len(recent_errors),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error obteniendo errores recientes: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/system/errors/{error_id}/resolve")
+async def resolve_error(error_id: str, resolution_notes: str = Query(..., description="Notas de resolución")):
+    """Marca un error como resuelto"""
+    try:
+        success = error_tracker.resolve_error(error_id, resolution_notes)
+        if success:
+            return {
+                "success": True,
+                "message": f"Error {error_id} marked as resolved",
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Error not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error resolviendo error {error_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/system/errors/cleanup")
+async def cleanup_old_errors(days_to_keep: int = Query(30, ge=1, le=365)):
+    """Limpia errores antiguos del sistema"""
+    try:
+        removed_count = error_tracker.clear_old_errors(days_to_keep)
+        return {
+            "success": True,
+            "message": f"Cleaned {removed_count} old errors",
+            "removed_count": removed_count,
+            "days_kept": days_to_keep,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error limpiando errores antiguos: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/data/paginated")
 async def get_paginated_data(
