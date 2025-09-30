@@ -18,6 +18,12 @@
   "env": {
     "ENVIRONMENT": "production",
     "DEBUG": "false",
-    "LOG_LEVEL": "info"
+    "LOG_LEVEL": "info",
+    "PYTHON_VERSION": "3.12"
+  },
+  "functions": {
+    "main_with_db.py": {
+      "maxDuration": 30
+    }
   }
 }

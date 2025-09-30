@@ -1,8 +1,8 @@
 """
-API REST para Immermex Dashboard con persistencia en base de datos
-Integra el procesador avanzado con almacenamiento persistente
+API de Producción para Immermex Dashboard
+Versión limpia y optimizada para Vercel
 """
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Query
+from fastapi import FastAPI, HTTPException, UploadFile, File, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
@@ -40,6 +40,30 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# Crear aplicación FastAPI
+app = FastAPI(
+    title="Immermex Dashboard API",
+    description="API para análisis de datos financieros de Immermex",
+    version="2.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+# Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://edu-maass.github.io"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Función para verificar conexión a base de datos
 def check_database_connection():
@@ -113,30 +137,6 @@ def calculate_basic_kpis(facturacion_data: List[Dict], cobranza_data: List[Dict]
     except Exception as e:
         logger.error(f"Error calculating KPIs: {str(e)}")
         return {}
-
-# Crear aplicación FastAPI
-app = FastAPI(
-    title="Immermex Dashboard API",
-    description="API para análisis de datos financieros de Immermex",
-    version="2.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
-)
-
-# Middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://edu-maass.github.io"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Endpoints
 @app.get("/")
