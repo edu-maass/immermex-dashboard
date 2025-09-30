@@ -531,6 +531,85 @@ async def debug_upload(file: UploadFile = File(...)):
         logger.error(f"🔍 DEBUG: Error general: {str(e)}")
         return {"error": f"Error general: {str(e)}", "status": "general_error"}
 
+@app.get("/api/debug/test")
+async def debug_test():
+    """Endpoint simple para verificar que la API está funcionando"""
+    try:
+        logger.info("🔍 DEBUG: Test endpoint llamado")
+        return {
+            "status": "success",
+            "message": "API funcionando correctamente",
+            "timestamp": datetime.now().isoformat(),
+            "version": "refactored"
+        }
+    except Exception as e:
+        logger.error(f"🔍 DEBUG: Error en test: {str(e)}")
+        return {"error": str(e), "status": "error"}
+
+@app.post("/api/debug/simple-upload")
+async def debug_simple_upload(file: UploadFile = File(...)):
+    """Endpoint de upload simplificado para debugging"""
+    try:
+        logger.info(f"🔍 DEBUG SIMPLE: Archivo recibido: {file.filename}")
+        
+        # Validaciones básicas
+        if not file.filename:
+            raise FileProcessingError("No filename provided")
+        
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            raise FileProcessingError("Invalid file type")
+        
+        contents = await file.read()
+        logger.info(f"🔍 DEBUG SIMPLE: Archivo leído: {len(contents)} bytes")
+        
+        if len(contents) == 0:
+            raise FileProcessingError("Empty file")
+        
+        if len(contents) > 10 * 1024 * 1024:
+            raise FileProcessingError("File too large")
+        
+        return {
+            "status": "success",
+            "filename": file.filename,
+            "size": len(contents),
+            "message": "Archivo recibido correctamente"
+        }
+        
+    except FileProcessingError as e:
+        logger.error(f"🔍 DEBUG SIMPLE: Error de validación: {str(e)}")
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        logger.error(f"🔍 DEBUG SIMPLE: Error general: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/debug/upload-no-decorator")
+async def debug_upload_no_decorator(file: UploadFile = File(...)):
+    """Endpoint de upload sin decorador para debugging"""
+    logger.info(f"🔍 DEBUG NO DECORATOR: Archivo recibido: {file.filename}")
+    
+    # Validaciones básicas
+    if not file.filename:
+        return {"error": "No filename provided", "status": "error"}
+    
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        return {"error": "Invalid file type", "status": "error"}
+    
+    contents = await file.read()
+    logger.info(f"🔍 DEBUG NO DECORATOR: Archivo leído: {len(contents)} bytes")
+    
+    if len(contents) == 0:
+        return {"error": "Empty file", "status": "error"}
+    
+    if len(contents) > 10 * 1024 * 1024:
+        return {"error": "File too large", "status": "error"}
+    
+    return {
+        "status": "success",
+        "filename": file.filename,
+        "size": len(contents),
+        "message": "Archivo recibido correctamente sin decorador"
+    }
+
 if __name__ == "__main__":
     import uvicorn
     print("🚀 Iniciando servidor Immermex Dashboard (Con Base de Datos)")
