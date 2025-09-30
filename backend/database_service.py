@@ -838,8 +838,8 @@ class DatabaseService:
                 if cobranza.uuid_factura_relacionada:
                     cobranzas_por_factura[cobranza.uuid_factura_relacionada] = cobranzas_por_factura.get(cobranza.uuid_factura_relacionada, 0) + cobranza.importe_pagado
         
-        # Agrupar por semana (4 semanas pasadas + 4 semanas futuras)
-        for i in range(-4, 4):
+        # Agrupar por semana (4 semanas pasadas + 18 semanas futuras para cubrir créditos de 120 días)
+        for i in range(-4, 18):
             semana_inicio = hoy + timedelta(weeks=i)
             semana_fin = semana_inicio + timedelta(days=6)
             semana_key = f"Semana {i+5} ({semana_inicio.strftime('%d/%m')} - {semana_fin.strftime('%d/%m')})"
