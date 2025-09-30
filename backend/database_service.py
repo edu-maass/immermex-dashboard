@@ -465,6 +465,32 @@ class DatabaseService:
             self.db.rollback()
             logger.error(f"Error limpiando datos: {str(e)}")
     
+    def _get_facturas_related_to_pedidos(self, pedidos_filtrados: list) -> list:
+        """
+        Obtiene todas las facturas relacionadas con los pedidos filtrados.
+        Considera la relación many-to-many: un pedido puede estar en múltiples facturas.
+        Solo busca por folio_factura directo, no por cliente.
+        """
+        facturas_relacionadas = []
+        
+        for pedido in pedidos_filtrados:
+            # Buscar todas las facturas donde aparece este pedido por folio_factura
+            if pedido.folio_factura:
+                facturas_folio = self.db.query(Facturacion).filter(
+                    Facturacion.folio_factura == pedido.folio_factura
+                ).all()
+                facturas_relacionadas.extend(facturas_folio)
+                logger.debug(f"Pedido {pedido.pedido} -> Facturas por folio {pedido.folio_factura}: {len(facturas_folio)}")
+        
+        # Eliminar duplicados por UUID
+        facturas_unicas = {}
+        for factura in facturas_relacionadas:
+            if factura.uuid_factura:
+                facturas_unicas[factura.uuid_factura] = factura
+        
+        logger.info(f"Facturas relacionadas con pedidos filtrados: {len(facturas_unicas)}")
+        return list(facturas_unicas.values())
+
     def calculate_kpis(self, filtros: dict = None) -> dict:
         """
         Calcula KPIs basados en los datos de la base de datos
@@ -543,23 +569,20 @@ class DatabaseService:
             if filtros and filtros.get('pedidos'):
                 logger.info(f"Calculando cobranza para pedidos filtrados: {filtros['pedidos']}")
                 
-                # Paso 1: Obtener folio_factura de los pedidos filtrados
-                folios_pedidos_filtrados = [p.folio_factura for p in pedidos if p.folio_factura and p.folio_factura.strip()]
-                logger.info(f"Folios de pedidos filtrados: {folios_pedidos_filtrados}")
+                # Usar la nueva función para obtener todas las facturas relacionadas
+                facturas_pedidos_filtrados = self._get_facturas_related_to_pedidos(pedidos)
                 
-                # Paso 2: Buscar facturas que coincidan con estos folios
-                facturas_pedidos_filtrados = [f for f in facturas if f.folio_factura in folios_pedidos_filtrados and f.folio_factura and f.folio_factura.strip()]
-                logger.info(f"Facturas encontradas para pedidos filtrados: {len(facturas_pedidos_filtrados)}")
-                
-                # Paso 3: Obtener uuid_factura de estas facturas
+                # Obtener UUIDs de estas facturas
                 uuids_facturas_pedidos = {f.uuid_factura for f in facturas_pedidos_filtrados if f.uuid_factura and f.uuid_factura.strip()}
                 logger.info(f"UUIDs de facturas de pedidos: {len(uuids_facturas_pedidos)}")
                 
-                # Paso 4: Buscar cobranzas que tengan uuid_factura_relacionada coincidente
+                # Buscar cobranzas que tengan uuid_factura_relacionada coincidente
                 cobranzas_relacionadas_pedidos = [c for c in cobranzas 
                     if c.uuid_factura_relacionada in uuids_facturas_pedidos 
                     and c.folio_pago and c.folio_pago.strip() 
                     and not c.folio_pago.lower().startswith(('total', 'suma', 'subtotal'))]
+                
+                logger.info(f"Cobranzas relacionadas encontradas: {len(cobranzas_relacionadas_pedidos)}")
                 
                 # Paso 5: Calcular cobranza proporcional por pedido
                 cobranza_total = 0
@@ -592,6 +615,7 @@ class DatabaseService:
                             monto_total_pedidos_factura = sum(p.importe_sin_iva for p in pedidos_factura if p.importe_sin_iva)
                             
                             # Calcular monto de los pedidos filtrados de esta factura
+                            # Un pedido puede aparecer múltiples veces en la misma factura con diferentes materiales
                             pedidos_filtrados_factura = [p for p in pedidos if p.folio_factura == factura.folio_factura]
                             monto_pedidos_filtrados_factura = sum(p.importe_sin_iva for p in pedidos_filtrados_factura if p.importe_sin_iva)
                             
@@ -628,7 +652,7 @@ class DatabaseService:
             if filtros and filtros.get('pedidos'):
                 logger.info(f"Calculando anticipos para pedidos filtrados: {filtros['pedidos']}")
                 
-                # Obtener UUIDs de facturas de pedidos filtrados
+                # Usar las mismas facturas relacionadas
                 uuids_facturas_pedidos = {f.uuid_factura for f in facturas_pedidos_filtrados if f.uuid_factura and f.uuid_factura.strip()}
                 logger.info(f"UUIDs de facturas para anticipos: {len(uuids_facturas_pedidos)}")
                 
