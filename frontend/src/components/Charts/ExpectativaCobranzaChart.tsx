@@ -37,7 +37,7 @@ export const ExpectativaCobranzaChart: FC<ExpectativaCobranzaChartProps> = ({ da
           return `${Math.round(value)}`;
         };
         
-        return `S${semanaNum}\n${fechaInicio}\nReal: $${formatShortCurrency(cobranzaReal)}`;
+        return `S${semanaNum}\n${fechaInicio}`;
       }
       
       return `S${semanaNum}\n${fechaInicio}`;
