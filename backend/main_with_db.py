@@ -18,8 +18,9 @@ from typing import List, Optional
 from database import get_db, init_db, ArchivoProcesado
 from database_service_refactored import DatabaseService
 from utils import setup_logging, handle_api_error, FileProcessingError, DatabaseError
-from utils.error_middleware import ErrorHandlingMiddleware, RequestLoggingMiddleware
-from utils.error_tracker import error_tracker, ErrorCategory, ErrorSeverity
+# Comentado temporalmente para evitar problemas en Vercel
+# from utils.error_middleware import ErrorHandlingMiddleware, RequestLoggingMiddleware
+# from utils.error_tracker import error_tracker, ErrorCategory, ErrorSeverity
 # Comentado temporalmente para evitar problemas en Vercel
 # from utils.advanced_logging import (
 #     setup_global_logging, system_logger, api_logger, database_logger,
@@ -28,11 +29,12 @@ from utils.error_tracker import error_tracker, ErrorCategory, ErrorSeverity
 # from utils.logging_middleware import (
 #     AdvancedLoggingMiddleware, PerformanceLoggingMiddleware, AuditLoggingMiddleware
 # )
-from utils.security import (
-    require_rate_limit, validate_file_upload, validate_input_data, 
-    validate_filters, SecurityMiddleware, SecurityValidator
-)
-from utils.data_validator import AdvancedDataValidator, ValidationLevel
+# Comentado temporalmente para evitar problemas en Vercel
+# from utils.security import (
+#     require_rate_limit, validate_file_upload, validate_input_data, 
+#     validate_filters, SecurityMiddleware, SecurityValidator
+# )
+# from utils.data_validator import AdvancedDataValidator, ValidationLevel
 from datetime import datetime
 from data_processor import process_immermex_file_advanced
 
@@ -75,10 +77,10 @@ app.add_middleware(
 # Agregar compresión GZIP para optimizar el ancho de banda
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# Agregar middlewares de manejo de errores y logging
-app.add_middleware(ErrorHandlingMiddleware)
-app.add_middleware(RequestLoggingMiddleware)
-app.add_middleware(SecurityMiddleware)
+# Agregar middlewares de manejo de errores y logging (comentado temporalmente)
+# app.add_middleware(ErrorHandlingMiddleware)
+# app.add_middleware(RequestLoggingMiddleware)
+# app.add_middleware(SecurityMiddleware)
 
 # Incluir router de compras (comentado temporalmente)
 # app.include_router(compras_router)
@@ -261,7 +263,7 @@ async def aplicar_filtros_pedido(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/upload")
-@require_rate_limit("upload")
+# @require_rate_limit("upload")  # Comentado temporalmente
 async def upload_file(
     file: UploadFile = File(...),
     reemplazar_datos: bool = Query(True, description="Si true, reemplaza todos los datos existentes"),
@@ -269,15 +271,18 @@ async def upload_file(
 ):
     """Endpoint para subir archivos Excel con persistencia en base de datos"""
     try:
-        # Validación de seguridad del archivo
-        SecurityValidator.validate_file_type(file.filename)
+        # Validación básica del archivo (sin SecurityValidator temporalmente)
+        if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
+            raise HTTPException(status_code=400, detail="Solo se permiten archivos Excel (.xlsx, .xls)")
         
         # Leer contenido para validar tamaño
         content = await file.read()
-        SecurityValidator.validate_file_size(len(content))
+        if len(content) > 10 * 1024 * 1024:  # 10MB
+            raise HTTPException(status_code=400, detail="El archivo es demasiado grande. Máximo 10MB permitido.")
         
-        # Sanitizar nombre del archivo
-        file.filename = SecurityValidator.sanitize_filename(file.filename)
+        # Validaciones básicas sin SecurityValidator
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="Nombre de archivo no válido")
         
         logger.info(f"Procesando archivo con persistencia: {file.filename}")
         
