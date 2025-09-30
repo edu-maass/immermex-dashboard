@@ -17,6 +17,7 @@ from typing import List, Optional
 from database import get_db, init_db, ArchivoProcesado
 from database_service_refactored import DatabaseService
 from utils import setup_logging, handle_api_error, FileProcessingError, DatabaseError
+from datetime import datetime
 from data_processor import process_immermex_file_advanced
 
 # Configurar logging
@@ -255,53 +256,61 @@ async def upload_file(
         # Procesar archivo directamente desde memoria (compatible con Vercel)
         try:
             import io
-            from data_processor import ImmermexDataProcessor
+            from data_processor import process_excel_from_bytes
             
             logger.info(f"Procesando archivo desde memoria: {file.filename}")
-            
-            # Crear un objeto BytesIO para simular un archivo
-            file_like = io.BytesIO(contents)
+            logger.info(f"Tamaño del archivo: {len(contents)} bytes")
             
             # Procesar usando la nueva función desde bytes
-            from data_processor import process_excel_from_bytes
             processed_data_dict, kpis = process_excel_from_bytes(contents, file.filename)
+            logger.info(f"Datos procesados exitosamente. Claves: {list(processed_data_dict.keys())}")
+            
+            # Verificar estructura de datos procesados
+            for key, data in processed_data_dict.items():
+                logger.info(f"{key}: {len(data)} registros")
+                if len(data) > 0:
+                    logger.info(f"  Primer registro de {key}: {list(data[0].keys()) if isinstance(data, list) else 'No es lista'}")
             
             # Preparar información del archivo
             archivo_info = {
-                "nombre": file.filename,
-                "tamaño": len(contents),
-                "algoritmo": "advanced_cleaning",
+                "nombre_archivo": file.filename,
+                "tipo_archivo": file.content_type or "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "contenido": contents.decode('utf-8', errors='ignore'),
                 "reemplazar_datos": reemplazar_datos
             }
             
             # Guardar en base de datos
+            logger.info("Iniciando guardado en base de datos...")
             db_service = DatabaseService(db)
             result = db_service.save_processed_data(processed_data_dict, archivo_info)
+            logger.info(f"Guardado completado: {result}")
             
-            if result["success"]:
-                logger.info(f"Archivo procesado y guardado exitosamente: {file.filename}")
-                
-                return {
-                    "mensaje": "Archivo procesado y guardado exitosamente en base de datos",
-                    "nombre_archivo": file.filename,
-                    "archivo_id": result["archivo_id"],
-                    "registros_procesados": result["registros_procesados"],
-                    "fecha_procesamiento": datetime.now().isoformat(),
-                    "estado": "procesado",
-                    "algoritmo": "memory_processing_with_persistence",
-                    "desglose": result["desglose"],
-                    "caracteristicas": {
-                        "deteccion_automatica_encabezados": True,
-                        "mapeo_flexible_columnas": True,
-                        "validacion_datos": True,
-                        "calculo_relaciones": True,
-                        "limpieza_robusta": True,
-                        "persistencia_base_datos": True,
-                        "filtros_dinamicos": True
-                    }
+            logger.info(f"Archivo procesado y guardado exitosamente: {file.filename}")
+            
+            return {
+                "mensaje": "Archivo procesado y guardado exitosamente en base de datos",
+                "nombre_archivo": file.filename,
+                "archivo_id": result["archivo_id"],
+                "total_registros": result["total_registros"],
+                "fecha_procesamiento": datetime.now().isoformat(),
+                "estado": "procesado",
+                "algoritmo": "memory_processing_with_persistence",
+                "desglose": {
+                    "facturas": result["facturas"],
+                    "cobranzas": result["cobranzas"],
+                    "anticipos": result["anticipos"],
+                    "pedidos": result["pedidos"]
+                },
+                "caracteristicas": {
+                    "deteccion_automatica_encabezados": True,
+                    "mapeo_flexible_columnas": True,
+                    "validacion_datos": True,
+                    "calculo_relaciones": True,
+                    "limpieza_robusta": True,
+                    "persistencia_base_datos": True,
+                    "filtros_dinamicos": True
                 }
-            else:
-                raise HTTPException(status_code=500, detail=f"Error guardando datos: {result.get('error', 'Error desconocido')}")
+            }
             
         finally:
             # No hay archivos temporales que limpiar (procesamiento en memoria)
@@ -477,6 +486,50 @@ async def get_grafico_consumo_material(
     except Exception as e:
         logger.error(f"Error obteniendo gráfico de consumo de material: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/debug/upload")
+async def debug_upload(file: UploadFile = File(...)):
+    """Endpoint de debugging temporal para diagnosticar problemas de upload"""
+    try:
+        logger.info(f"🔍 DEBUG: Procesando archivo: {file.filename}")
+        
+        # Validar tipo de archivo
+        if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
+            return {"error": "Solo se permiten archivos Excel (.xlsx, .xls)", "status": "validation_error"}
+        
+        # Leer contenido
+        contents = await file.read()
+        logger.info(f"🔍 DEBUG: Archivo leído: {len(contents)} bytes")
+        
+        # Validar tamaño
+        if len(contents) > 10 * 1024 * 1024:
+            return {"error": "Archivo demasiado grande", "status": "size_error"}
+        
+        # Probar procesamiento
+        try:
+            from data_processor import process_excel_from_bytes
+            processed_data_dict, kpis = process_excel_from_bytes(contents, file.filename)
+            logger.info(f"🔍 DEBUG: Procesamiento exitoso")
+            
+            return {
+                "status": "success",
+                "filename": file.filename,
+                "size": len(contents),
+                "processed_keys": list(processed_data_dict.keys()),
+                "record_counts": {key: len(data) for key, data in processed_data_dict.items()},
+                "kpis": kpis,
+                "first_record_keys": {
+                    key: list(data[0].keys()) if len(data) > 0 else [] 
+                    for key, data in processed_data_dict.items()
+                }
+            }
+        except Exception as e:
+            logger.error(f"🔍 DEBUG: Error en procesamiento: {str(e)}")
+            return {"error": f"Error en procesamiento: {str(e)}", "status": "processing_error"}
+            
+    except Exception as e:
+        logger.error(f"🔍 DEBUG: Error general: {str(e)}")
+        return {"error": f"Error general: {str(e)}", "status": "general_error"}
 
 if __name__ == "__main__":
     import uvicorn
