@@ -326,6 +326,79 @@ async def upload_file(
         logger.error(f"Traceback completo: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/upload/compras")
+async def upload_compras_file(
+    file: UploadFile = File(...),
+    reemplazar_datos: bool = Query(True, description="Si true, reemplaza todos los datos existentes"),
+    db: Session = Depends(get_db)
+):
+    """Endpoint específico para subir archivos Excel de compras"""
+    try:
+        # Validación básica del archivo
+        if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
+            raise HTTPException(status_code=400, detail="Solo se permiten archivos Excel (.xlsx, .xls)")
+        
+        # Leer contenido para validar tamaño
+        content = await file.read()
+        if len(content) > 10 * 1024 * 1024:  # 10MB
+            raise HTTPException(status_code=400, detail="El archivo es demasiado grande. Máximo 10MB permitido.")
+        
+        logger.info(f"Procesando archivo de compras: {file.filename}")
+        
+        # Procesar archivo de compras usando el procesador específico
+        try:
+            from compras_processor import process_compras_excel_from_bytes
+            
+            logger.info(f"Procesando archivo de compras desde memoria: {file.filename}")
+            logger.info(f"Tamaño del archivo: {len(content)} bytes")
+            
+            # Procesar usando el procesador específico de compras
+            processed_data_dict, kpis = process_compras_excel_from_bytes(content, file.filename)
+            logger.info(f"Datos de compras procesados exitosamente. Claves: {list(processed_data_dict.keys())}")
+            
+            # Preparar información del archivo
+            archivo_info = {
+                "nombre_archivo": file.filename,
+                "tipo_archivo": file.content_type or "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "reemplazar_datos": reemplazar_datos,
+                "tipo_datos": "compras"  # Marcar como datos de compras
+            }
+            
+            # Guardar en base de datos
+            logger.info("Iniciando guardado de datos de compras en base de datos...")
+            db_service = DatabaseService(db)
+            result = db_service.save_processed_data(processed_data_dict, archivo_info)
+            logger.info(f"Guardado de compras completado: {result}")
+            
+            logger.info(f"Archivo de compras procesado y guardado exitosamente: {file.filename}")
+            
+            return {
+                "mensaje": "Archivo de compras procesado y guardado exitosamente en base de datos",
+                "nombre_archivo": file.filename,
+                "archivo_id": result["archivo_id"],
+                "total_registros": result["total_registros"],
+                "registros_procesados": result["total_registros"],
+                "kpis_compras": kpis,
+                "datos_procesados": {
+                    "compras": len(processed_data_dict.get('compras', []))
+                },
+                "archivo_info": archivo_info
+            }
+            
+        except Exception as e:
+            logger.error(f"Error procesando archivo de compras: {str(e)}")
+            import traceback
+            logger.error(f"Traceback completo: {traceback.format_exc()}")
+            raise HTTPException(status_code=500, detail=f"Error procesando archivo de compras: {str(e)}")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error en endpoint de compras: {str(e)}")
+        import traceback
+        logger.error(f"Traceback completo: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/archivos")
 async def get_archivos_procesados(
     skip: int = Query(0, ge=0),

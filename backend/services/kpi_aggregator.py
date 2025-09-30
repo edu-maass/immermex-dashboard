@@ -47,17 +47,13 @@ class KPIAggregator:
             # Calcular KPIs según el tipo de filtro
             if filtros and filtros.get('pedidos'):
                 kpis_result = self._calculate_kpis_filtered_by_pedidos(facturas, pedidos, cobranzas, anticipos, filtros)
-                # Para filtros de pedidos, aplicar filtro proporcional a la expectativa de cobranza
-                aplicar_filtro_proporcional = True
+                # La expectativa de cobranza ya se calculó dentro de _calculate_kpis_filtered_by_pedidos
             else:
                 kpis_result = self._calculate_kpis_general(facturas, pedidos, cobranzas, anticipos)
-                # Sin filtros, mostrar todos los datos
-                aplicar_filtro_proporcional = False
-            
-            # Calcular expectativa de cobranza
-            kpis_result['expectativa_cobranza'] = self._calculate_expectativa_cobranza(
-                facturas, pedidos, anticipos, cobranzas, aplicar_filtro_proporcional
-            )
+                # Para KPIs generales, calcular expectativa de cobranza sin filtro proporcional
+                kpis_result['expectativa_cobranza'] = self._calculate_expectativa_cobranza(
+                    facturas, pedidos, anticipos, cobranzas, aplicar_filtro_proporcional=False
+                )
             
             return kpis_result
                 
@@ -82,9 +78,15 @@ class KPIAggregator:
         folios_unicos = len(set(p.folio_factura for p in pedidos if p.folio_factura))
         total_facturas = folios_unicos
         
-        # Calcular cobranza proporcional
-        cobranza_total = self.cobranza_service.calculate_cobranza_proporcional(
-            facturas_pedidos, pedidos, cobranzas
+        # Calcular expectativa de cobranza primero para obtener cobranza_real consistente
+        expectativa_cobranza = self._calculate_expectativa_cobranza(
+            facturas_pedidos, pedidos, anticipos, cobranzas, aplicar_filtro_proporcional=True
+        )
+        
+        # Calcular cobranza_total sumando cobranza_real de todas las semanas
+        cobranza_total = sum(
+            semana_data.get('cobranza_real', 0) 
+            for semana_data in expectativa_cobranza.values()
         )
         
         # Calcular anticipos relacionados
@@ -130,7 +132,7 @@ class KPIAggregator:
             "aging_cartera": aging_cartera,
             "top_clientes": top_clientes,
             "consumo_material": consumo_material,
-            "expectativa_cobranza": {},  # Se calculará por separado si es necesario
+            "expectativa_cobranza": expectativa_cobranza,  # Usar la ya calculada para consistencia
             "rotacion_inventario": 0,
             "dias_cxc_ajustado": 0,
             "ciclo_efectivo": 0
