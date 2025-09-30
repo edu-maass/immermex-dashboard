@@ -74,9 +74,8 @@ async def startup_event():
             try:
                 from database import SessionLocal
                 from sqlalchemy import text
-                db = SessionLocal()
-                db.execute(text("SELECT 1"))
-                db.close()
+                with SessionLocal() as db:
+                    db.execute(text("SELECT 1"))
                 logger.info("✅ Conexión a base de datos verificada")
             except Exception as e:
                 logger.warning(f"⚠️  Advertencia en conexión: {str(e)}")
