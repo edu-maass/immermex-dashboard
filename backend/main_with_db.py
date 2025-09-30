@@ -608,6 +608,111 @@ async def debug_upload_no_decorator(file: UploadFile = File(...)):
         "message": "Archivo recibido correctamente sin decorador"
     }
 
+@app.get("/api/system/performance")
+async def get_system_performance(db: Session = Depends(get_db)):
+    """Endpoint para monitorear el rendimiento del sistema"""
+    try:
+        from utils.cache import cache
+        import psutil
+        import time
+        
+        # Estadísticas de caché
+        cache_stats = cache.get_stats()
+        
+        # Estadísticas de memoria
+        memory_stats = {
+            "total_memory_mb": round(psutil.virtual_memory().total / (1024 * 1024), 2),
+            "available_memory_mb": round(psutil.virtual_memory().available / (1024 * 1024), 2),
+            "memory_usage_percent": psutil.virtual_memory().percent
+        }
+        
+        # Estadísticas de base de datos
+        db_service = DatabaseService(db)
+        data_summary = db_service.get_data_summary()
+        
+        return {
+            "timestamp": time.time(),
+            "cache": cache_stats,
+            "memory": memory_stats,
+            "database": {
+                "has_data": data_summary.get("has_data", False),
+                "total_records": sum(data_summary.get("conteos", {}).values())
+            },
+            "status": "healthy"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo métricas de rendimiento: {str(e)}")
+        return {"error": str(e), "status": "error"}
+
+@app.post("/api/system/cache/clear")
+async def clear_cache():
+    """Endpoint para limpiar el caché del sistema"""
+    try:
+        from utils.cache import invalidate_data_cache
+        deleted_count = invalidate_data_cache()
+        return {
+            "success": True,
+            "message": f"Cache cleared successfully",
+            "entries_deleted": deleted_count
+        }
+    except Exception as e:
+        logger.error(f"Error limpiando caché: {str(e)}")
+        return {"error": str(e), "status": "error"}
+
+@app.get("/api/data/paginated")
+async def get_paginated_data(
+    page: int = Query(1, ge=1, description="Número de página"),
+    per_page: int = Query(50, ge=1, le=100, description="Elementos por página"),
+    table: str = Query("facturacion", description="Tabla a consultar (facturacion, cobranza, pedidos)"),
+    db: Session = Depends(get_db)
+):
+    """Endpoint optimizado para obtener datos con paginación"""
+    try:
+        from utils.pagination import paginate, get_pagination_params
+        from database import Facturacion, Cobranza, Pedido
+        
+        # Validar parámetros
+        page, per_page = get_pagination_params(page, per_page)
+        
+        # Seleccionar tabla
+        if table == "facturacion":
+            query = db.query(Facturacion).order_by(Facturacion.fecha_factura.desc())
+        elif table == "cobranza":
+            query = db.query(Cobranza).order_by(Cobranza.fecha_pago.desc())
+        elif table == "pedidos":
+            query = db.query(Pedido).order_by(Pedido.fecha_factura.desc())
+        else:
+            raise HTTPException(status_code=400, detail="Tabla no válida")
+        
+        # Paginar resultados
+        result = paginate(query, page, per_page)
+        
+        # Convertir a diccionario
+        items = []
+        for item in result.items:
+            if hasattr(item, '__dict__'):
+                item_dict = {k: v for k, v in item.__dict__.items() if not k.startswith('_')}
+                items.append(item_dict)
+        
+        return {
+            "items": items,
+            "pagination": {
+                "page": result.page,
+                "per_page": result.per_page,
+                "total": result.total,
+                "pages": result.pages,
+                "has_prev": result.has_prev,
+                "has_next": result.has_next,
+                "prev_num": result.prev_num,
+                "next_num": result.next_num
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo datos paginados: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
     print("🚀 Iniciando servidor Immermex Dashboard (Con Base de Datos)")

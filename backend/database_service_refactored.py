@@ -12,6 +12,7 @@ from database import (
 from services import FacturacionService, CobranzaService, PedidosService, KPIAggregator
 from utils.validators import DataValidator
 from utils.logging_config import setup_logging, log_performance
+from utils.cache import cache_filtros, invalidate_data_cache
 from datetime import datetime, timedelta
 import logging
 import hashlib
@@ -53,6 +54,10 @@ class DatabaseService:
             
             self.db.commit()
             self.db.refresh(archivo)
+            
+            # Invalidar caché después de actualizar datos
+            invalidate_data_cache()
+            logger.info("Cache invalidated after data update")
             
             return {
                 "archivo_id": archivo.id,
@@ -179,6 +184,7 @@ class DatabaseService:
             self.db.rollback()
             return False
     
+    @cache_filtros(ttl=600)  # Cache por 10 minutos
     def get_filtros_disponibles(self) -> dict:
         """Obtiene opciones disponibles para filtros"""
         try:

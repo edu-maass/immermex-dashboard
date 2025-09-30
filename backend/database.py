@@ -66,6 +66,9 @@ class Facturacion(Base):
     __table_args__ = (
         Index('idx_factura_fecha_cliente', 'fecha_factura', 'cliente'),
         Index('idx_factura_mes_año', 'mes', 'año'),
+        Index('idx_factura_uuid_cliente', 'uuid_factura', 'cliente'),
+        Index('idx_factura_folio_serie', 'folio_factura', 'serie_factura'),
+        Index('idx_factura_archivo_fecha', 'archivo_id', 'fecha_factura'),
     )
 
 class Cobranza(Base):
@@ -89,6 +92,8 @@ class Cobranza(Base):
     __table_args__ = (
         Index('idx_cobranza_fecha_cliente', 'fecha_pago', 'cliente'),
         Index('idx_cobranza_uuid', 'uuid_factura_relacionada'),
+        Index('idx_cobranza_archivo_fecha', 'archivo_id', 'fecha_pago'),
+        Index('idx_cobranza_cliente_importe', 'cliente', 'importe_pagado'),
     )
 
 class CFDIRelacionado(Base):
@@ -162,6 +167,9 @@ class Pedido(Base):
     __table_args__ = (
         Index('idx_pedido_material', 'material'),
         Index('idx_pedido_fecha', 'fecha_factura'),
+        Index('idx_pedido_cliente_material', 'cliente', 'material'),
+        Index('idx_pedido_folio_archivo', 'folio_factura', 'archivo_id'),
+        Index('idx_pedido_fecha_credito', 'fecha_factura', 'dias_credito'),
     )
 
 class ArchivoProcesado(Base):

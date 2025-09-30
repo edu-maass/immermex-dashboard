@@ -8,6 +8,7 @@ from .cobranza_service import CobranzaService
 from .pedidos_service import PedidosService
 from database import CFDIRelacionado, Cobranza
 from utils.logging_config import log_performance
+from utils.cache import cache_kpis, invalidate_data_cache
 import time
 import logging
 
@@ -22,6 +23,7 @@ class KPIAggregator:
         self.cobranza_service = CobranzaService(db)
         self.pedidos_service = PedidosService(db)
     
+    @cache_kpis(ttl=300)  # Cache por 5 minutos
     def calculate_kpis(self, filtros: dict = None) -> dict:
         """
         Calcula KPIs principales coordinando todos los servicios
