@@ -20,6 +20,9 @@ Sistema web moderno para análisis financiero y operacional de Immermex, constru
 - ✅ **Diseño Responsivo**: Funciona en desktop y móvil
 - ✅ **API REST Completa**: Documentación automática con Swagger
 - ✅ **Análisis en Tiempo Real**: Cálculo automático de métricas con persistencia
+- ✅ **Sistema de Monitoreo**: Métricas de rendimiento y alertas en tiempo real
+- ✅ **Optimizaciones Avanzadas**: Caching, compresión, lazy loading, bundle splitting
+- ✅ **Seguridad Mejorada**: Rate limiting, validación de entrada, sanitización
 
 ## 🚀 Acceso al Sistema
 
@@ -115,12 +118,13 @@ El sistema utiliza PostgreSQL con Supabase para:
 
 ## 🔧 Para Desarrolladores
 
-### Documentación Técnica
-Consulta la [documentación técnica completa](./docs/SISTEMA_IMMERMEX_DASHBOARD.md) para:
-- Arquitectura detallada del sistema
-- API endpoints y especificaciones
-- Guías de desarrollo y mantenimiento
-- Configuración de despliegue
+### Documentación Técnica Completa
+
+- **[API Documentation](docs/API_DOCUMENTATION.md)**: Documentación completa de la API REST con ejemplos
+- **[System Architecture](docs/SYSTEM_ARCHITECTURE.md)**: Arquitectura del sistema, tecnologías y componentes
+- **[Development Guide](docs/DEVELOPMENT_GUIDE.md)**: Guía completa de desarrollo, testing y deployment
+- **[Troubleshooting & FAQ](docs/TROUBLESHOOTING_FAQ.md)**: Solución de problemas comunes y debugging
+- **[Sistema Original](docs/SISTEMA_IMMERMEX_DASHBOARD.md)**: Documentación técnica original del sistema
 
 ### Agregar Nuevas Funcionalidades
 1. **Nuevos KPIs**: Modificar `backend/database_service.py` y `backend/main_with_db.py`

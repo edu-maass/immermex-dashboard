@@ -158,6 +158,17 @@ class ApiService {
     });
   }
 
+  async uploadComprasFile(file: File): Promise<{ registros_procesados?: number; [key: string]: any }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.request<{ registros_procesados?: number; [key: string]: any }>('/upload/compras', {
+      method: 'POST',
+      headers: {}, // No Content-Type header for FormData
+      body: formData,
+    });
+  }
+
   async getArchivosProcesados(skip: number = 0, limit: number = 100) {
     return this.request(`/archivos?skip=${skip}&limit=${limit}`);
   }

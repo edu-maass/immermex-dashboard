@@ -1,6 +1,6 @@
 import { FC, useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
-import { FileUpload } from './FileUpload';
+import { DualUpload } from './DualUpload';
 import { OptimizedDashboard } from './OptimizedDashboard';
 import { DashboardFiltrado } from './DashboardFiltrado';
 import { DataManagement } from './DataManagement';
@@ -120,8 +120,8 @@ export const MainDashboard: FC = () => {
           </TabsList>
 
           <TabsContent value="upload" className="mt-6">
-            <div className="max-w-2xl mx-auto">
-              <FileUpload onUploadSuccess={handleUploadSuccess} onNewUpload={handleNewUpload} />
+            <div className="max-w-6xl mx-auto">
+              <DualUpload onUploadSuccess={handleUploadSuccess} onNewUpload={handleNewUpload} />
             </div>
           </TabsContent>
 
