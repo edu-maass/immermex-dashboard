@@ -1,12 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from './ui/button';
 import { KPICard } from './KPICard';
 import { FileUpload } from './FileUpload';
 import { Filters } from './Filters';
-import { AgingChart } from './Charts/AgingChart';
-import { TopClientesChart } from './Charts/TopClientesChart';
-import { ConsumoMaterialChart } from './Charts/ConsumoMaterialChart';
-import { ExpectativaCobranzaChart } from './Charts/ExpectativaCobranzaChart';
+import { 
+  LazyAgingChart,
+  LazyTopClientesChart,
+  LazyConsumoMaterialChart,
+  LazyExpectativaCobranzaChart
+} from './LazyCharts';
+import { LoadingSpinner, ChartLoader } from './LoadingSpinner';
+import { useKPIs, useChartData, useFiltersState, useLoadingState } from '../hooks/useOptimizedAPI';
+import { useOptimizedState } from '../hooks/useOptimizedState';
 import { apiService } from '../services/api';
 import { KPIs, FiltrosDashboard, GraficoDatos } from '../types';
 import { 
@@ -27,8 +32,12 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ onUploadSuccess }) => {
-  const [kpis, setKpis] = useState<KPIs | null>(null);
-  const [agingData, setAgingData] = useState<GraficoDatos | null>(null);
+  // Hooks optimizados
+  const { kpis, fetchKPIs, loading: kpisLoading } = useKPIs();
+  const { chartData, fetchAllCharts, loading: chartsLoading } = useChartData();
+  const { filters, updateFilter, clearFilters, hasActiveFilters } = useFiltersState();
+  const { setLoading, isLoading } = useLoadingState();
+  const [optimizedFilters, setOptimizedFilters] = useOptimizedState<FiltrosDashboard | null>(null);
   const [topClientesData, setTopClientesData] = useState<GraficoDatos | null>(null);
   const [consumoMaterialData, setConsumoMaterialData] = useState<GraficoDatos | null>(null);
   const [loading, setLoading] = useState(true);

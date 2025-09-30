@@ -1,7 +1,7 @@
 import { FC, useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 import { FileUpload } from './FileUpload';
-import { Dashboard } from './Dashboard';
+import { OptimizedDashboard } from './OptimizedDashboard';
 import { DashboardFiltrado } from './DashboardFiltrado';
 import { DataManagement } from './DataManagement';
 import { Upload, BarChart3, Package, Database } from 'lucide-react';
@@ -126,7 +126,7 @@ export const MainDashboard: FC = () => {
           </TabsContent>
 
           <TabsContent value="dashboard" className="mt-6">
-            <Dashboard onUploadSuccess={handleUploadSuccess} />
+            <OptimizedDashboard onUploadSuccess={handleUploadSuccess} />
           </TabsContent>
 
           <TabsContent value="pedidos" className="mt-6">
