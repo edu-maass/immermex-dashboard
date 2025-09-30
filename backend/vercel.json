@@ -3,10 +3,7 @@
   "builds": [
     {
       "src": "main_with_db.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "50mb"
-      }
+      "use": "@vercel/python"
     }
   ],
   "routes": [
@@ -14,16 +11,5 @@
       "src": "/(.*)",
       "dest": "main_with_db.py"
     }
-  ],
-  "env": {
-    "ENVIRONMENT": "production",
-    "DEBUG": "false",
-    "LOG_LEVEL": "info",
-    "PYTHON_VERSION": "3.12"
-  },
-  "functions": {
-    "main_with_db.py": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
