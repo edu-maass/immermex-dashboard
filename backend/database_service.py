@@ -673,9 +673,9 @@ class DatabaseService:
                         facturas_relacionadas.extend(facturas_pedido)
                         logger.info(f"Pedido {pedido_num}: {len(facturas_pedido)} facturas encontradas")
                     
-                    # Usar pedidos para calcular expectativa de cobranza
-                    expectativa_cobranza = self._calculate_expectativa_cobranza(facturas_relacionadas, pedidos, anticipos, cobranzas)
-                    logger.info(f"Expectativa de cobranza calculada con {len(pedidos)} pedidos: {len(expectativa_cobranza)} semanas")
+                    # Usar pedidos para calcular expectativa de cobranza con cobranzas filtradas proporcionalmente
+                    expectativa_cobranza = self._calculate_expectativa_cobranza(facturas_relacionadas, pedidos, anticipos, cobranzas_relacionadas_pedidos, aplicar_filtro_proporcional=True)
+                    logger.info(f"Expectativa de cobranza calculada con {len(pedidos)} pedidos y {len(cobranzas_relacionadas_pedidos)} cobranzas filtradas: {len(expectativa_cobranza)} semanas")
                 else:
                     expectativa_cobranza = self._calculate_expectativa_cobranza(facturas_validas, pedidos, anticipos, cobranzas)
                     logger.info(f"Expectativa de cobranza calculada con {len(pedidos)} pedidos: {len(expectativa_cobranza)} semanas")
@@ -804,7 +804,7 @@ class DatabaseService:
         sorted_materiales = sorted(materiales_consumo.items(), key=lambda x: x[1], reverse=True)
         return dict(sorted_materiales[:10])
     
-    def _calculate_expectativa_cobranza(self, facturas: list, pedidos: list, anticipos: list = None, cobranzas: list = None) -> dict:
+    def _calculate_expectativa_cobranza(self, facturas: list, pedidos: list, anticipos: list = None, cobranzas: list = None, aplicar_filtro_proporcional: bool = False) -> dict:
         """Calcula expectativa de cobranza futura basada en pedidos y sus días de crédito"""
         from datetime import datetime, timedelta
         
@@ -884,9 +884,51 @@ class DatabaseService:
             
             # Calcular cobranza real para esta semana usando datos de cobranza filtrada
             try:
-                for cobranza in cobranzas or []:
-                    if cobranza.fecha_pago and semana_inicio <= cobranza.fecha_pago <= semana_fin:
-                        cobranza_real += cobranza.importe_pagado
+                if aplicar_filtro_proporcional and facturas:
+                    # Aplicar filtro proporcional: solo considerar cobranzas relacionadas con facturas de pedidos filtrados
+                    cobranza_real_proporcional = 0
+                    
+                    # Crear diccionario de cobranzas por UUID de factura
+                    cobranzas_por_uuid = {}
+                    for cobranza in cobranzas or []:
+                        if cobranza.fecha_pago and semana_inicio <= cobranza.fecha_pago <= semana_fin:
+                            uuid_factura = cobranza.uuid_factura_relacionada
+                            if uuid_factura not in cobranzas_por_uuid:
+                                cobranzas_por_uuid[uuid_factura] = 0
+                            cobranzas_por_uuid[uuid_factura] += cobranza.importe_pagado
+                    
+                    # Calcular cobranza proporcional para cada factura
+                    for factura in facturas:
+                        if not factura.uuid_factura:
+                            continue
+                        
+                        uuid_factura = factura.uuid_factura
+                        cobranza_factura = cobranzas_por_uuid.get(uuid_factura, 0)
+                        
+                        if cobranza_factura > 0 and factura.monto_total > 0:
+                            # Buscar todos los pedidos asociados a esta factura (no solo los filtrados)
+                            pedidos_factura = [p for p in self.db.query(Pedido).filter(Pedido.folio_factura == factura.folio_factura).all()]
+                            
+                            if pedidos_factura:
+                                # Calcular monto total de todos los pedidos de esta factura
+                                monto_total_pedidos_factura = sum(p.importe_sin_iva for p in pedidos_factura if p.importe_sin_iva)
+                                
+                                # Calcular monto de los pedidos filtrados de esta factura
+                                pedidos_filtrados_factura = [p for p in pedidos if p.folio_factura == factura.folio_factura]
+                                monto_pedidos_filtrados_factura = sum(p.importe_sin_iva for p in pedidos_filtrados_factura if p.importe_sin_iva)
+                                
+                                if monto_total_pedidos_factura > 0:
+                                    # Calcular cobranza proporcional basada en monto
+                                    porcentaje_monto_pedidos_filtrados = monto_pedidos_filtrados_factura / monto_total_pedidos_factura
+                                    cobranza_proporcional = cobranza_factura * porcentaje_monto_pedidos_filtrados
+                                    cobranza_real_proporcional += cobranza_proporcional
+                    
+                    cobranza_real = cobranza_real_proporcional
+                else:
+                    # Cálculo normal sin filtro proporcional
+                    for cobranza in cobranzas or []:
+                        if cobranza.fecha_pago and semana_inicio <= cobranza.fecha_pago <= semana_fin:
+                            cobranza_real += cobranza.importe_pagado
             except Exception as e:
                 logger.warning(f"Error calculando cobranza real para semana {i+5}: {str(e)}")
                 cobranza_real = 0
