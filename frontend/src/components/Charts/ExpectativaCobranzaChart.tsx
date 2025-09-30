@@ -93,12 +93,14 @@ export const ExpectativaCobranzaChart: FC<ExpectativaCobranzaChartProps> = ({ da
                 dataKey="cobranza_esperada" 
                 fill="#3b82f6"
                 name="Esperada"
-                radius={[4, 4, 0, 0]}
+                stackId="cobranza"
+                radius={[0, 0, 0, 0]}
               />
               <Bar 
                 dataKey="cobranza_real" 
                 fill="#10b981"
                 name="Real"
+                stackId="cobranza"
                 radius={[4, 4, 0, 0]}
               />
             </BarChart>
