@@ -47,8 +47,13 @@ class DatabaseService:
             anticipos_count = self._save_anticipos(processed_data_dict.get("cfdi_clean", []), archivo.id)
             pedidos_count = self.pedidos_service.save_pedidos(processed_data_dict.get("pedidos_clean", []), archivo.id)
             
+            # Guardar datos de compras si están presentes
+            compras_count = 0
+            if "compras" in processed_data_dict:
+                compras_count = self._save_compras(processed_data_dict.get("compras", []), archivo.id)
+            
             # Actualizar registro de archivo
-            total_registros = facturas_count + cobranzas_count + anticipos_count + pedidos_count
+            total_registros = facturas_count + cobranzas_count + anticipos_count + pedidos_count + compras_count
             archivo.registros_procesados = total_registros
             archivo.estado = "procesado"
             
@@ -138,6 +143,108 @@ class DatabaseService:
                 count += 1
             except Exception as e:
                 logger.warning(f"Error guardando anticipo: {str(e)}")
+                continue
+        
+        self.db.commit()
+        return count
+    
+    def _save_compras(self, compras_data: list, archivo_id: int) -> int:
+        """Guarda datos de compras"""
+        count = 0
+        for compra_data in compras_data:
+            try:
+                # Crear registro de compra usando SQL directo para evitar problemas de modelo
+                compra_values = {
+                    'fecha_compra': compra_data.get('fecha_compra'),
+                    'numero_factura': DataValidator.safe_string(compra_data.get('numero_factura', '')),
+                    'proveedor': DataValidator.safe_string(compra_data.get('proveedor', '')),
+                    'concepto': DataValidator.safe_string(compra_data.get('concepto', '')),
+                    'categoria': DataValidator.safe_string(compra_data.get('categoria', 'Importación')),
+                    'subcategoria': DataValidator.safe_string(compra_data.get('subcategoria', '')),
+                    'cantidad': DataValidator.safe_float(compra_data.get('cantidad', 0)),
+                    'unidad': DataValidator.safe_string(compra_data.get('unidad', 'KG')),
+                    'precio_unitario': DataValidator.safe_float(compra_data.get('precio_unitario', 0)),
+                    'subtotal': DataValidator.safe_float(compra_data.get('subtotal', 0)),
+                    'iva': DataValidator.safe_float(compra_data.get('iva', 0)),
+                    'total': DataValidator.safe_float(compra_data.get('total', 0)),
+                    'moneda': DataValidator.safe_string(compra_data.get('moneda', 'USD')),
+                    'tipo_cambio': DataValidator.safe_float(compra_data.get('tipo_cambio', 1.0)),
+                    'forma_pago': DataValidator.safe_string(compra_data.get('forma_pago', '')),
+                    'dias_credito': DataValidator.safe_int(compra_data.get('dias_credito', 0)),
+                    'fecha_vencimiento': compra_data.get('fecha_vencimiento'),
+                    'fecha_pago': compra_data.get('fecha_pago'),
+                    'estado_pago': DataValidator.safe_string(compra_data.get('estado_pago', 'pendiente')),
+                    'centro_costo': DataValidator.safe_string(compra_data.get('centro_costo', '')),
+                    'proyecto': DataValidator.safe_string(compra_data.get('proyecto', '')),
+                    'notas': DataValidator.safe_string(compra_data.get('notas', '')),
+                    'archivo_origen': f"Upload/{archivo_id}",
+                    'archivo_id': archivo_id,
+                    'mes': DataValidator.safe_int(compra_data.get('mes', 0)),
+                    'año': DataValidator.safe_int(compra_data.get('año', 0)),
+                    # Campos específicos de importación
+                    'imi': DataValidator.safe_string(compra_data.get('imi', '')),
+                    'puerto_origen': DataValidator.safe_string(compra_data.get('puerto_origen', '')),
+                    'fecha_salida_puerto': compra_data.get('fecha_salida_puerto'),
+                    'fecha_arribo_puerto': compra_data.get('fecha_arribo_puerto'),
+                    'fecha_entrada_inmermex': compra_data.get('fecha_entrada_inmermex'),
+                    'precio_dlls': DataValidator.safe_float(compra_data.get('precio_dlls', 0)),
+                    'xr': DataValidator.safe_float(compra_data.get('xr', 0)),
+                    'financiera': DataValidator.safe_string(compra_data.get('financiera', '')),
+                    'porcentaje_anticipo': DataValidator.safe_float(compra_data.get('porcentaje_anticipo', 0)),
+                    'fecha_anticipo': compra_data.get('fecha_anticipo'),
+                    'anticipo_dlls': DataValidator.safe_float(compra_data.get('anticipo_dlls', 0)),
+                    'tipo_cambio_anticipo': DataValidator.safe_float(compra_data.get('tipo_cambio_anticipo', 0)),
+                    'pago_factura_dlls': DataValidator.safe_float(compra_data.get('pago_factura_dlls', 0)),
+                    'tipo_cambio_factura': DataValidator.safe_float(compra_data.get('tipo_cambio_factura', 0)),
+                    'pu_mxn': DataValidator.safe_float(compra_data.get('pu_mxn', 0)),
+                    'precio_mxn': DataValidator.safe_float(compra_data.get('precio_mxn', 0)),
+                    'porcentaje_imi': DataValidator.safe_float(compra_data.get('porcentaje_imi', 0)),
+                    'fecha_entrada_aduana': compra_data.get('fecha_entrada_aduana'),
+                    'pedimento': DataValidator.safe_string(compra_data.get('pedimento', '')),
+                    'gastos_aduanales': DataValidator.safe_float(compra_data.get('gastos_aduanales', 0)),
+                    'costo_total': DataValidator.safe_float(compra_data.get('costo_total', 0)),
+                    'porcentaje_gastos_aduanales': DataValidator.safe_float(compra_data.get('porcentaje_gastos_aduanales', 0)),
+                    'pu_total': DataValidator.safe_float(compra_data.get('pu_total', 0)),
+                    'fecha_pago_impuestos': compra_data.get('fecha_pago_impuestos'),
+                    'fecha_salida_aduana': compra_data.get('fecha_salida_aduana'),
+                    'dias_en_puerto': DataValidator.safe_int(compra_data.get('dias_en_puerto', 0)),
+                    'agente': DataValidator.safe_string(compra_data.get('agente', '')),
+                    'fac_agente': DataValidator.safe_string(compra_data.get('fac_agente', ''))
+                }
+                
+                # Insertar usando SQL directo
+                insert_query = """
+                    INSERT INTO compras (
+                        fecha_compra, numero_factura, proveedor, concepto, categoria, subcategoria,
+                        cantidad, unidad, precio_unitario, subtotal, iva, total, moneda, tipo_cambio,
+                        forma_pago, dias_credito, fecha_vencimiento, fecha_pago, estado_pago,
+                        centro_costo, proyecto, notas, archivo_origen, archivo_id, mes, año,
+                        imi, puerto_origen, fecha_salida_puerto, fecha_arribo_puerto, fecha_entrada_inmermex,
+                        precio_dlls, xr, financiera, porcentaje_anticipo, fecha_anticipo, anticipo_dlls,
+                        tipo_cambio_anticipo, pago_factura_dlls, tipo_cambio_factura, pu_mxn, precio_mxn,
+                        porcentaje_imi, fecha_entrada_aduana, pedimento, gastos_aduanales, costo_total,
+                        porcentaje_gastos_aduanales, pu_total, fecha_pago_impuestos, fecha_salida_aduana,
+                        dias_en_puerto, agente, fac_agente
+                    ) VALUES (
+                        :fecha_compra, :numero_factura, :proveedor, :concepto, :categoria, :subcategoria,
+                        :cantidad, :unidad, :precio_unitario, :subtotal, :iva, :total, :moneda, :tipo_cambio,
+                        :forma_pago, :dias_credito, :fecha_vencimiento, :fecha_pago, :estado_pago,
+                        :centro_costo, :proyecto, :notas, :archivo_origen, :archivo_id, :mes, :año,
+                        :imi, :puerto_origen, :fecha_salida_puerto, :fecha_arribo_puerto, :fecha_entrada_inmermex,
+                        :precio_dlls, :xr, :financiera, :porcentaje_anticipo, :fecha_anticipo, :anticipo_dlls,
+                        :tipo_cambio_anticipo, :pago_factura_dlls, :tipo_cambio_factura, :pu_mxn, :precio_mxn,
+                        :porcentaje_imi, :fecha_entrada_aduana, :pedimento, :gastos_aduanales, :costo_total,
+                        :porcentaje_gastos_aduanales, :pu_total, :fecha_pago_impuestos, :fecha_salida_aduana,
+                        :dias_en_puerto, :agente, :fac_agente
+                    )
+                """
+                
+                from sqlalchemy import text
+                self.db.execute(text(insert_query), compra_values)
+                count += 1
+                
+            except Exception as e:
+                logger.warning(f"Error guardando compra: {str(e)}")
                 continue
         
         self.db.commit()
