@@ -24,34 +24,34 @@ def run_command(command, description):
         print(result.stderr)
     
     if result.returncode != 0:
-        print(f"❌ Error en: {description}")
+        print(f"ERROR en: {description}")
         return False
     else:
-        print(f"✅ Éxito en: {description}")
+        print(f"EXITO en: {description}")
         return True
 
 def main():
     """Función principal"""
-    print("🧪 Ejecutando tests del backend Immermex Dashboard")
+    print("Ejecutando tests del backend Immermex Dashboard")
     
     # Cambiar al directorio del backend
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     
     # Verificar que estamos en el directorio correcto
     if not os.path.exists("main_with_db.py"):
-        print("❌ Error: No se encontró main_with_db.py. Asegúrate de estar en el directorio backend/")
+        print("ERROR: No se encontró main_with_db.py. Asegúrate de estar en el directorio backend/")
         sys.exit(1)
     
     # Instalar dependencias de testing si no están instaladas
-    print("\n📦 Verificando dependencias de testing...")
+    print("\nVerificando dependencias de testing...")
     try:
         import pytest
         import pytest_cov
-        print("✅ Dependencias de testing ya están instaladas")
+        print("Dependencias de testing ya están instaladas")
     except ImportError:
-        print("📥 Instalando dependencias de testing...")
+        print("Instalando dependencias de testing...")
         if not run_command("pip install -r requirements-test.txt", "Instalación de dependencias de testing"):
-            print("❌ Error instalando dependencias de testing")
+            print("ERROR instalando dependencias de testing")
             sys.exit(1)
     
     # Ejecutar tests
@@ -89,17 +89,17 @@ def main():
         run_command("mypy .", "Verificación de tipos con MyPy")
         
     except FileNotFoundError as e:
-        print(f"⚠️  Herramienta de linting no encontrada: {e}")
+        print(f"WARNING: Herramienta de linting no encontrada: {e}")
         print("Puedes instalarla con: pip install black flake8 mypy")
     
     # Resumen final
     print(f"\n{'='*50}")
     if tests_passed:
-        print("🎉 ¡Todos los tests pasaron exitosamente!")
-        print("✅ El sistema está listo para deployment")
+        print("¡Todos los tests pasaron exitosamente!")
+        print("El sistema está listo para deployment")
     else:
-        print("❌ Algunos tests fallaron")
-        print("🔧 Revisa los errores arriba y corrige los problemas")
+        print("Algunos tests fallaron")
+        print("Revisa los errores arriba y corrige los problemas")
     print(f"{'='*50}")
     
     return 0 if tests_passed else 1
