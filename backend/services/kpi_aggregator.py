@@ -46,9 +46,14 @@ class KPIAggregator:
             
             # Calcular KPIs según el tipo de filtro
             if filtros and filtros.get('pedidos'):
-                return self._calculate_kpis_filtered_by_pedidos(facturas, pedidos, cobranzas, anticipos, filtros)
+                kpis_result = self._calculate_kpis_filtered_by_pedidos(facturas, pedidos, cobranzas, anticipos, filtros)
             else:
-                return self._calculate_kpis_general(facturas, pedidos, cobranzas, anticipos)
+                kpis_result = self._calculate_kpis_general(facturas, pedidos, cobranzas, anticipos)
+            
+            # Calcular expectativa de cobranza
+            kpis_result['expectativa_cobranza'] = self._calculate_expectativa_cobranza(facturas, pedidos, anticipos, cobranzas)
+            
+            return kpis_result
                 
         except Exception as e:
             logger.error(f"Error calculando KPIs: {str(e)}")
@@ -211,3 +216,106 @@ class KPIAggregator:
             "dias_cxc_ajustado": 0.0,
             "ciclo_efectivo": 0.0
         }
+    
+    def _calculate_expectativa_cobranza(self, facturas: list, pedidos: list, anticipos: list = None, cobranzas: list = None) -> dict:
+        """Calcula expectativa de cobranza futura basada en pedidos y sus días de crédito"""
+        from datetime import datetime, timedelta
+        
+        expectativa = {}
+        
+        logger.info(f"Calculando expectativa de cobranza con {len(pedidos)} pedidos, {len(facturas)} facturas, {len(cobranzas or [])} cobranzas")
+        
+        # Obtener fecha actual
+        hoy = datetime.now()
+        
+        # Crear diccionarios para búsqueda rápida
+        anticipos_por_factura = {}
+        if anticipos:
+            for anticipo in anticipos:
+                if hasattr(anticipo, 'uuid_factura_relacionada') and anticipo.uuid_factura_relacionada:
+                    anticipos_por_factura[anticipo.uuid_factura_relacionada] = anticipos_por_factura.get(anticipo.uuid_factura_relacionada, 0) + anticipo.importe_relacion
+        
+        cobranzas_por_factura = {}
+        if cobranzas:
+            for cobranza in cobranzas:
+                if cobranza.uuid_factura_relacionada:
+                    cobranzas_por_factura[cobranza.uuid_factura_relacionada] = cobranzas_por_factura.get(cobranza.uuid_factura_relacionada, 0) + cobranza.importe_pagado
+        
+        # Calcular fecha de referencia basada en los pedidos
+        fechas_pedidos = [p.fecha_factura for p in pedidos if p.fecha_factura]
+        if fechas_pedidos:
+            fecha_referencia = min(fechas_pedidos)
+            # Ajustar al lunes de esa semana
+            dias_hasta_lunes = fecha_referencia.weekday()
+            fecha_referencia = fecha_referencia - timedelta(days=dias_hasta_lunes)
+        else:
+            fecha_referencia = hoy
+        
+        logger.info(f"Fecha de referencia para semanas: {fecha_referencia.strftime('%Y-%m-%d')}")
+        
+        # Agrupar por semana (4 semanas pasadas + 18 semanas futuras para cubrir créditos de 120 días)
+        for i in range(-4, 18):
+            semana_inicio = fecha_referencia + timedelta(weeks=i)
+            semana_fin = semana_inicio + timedelta(days=6)
+            semana_key = f"Semana {i+5} ({semana_inicio.strftime('%d/%m')} - {semana_fin.strftime('%d/%m')})"
+            
+            cobranza_esperada = 0
+            cobranza_real = 0
+            pedidos_pendientes = 0
+            
+            # Calcular cobranza esperada basada en pedidos que vencen en esa semana
+            for pedido in pedidos:
+                if not pedido.fecha_factura:
+                    continue
+                
+                try:
+                    # Calcular fecha de vencimiento usando fecha_factura + dias_credito del pedido
+                    dias_credito = pedido.dias_credito or 0
+                    fecha_vencimiento = pedido.fecha_factura + timedelta(days=dias_credito)
+                    
+                    # Si el pedido vence en esta semana
+                    if semana_inicio <= fecha_vencimiento <= semana_fin:
+                        # Verificar si el pedido ya está cobrado
+                        pedido_cobrado = False
+                        if pedido.folio_factura:
+                            # Buscar factura relacionada
+                            factura_pedido = next((f for f in facturas if f.folio_factura == pedido.folio_factura), None)
+                            if factura_pedido and factura_pedido.uuid_factura:
+                                # Buscar cobranzas de esta factura
+                                cobranzas_factura = [c for c in cobranzas or [] if c.uuid_factura_relacionada == factura_pedido.uuid_factura]
+                                if cobranzas_factura:
+                                    total_cobrado_factura = sum(c.importe_pagado for c in cobranzas_factura)
+                                    if factura_pedido.monto_total > 0:
+                                        porcentaje_cobrado = total_cobrado_factura / factura_pedido.monto_total
+                                        if porcentaje_cobrado >= 0.99:  # 99% o más cobrado
+                                            pedido_cobrado = True
+                        
+                        # Solo incluir en cobranza esperada si NO está cobrado
+                        if not pedido_cobrado:
+                            monto_pedido = getattr(pedido, 'importe_sin_iva', 0) or 0
+                            
+                            # Solo considerar si hay monto positivo
+                            if monto_pedido > 0:
+                                cobranza_esperada += monto_pedido
+                                pedidos_pendientes += 1
+                                
+                except Exception as e:
+                    logger.warning(f"Error procesando pedido {pedido.id}: {str(e)}")
+                    continue
+            
+            # Calcular cobranza real para esta semana
+            if cobranzas:
+                for cobranza in cobranzas:
+                    if cobranza.fecha_pago and semana_inicio <= cobranza.fecha_pago <= semana_fin:
+                        cobranza_real += cobranza.importe_pagado
+            
+            # Solo incluir semanas con datos
+            if cobranza_esperada > 0 or cobranza_real > 0:
+                expectativa[semana_key] = {
+                    'cobranza_esperada': cobranza_esperada,
+                    'cobranza_real': cobranza_real,
+                    'pedidos_pendientes': pedidos_pendientes
+                }
+        
+        logger.info(f"Expectativa de cobranza calculada: {len(expectativa)} semanas con datos")
+        return expectativa
