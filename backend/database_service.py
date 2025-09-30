@@ -886,14 +886,17 @@ class DatabaseService:
             pedidos_vencen_semana = 0
             
             for pedido in pedidos:
-                if not pedido.fecha_factura or not pedido.dias_credito:
+                if not pedido.fecha_factura:
                     continue
                 
-                pedidos_con_credito += 1
+                # Contar pedidos con crédito (dias_credito > 0)
+                if pedido.dias_credito and pedido.dias_credito > 0:
+                    pedidos_con_credito += 1
                 
                 try:
                     # Calcular fecha de vencimiento usando fecha_factura + dias_credito del pedido
-                    fecha_vencimiento = pedido.fecha_factura + timedelta(days=pedido.dias_credito)
+                    dias_credito = pedido.dias_credito or 0
+                    fecha_vencimiento = pedido.fecha_factura + timedelta(days=dias_credito)
                     
                     # Si el pedido vence en esta semana
                     if semana_inicio <= fecha_vencimiento <= semana_fin:
