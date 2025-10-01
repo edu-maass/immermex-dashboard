@@ -810,6 +810,11 @@ async def get_compras_kpis(
 ):
     """Obtiene KPIs principales de compras con filtros opcionales"""
     try:
+        import time
+        start_time = time.time()
+        
+        logger.info(f"Iniciando cálculo de KPIs de compras - filtros: {mes}, {año}, {material}")
+        
         db_service = DatabaseService(db)
         
         # Preparar filtros
@@ -822,6 +827,12 @@ async def get_compras_kpis(
             filtros['material'] = material
         
         kpis = db_service.calculate_compras_kpis(filtros)
+        
+        end_time = time.time()
+        execution_time = end_time - start_time
+        
+        logger.info(f"KPIs de compras calculados exitosamente en {execution_time:.2f} segundos")
+        
         return kpis
         
     except Exception as e:
@@ -905,6 +916,80 @@ async def get_materiales_compras(db: Session = Depends(get_db)):
         
     except Exception as e:
         logger.error(f"Error obteniendo materiales de compras: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== ENDPOINTS ADICIONALES (404 FIXES) ====================
+
+@app.get("/api/filtros-disponibles")
+async def get_filtros_disponibles(db: Session = Depends(get_db)):
+    """Obtiene opciones disponibles para filtros (compatible con frontend)"""
+    try:
+        db_service = DatabaseService(db)
+        filtros = db_service.get_filtros_disponibles()
+        return filtros
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo filtros disponibles: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/pedidos-filtro")
+async def get_pedidos_filtro(db: Session = Depends(get_db)):
+    """Obtiene lista de pedidos para filtros (compatible con frontend)"""
+    try:
+        db_service = DatabaseService(db)
+        filtros = db_service.get_filtros_disponibles()
+        return filtros.get("pedidos", [])
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo pedidos para filtro: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/clientes-filtro")
+async def get_clientes_filtro(db: Session = Depends(get_db)):
+    """Obtiene lista de clientes para filtros (compatible con frontend)"""
+    try:
+        db_service = DatabaseService(db)
+        filtros = db_service.get_filtros_disponibles()
+        return filtros.get("clientes", [])
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo clientes para filtro: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/materiales-filtro")
+async def get_materiales_filtro(db: Session = Depends(get_db)):
+    """Obtiene lista de materiales para filtros (compatible con frontend)"""
+    try:
+        db_service = DatabaseService(db)
+        filtros = db_service.get_filtros_disponibles()
+        return filtros.get("materiales", [])
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo materiales para filtro: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/archivos-procesados")
+async def get_archivos_procesados(db: Session = Depends(get_db)):
+    """Obtiene lista de archivos procesados (compatible con frontend)"""
+    try:
+        db_service = DatabaseService(db)
+        archivos = db_service.get_archivos_procesados()
+        return archivos
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo archivos procesados: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/data-summary")
+async def get_data_summary(db: Session = Depends(get_db)):
+    """Obtiene resumen de datos disponibles (compatible con frontend)"""
+    try:
+        db_service = DatabaseService(db)
+        summary = db_service.get_data_summary()
+        return summary
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo resumen de datos: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

@@ -682,7 +682,7 @@ class DatabaseService:
             
             # Calcular KPIs básicos
             total_compras = sum(c.total for c in compras if c.total)
-            total_compras_usd = sum(c.total / c.tipo_cambio for c in compras if c.total and c.tipo_cambio)
+            total_compras_usd = sum(c.total / c.tipo_cambio for c in compras if c.total and c.tipo_cambio and c.tipo_cambio > 0)
             
             # Compras pendientes
             compras_pendientes = [c for c in compras if c.estado_pago == 'pendiente']
@@ -917,6 +917,29 @@ class DatabaseService:
             logger.error(f"Error obteniendo materiales de compras: {str(e)}")
             return []
     
+    def get_archivos_procesados(self) -> list:
+        """Obtiene lista de archivos procesados"""
+        try:
+            archivos = self.db.query(ArchivoProcesado).order_by(
+                ArchivoProcesado.fecha_procesamiento.desc()
+            ).limit(50).all()
+            
+            return [
+                {
+                    "id": archivo.id,
+                    "nombre_archivo": archivo.nombre_archivo,
+                    "tipo_archivo": archivo.tipo_archivo,
+                    "registros_procesados": archivo.registros_procesados,
+                    "fecha_procesamiento": archivo.fecha_procesamiento.isoformat() if archivo.fecha_procesamiento else None,
+                    "hash_archivo": archivo.hash_archivo
+                }
+                for archivo in archivos
+            ]
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo archivos procesados: {str(e)}")
+            return []
+    
     def _get_default_compras_kpis(self) -> dict:
         """Retorna KPIs por defecto para compras cuando no hay datos"""
         return {
@@ -935,19 +958,46 @@ class DatabaseService:
     def _calculate_margen_bruto_compras_pedidos(self, compras: list) -> float:
         """Calcula margen bruto promedio combinando datos de compras y pedidos"""
         try:
-            # Obtener pedidos relacionados por concepto/material
-            margenes = []
+            # Optimización: obtener todos los pedidos de una vez
+            if not compras:
+                return 0
+                
+            # Obtener todos los materiales únicos de compras
+            materiales_compras = set()
+            compras_con_precio = []
             
             for compra in compras:
                 if compra.concepto and compra.precio_unitario:
-                    # Buscar pedidos relacionados por concepto
-                    pedidos_relacionados = self.db.query(Pedido).filter(
-                        Pedido.material.contains(compra.concepto[:10])  # Buscar por los primeros 10 caracteres
-                    ).all()
-                    
-                    for pedido in pedidos_relacionados:
-                        if pedido.precio_unitario and pedido.precio_unitario > 0:
-                            margen = ((pedido.precio_unitario - compra.precio_unitario) / pedido.precio_unitario) * 100
+                    materiales_compras.add(compra.concepto[:10])
+                    compras_con_precio.append(compra)
+            
+            if not materiales_compras:
+                return 0
+            
+            # Query optimizada: obtener todos los pedidos relacionados en una sola consulta
+            pedidos_relacionados = self.db.query(Pedido).filter(
+                or_(*[Pedido.material.contains(material) for material in materiales_compras])
+            ).all()
+            
+            # Crear diccionario para búsqueda rápida
+            pedidos_por_material = {}
+            for pedido in pedidos_relacionados:
+                if pedido.material and pedido.precio_unitario:
+                    for material in materiales_compras:
+                        if material in pedido.material:
+                            if material not in pedidos_por_material:
+                                pedidos_por_material[material] = []
+                            pedidos_por_material[material].append(pedido.precio_unitario)
+                            break
+            
+            # Calcular márgenes
+            margenes = []
+            for compra in compras_con_precio:
+                material_key = compra.concepto[:10]
+                if material_key in pedidos_por_material:
+                    for precio_pedido in pedidos_por_material[material_key]:
+                        if precio_pedido > 0:
+                            margen = ((precio_pedido - compra.precio_unitario) / precio_pedido) * 100
                             margenes.append(margen)
             
             return sum(margenes) / len(margenes) if margenes else 0
