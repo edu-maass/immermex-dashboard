@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, memo } from 'react';
 import { Button } from './ui/button';
 import { KPICard } from './KPICard';
-import { FileUpload } from './FileUpload';
 import { Filters } from './Filters';
 import { 
   LazyAgingChart,
@@ -47,7 +46,7 @@ const KPIsSection = memo(({ kpis, loading }: { kpis: KPIs | null; loading: boole
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
       {/* Facturación Total */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between">
@@ -158,6 +157,34 @@ const KPIsSection = memo(({ kpis, loading }: { kpis: KPIs | null; loading: boole
           <p className="text-sm text-gray-500 mt-1">Toneladas totales</p>
         </div>
       </div>
+
+      {/* Precio Unitario Promedio */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <DollarSign className="h-5 w-5 text-green-600" />
+            <h3 className="text-sm font-medium text-gray-500">Precio Unitario</h3>
+          </div>
+        </div>
+        <div className="mt-2">
+          <p className="text-2xl font-bold text-gray-900">${kpis.precio_unitario_promedio?.toFixed(2)}</p>
+          <p className="text-sm text-gray-500 mt-1">Promedio por kg</p>
+        </div>
+      </div>
+
+      {/* Costo Unitario Promedio */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <TrendingUp className="h-5 w-5 text-red-600" />
+            <h3 className="text-sm font-medium text-gray-500">Costo Unitario</h3>
+          </div>
+        </div>
+        <div className="mt-2">
+          <p className="text-2xl font-bold text-gray-900">${kpis.costo_unitario_promedio?.toFixed(2)}</p>
+          <p className="text-sm text-gray-500 mt-1">Promedio por kg</p>
+        </div>
+      </div>
     </div>
   );
 });
@@ -258,10 +285,6 @@ export const OptimizedDashboard: React.FC<DashboardProps> = ({ onUploadSuccess }
           <p className="text-gray-600">Análisis de facturación, cobranza y pedidos</p>
         </div>
 
-        {/* Upload de archivos */}
-        <div className="mb-8">
-          <FileUpload onUploadSuccess={handleUploadSuccess} />
-        </div>
 
         {/* Filtros */}
         <div className="mb-8">

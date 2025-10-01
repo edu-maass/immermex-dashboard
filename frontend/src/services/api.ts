@@ -146,6 +146,20 @@ class ApiService {
     return this.request(`/graficos/consumo-material?${queryString}`);
   }
 
+  // Método genérico para obtener datos de gráficos
+  async getChartData(chartType: string, filtros?: any) {
+    switch (chartType) {
+      case 'aging':
+        return this.getGraficoAging(filtros);
+      case 'top-clientes':
+        return this.getGraficoTopClientes(10, filtros);
+      case 'consumo-material':
+        return this.getGraficoConsumoMaterial(10, filtros);
+      default:
+        throw new Error(`Tipo de gráfico no soportado: ${chartType}`);
+    }
+  }
+
   // Archivos
   async uploadFile(file: File): Promise<{ registros_procesados?: number; [key: string]: any }> {
     const formData = new FormData();

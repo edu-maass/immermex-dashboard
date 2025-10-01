@@ -210,7 +210,7 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-6">
         {/* Facturación */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
@@ -280,6 +280,34 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
           <div className="mt-2">
             <p className="text-2xl font-bold text-gray-900">{kpis.clientes_unicos || 0}</p>
             <p className="text-sm text-gray-500">clientes activos</p>
+          </div>
+        </div>
+
+        {/* Precio Unitario Promedio */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <DollarSign className="h-5 w-5 text-green-600" />
+              <h3 className="text-sm font-medium text-gray-500">Precio Unitario</h3>
+            </div>
+          </div>
+          <div className="mt-2">
+            <p className="text-2xl font-bold text-gray-900">{formatCurrency(kpis.precio_unitario_promedio || 0)}</p>
+            <p className="text-sm text-gray-500 mt-1">Promedio por kg</p>
+          </div>
+        </div>
+
+        {/* Costo Unitario Promedio */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <TrendingUp className="h-5 w-5 text-red-600" />
+              <h3 className="text-sm font-medium text-gray-500">Costo Unitario</h3>
+            </div>
+          </div>
+          <div className="mt-2">
+            <p className="text-2xl font-bold text-gray-900">{formatCurrency(kpis.costo_unitario_promedio || 0)}</p>
+            <p className="text-sm text-gray-500 mt-1">Promedio por kg</p>
           </div>
         </div>
       </div>

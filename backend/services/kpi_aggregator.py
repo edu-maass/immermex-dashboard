@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from .facturacion_service import FacturacionService
 from .cobranza_service import CobranzaService
 from .pedidos_service import PedidosService
-from database import CFDIRelacionado, Cobranza
+from database import CFDIRelacionado, Cobranza, Compras
 from utils.logging_config import log_performance
 from utils.cache import cache_kpis, invalidate_data_cache
 import time
@@ -107,6 +107,15 @@ class KPIAggregator:
         pedidos_unicos = len(set(p.pedido for p in pedidos if p.pedido))
         toneladas_total = sum(p.kg for p in pedidos)
         
+        # Calcular precio unitario promedio
+        precios_unitarios = [p.precio_unitario for p in pedidos if p.precio_unitario and p.precio_unitario > 0]
+        precio_unitario_promedio = sum(precios_unitarios) / len(precios_unitarios) if precios_unitarios else 0
+        
+        # Calcular costo unitario promedio desde compras
+        compras = self.db.query(Compras).filter(Compras.precio_unitario > 0).all()
+        costos_unitarios = [c.precio_unitario for c in compras if c.precio_unitario and c.precio_unitario > 0]
+        costo_unitario_promedio = sum(costos_unitarios) / len(costos_unitarios) if costos_unitarios else 0
+        
         # Calcular cobranza sin IVA
         cobranza_sin_iva = cobranza_total / 1.16 if cobranza_total > 0 else 0
         
@@ -129,6 +138,8 @@ class KPIAggregator:
             "clientes_unicos": clientes_unicos,
             "pedidos_unicos": pedidos_unicos,
             "toneladas_total": round(toneladas_total / 1000, 2),
+            "precio_unitario_promedio": round(precio_unitario_promedio, 2),
+            "costo_unitario_promedio": round(costo_unitario_promedio, 2),
             "aging_cartera": aging_cartera,
             "top_clientes": top_clientes,
             "consumo_material": consumo_material,
@@ -169,6 +180,15 @@ class KPIAggregator:
         pedidos_unicos = len(set(p.pedido for p in pedidos if p.pedido))
         toneladas_total = sum(p.kg for p in pedidos)
         
+        # Calcular precio unitario promedio
+        precios_unitarios = [p.precio_unitario for p in pedidos if p.precio_unitario and p.precio_unitario > 0]
+        precio_unitario_promedio = sum(precios_unitarios) / len(precios_unitarios) if precios_unitarios else 0
+        
+        # Calcular costo unitario promedio desde compras
+        compras = self.db.query(Compras).filter(Compras.precio_unitario > 0).all()
+        costos_unitarios = [c.precio_unitario for c in compras if c.precio_unitario and c.precio_unitario > 0]
+        costo_unitario_promedio = sum(costos_unitarios) / len(costos_unitarios) if costos_unitarios else 0
+        
         # Calcular cobranza sin IVA
         cobranza_sin_iva = sum(c.importe_pagado / 1.16 for c in cobranzas_relacionadas if c.importe_pagado > 0)
         
@@ -191,6 +211,8 @@ class KPIAggregator:
             "clientes_unicos": clientes_unicos,
             "pedidos_unicos": pedidos_unicos,
             "toneladas_total": round(toneladas_total / 1000, 2),
+            "precio_unitario_promedio": round(precio_unitario_promedio, 2),
+            "costo_unitario_promedio": round(costo_unitario_promedio, 2),
             "aging_cartera": aging_cartera,
             "top_clientes": top_clientes,
             "consumo_material": consumo_material,
@@ -216,6 +238,8 @@ class KPIAggregator:
             "clientes_unicos": 0,
             "pedidos_unicos": 0,
             "toneladas_total": 0.0,
+            "precio_unitario_promedio": 0.0,
+            "costo_unitario_promedio": 0.0,
             "aging_cartera": {},
             "top_clientes": {},
             "consumo_material": {},

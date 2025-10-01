@@ -25,6 +25,10 @@ export interface KPIs {
   cantidad_total_pedidos: number;
   toneladas_total: number;
   
+  // Precios y Costos
+  precio_unitario_promedio: number;
+  costo_unitario_promedio: number;
+  
   // Inventario
   rotacion_inventario: number;
   dias_cxc_ajustado: number;
