@@ -216,10 +216,12 @@ def process_compras_data(df: pd.DataFrame) -> Dict[str, Any]:
     # Convertir a lista de diccionarios
     compras_data = mapped_df.to_dict('records')
     
-    # Filtrar registros válidos (que tengan al menos proveedor y cantidad)
+    # Filtrar registros válidos (que tengan fecha_compra, proveedor y cantidad)
     compras_data = [
         record for record in compras_data 
-        if pd.notna(record.get('proveedor')) and record.get('cantidad', 0) > 0
+        if pd.notna(record.get('fecha_compra')) and 
+           pd.notna(record.get('proveedor')) and 
+           record.get('cantidad', 0) > 0
     ]
     
     logger.info(f"Datos de compras procesados: {len(compras_data)} registros válidos")
