@@ -264,6 +264,18 @@ export const OptimizedDashboard: React.FC<DashboardProps> = ({ onUploadSuccess }
     }));
   }, []);
 
+  // Función para transformar GraficoDatos a formato de array para charts
+  const transformChartData = useCallback((chartData: any) => {
+    if (!chartData || !Array.isArray(chartData.labels) || !Array.isArray(chartData.data)) {
+      return [];
+    }
+    
+    return chartData.labels.map((label: string, index: number) => ({
+      name: label,
+      value: chartData.data[index] || 0
+    }));
+  }, []);
+
   const loading = isLoading('initial') || isLoading('upload');
 
   if (loading) {
@@ -320,17 +332,17 @@ export const OptimizedDashboard: React.FC<DashboardProps> = ({ onUploadSuccess }
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Aging de Cartera */}
           {chartData.aging && (
-            <LazyAgingChart data={chartData.aging} />
+            <LazyAgingChart data={transformChartData(chartData.aging)} />
           )}
 
           {/* Top Clientes */}
           {chartData['top-clientes'] && (
-            <LazyTopClientesChart data={chartData['top-clientes']} />
+            <LazyTopClientesChart data={transformChartData(chartData['top-clientes'])} />
           )}
 
           {/* Consumo de Material */}
           {chartData['consumo-material'] && (
-            <LazyConsumoMaterialChart data={chartData['consumo-material']} />
+            <LazyConsumoMaterialChart data={transformChartData(chartData['consumo-material'])} />
           )}
 
           {/* Expectativa de Cobranza */}

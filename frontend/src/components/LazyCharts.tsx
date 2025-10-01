@@ -10,7 +10,7 @@ const ExpectativaCobranzaChart = lazy(() => import('./Charts/ExpectativaCobranza
 
 // Props interfaces
 interface ChartProps {
-  data: GraficoDatos;
+  data: Array<{ name: string; value: number }>;
 }
 
 interface ExpectativaCobranzaProps {

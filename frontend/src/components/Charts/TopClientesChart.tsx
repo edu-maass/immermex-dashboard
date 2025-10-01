@@ -7,6 +7,25 @@ interface TopClientesChartProps {
 }
 
 export const TopClientesChart: FC<TopClientesChartProps> = ({ data }) => {
+  // Safety check for data
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Top 10 Clientes por Facturación</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80 flex items-center justify-center text-gray-500">
+            <div className="text-center">
+              <p className="text-lg font-medium">Sin datos disponibles</p>
+              <p className="text-sm">No hay información de clientes</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const formatCurrency = (value: number) => {
     if (value >= 1000000) return `$${Math.round(value / 1000000)}M`;
     if (value >= 1000) return `$${Math.round(value / 1000)}K`;

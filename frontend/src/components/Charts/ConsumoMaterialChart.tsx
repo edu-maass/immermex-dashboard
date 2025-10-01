@@ -7,6 +7,25 @@ interface ConsumoMaterialChartProps {
 }
 
 export const ConsumoMaterialChart: FC<ConsumoMaterialChartProps> = ({ data }) => {
+  // Safety check for data
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Consumo por Material</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80 flex items-center justify-center text-gray-500">
+            <div className="text-center">
+              <p className="text-lg font-medium">Sin datos disponibles</p>
+              <p className="text-sm">No hay información de consumo de material</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const COLORS = [
     '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
     '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'

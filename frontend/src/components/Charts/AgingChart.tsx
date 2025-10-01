@@ -7,6 +7,25 @@ interface AgingChartProps {
 }
 
 export const AgingChart: FC<AgingChartProps> = ({ data }) => {
+  // Safety check for data
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Aging de Cartera</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80 flex items-center justify-center text-gray-500">
+            <div className="text-center">
+              <p className="text-lg font-medium">Sin datos disponibles</p>
+              <p className="text-sm">No hay información de aging de cartera</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const colors = {
     '0-30 dias': '#10b981',
     '31-60 dias': '#f59e0b',
