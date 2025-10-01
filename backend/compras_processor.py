@@ -233,15 +233,19 @@ def process_compras_data(df: pd.DataFrame) -> Dict[str, Any]:
     mapped_df['subtotal'] = mapped_df['cantidad'] * mapped_df['precio_unitario']
     mapped_df['total'] = mapped_df['costo_total'].fillna(mapped_df['subtotal'])
     
-    # Asegurar que concepto tenga un valor - usar IMI si concepto está vacío
-    if 'concepto' in mapped_df.columns and 'imi' in mapped_df.columns:
-        mapped_df['concepto'] = mapped_df['concepto'].fillna(mapped_df['imi'])
-        mapped_df['concepto'] = mapped_df['concepto'].replace('', mapped_df['imi'])
-    
-    # Si concepto aún está vacío, usar un valor por defecto
+    # Asegurar que concepto tenga un valor
     if 'concepto' in mapped_df.columns:
+        # Primero llenar NaN con IMI si está disponible
+        if 'imi' in mapped_df.columns:
+            mapped_df['concepto'] = mapped_df.apply(
+                lambda row: row['imi'] if (pd.isna(row['concepto']) or row['concepto'] == '') else row['concepto'], 
+                axis=1
+            )
+        # Si aún está vacío, usar valor por defecto
         mapped_df['concepto'] = mapped_df['concepto'].fillna('Material importado')
-        mapped_df['concepto'] = mapped_df['concepto'].replace('', 'Material importado')
+        mapped_df['concepto'] = mapped_df['concepto'].apply(
+            lambda x: 'Material importado' if x == '' else x
+        )
     
     # Convertir a lista de diccionarios
     compras_data = mapped_df.to_dict('records')
