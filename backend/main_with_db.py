@@ -65,14 +65,14 @@ async def startup_event():
         database_url = os.getenv("DATABASE_URL", "sqlite:///./immermex.db")
         
         if database_url.startswith("postgresql://"):
-            logger.info("🌐 Conectando a Supabase/PostgreSQL en la nube")
-            logger.info(f"🔗 Host: {database_url.split('@')[1].split('/')[0] if '@' in database_url else 'configurado'}")
+            logger.info("Conectando a Supabase/PostgreSQL en la nube")
+            logger.info(f"Host: {database_url.split('@')[1].split('/')[0] if '@' in database_url else 'configurado'}")
         else:
-            logger.info("💾 Usando SQLite local para desarrollo")
+            logger.info("Usando SQLite local para desarrollo")
         
         success = init_db()
         if success:
-            logger.info("✅ API con base de datos iniciada correctamente")
+            logger.info("API con base de datos iniciada correctamente")
             
             # Verificar conexión
             try:
@@ -80,15 +80,15 @@ async def startup_event():
                 from sqlalchemy import text
                 with SessionLocal() as db:
                     db.execute(text("SELECT 1"))
-                logger.info("✅ Conexión a base de datos verificada")
+                logger.info("Conexion a base de datos verificada")
             except Exception as e:
-                logger.warning(f"⚠️  Advertencia en conexión: {str(e)}")
+                logger.warning(f"Advertencia en conexion: {str(e)}")
                 
         else:
-            logger.error("❌ Error inicializando base de datos")
+            logger.error("Error inicializando base de datos")
     except Exception as e:
-        logger.error(f"❌ Error en startup: {str(e)}")
-        logger.error("💡 Asegúrate de que DATABASE_URL esté configurada correctamente")
+        logger.error(f"Error en startup: {str(e)}")
+        logger.error("Asegurate de que DATABASE_URL este configurada correctamente")
 
 @app.get("/")
 async def root():

@@ -172,6 +172,79 @@ class Pedido(Base):
         Index('idx_pedido_material_fecha', 'material', 'fecha_factura'),
     )
 
+class Compras(Base):
+    __tablename__ = "compras"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    fecha_compra = Column(DateTime, index=True)
+    numero_factura = Column(String, index=True)
+    proveedor = Column(String, index=True)
+    concepto = Column(Text)
+    categoria = Column(String)
+    subcategoria = Column(String)
+    cantidad = Column(Float, default=0.0)
+    unidad = Column(String, default='KG')
+    precio_unitario = Column(Float, default=0.0)
+    subtotal = Column(Float, default=0.0)
+    iva = Column(Float, default=0.0)
+    total = Column(Float, default=0.0)
+    moneda = Column(String, default='USD')
+    tipo_cambio = Column(Float, default=1.0)
+    forma_pago = Column(String)
+    dias_credito = Column(Integer, default=0)
+    fecha_vencimiento = Column(DateTime)
+    fecha_pago = Column(DateTime)
+    estado_pago = Column(String, default='pendiente')
+    centro_costo = Column(String)
+    proyecto = Column(String)
+    notas = Column(Text)
+    archivo_origen = Column(String)
+    archivo_id = Column(Integer, index=True)
+    mes = Column(Integer, index=True)
+    año = Column(Integer, index=True)
+    
+    # Campos específicos de importación
+    imi = Column(String)
+    puerto_origen = Column(String)
+    fecha_salida_puerto = Column(DateTime)
+    fecha_arribo_puerto = Column(DateTime)
+    fecha_entrada_inmermex = Column(DateTime)
+    precio_dlls = Column(Float)
+    xr = Column(Float)
+    financiera = Column(String)
+    porcentaje_anticipo = Column(Float)
+    fecha_anticipo = Column(DateTime)
+    anticipo_dlls = Column(Float)
+    tipo_cambio_anticipo = Column(Float)
+    pago_factura_dlls = Column(Float)
+    tipo_cambio_factura = Column(Float)
+    pu_mxn = Column(Float)
+    precio_mxn = Column(Float)
+    porcentaje_imi = Column(Float)
+    fecha_entrada_aduana = Column(DateTime)
+    pedimento = Column(String)
+    gastos_aduanales = Column(Float)
+    costo_total = Column(Float)
+    porcentaje_gastos_aduanales = Column(Float)
+    pu_total = Column(Float)
+    fecha_pago_impuestos = Column(DateTime)
+    fecha_salida_aduana = Column(DateTime)
+    dias_en_puerto = Column(Integer)
+    agente = Column(String)
+    fac_agente = Column(String)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        Index('idx_compras_fecha', 'fecha_compra'),
+        Index('idx_compras_proveedor', 'proveedor'),
+        Index('idx_compras_archivo', 'archivo_id'),
+        Index('idx_compras_mes_año', 'mes', 'año'),
+        Index('idx_compras_estado_pago', 'estado_pago'),
+        Index('idx_compras_numero_factura', 'numero_factura'),
+    )
+
 class ArchivoProcesado(Base):
     __tablename__ = "archivos_procesados"
     
