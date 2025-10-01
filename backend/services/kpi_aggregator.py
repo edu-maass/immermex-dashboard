@@ -116,6 +116,10 @@ class KPIAggregator:
         costos_unitarios = [c.precio_unitario for c in compras if c.precio_unitario and c.precio_unitario > 0]
         costo_unitario_promedio = sum(costos_unitarios) / len(costos_unitarios) if costos_unitarios else 0
         
+        # Calcular utilidad y margen por kg
+        utilidad_por_kg = precio_unitario_promedio - costo_unitario_promedio
+        margen_por_kg = (utilidad_por_kg / precio_unitario_promedio * 100) if precio_unitario_promedio > 0 else 0
+        
         # Calcular cobranza sin IVA
         cobranza_sin_iva = cobranza_total / 1.16 if cobranza_total > 0 else 0
         
@@ -140,6 +144,8 @@ class KPIAggregator:
             "toneladas_total": round(toneladas_total / 1000, 2),
             "precio_unitario_promedio": round(precio_unitario_promedio, 2),
             "costo_unitario_promedio": round(costo_unitario_promedio, 2),
+            "utilidad_por_kg": round(utilidad_por_kg, 2),
+            "margen_por_kg": round(margen_por_kg, 2),
             "aging_cartera": aging_cartera,
             "top_clientes": top_clientes,
             "consumo_material": consumo_material,
@@ -189,6 +195,10 @@ class KPIAggregator:
         costos_unitarios = [c.precio_unitario for c in compras if c.precio_unitario and c.precio_unitario > 0]
         costo_unitario_promedio = sum(costos_unitarios) / len(costos_unitarios) if costos_unitarios else 0
         
+        # Calcular utilidad y margen por kg
+        utilidad_por_kg = precio_unitario_promedio - costo_unitario_promedio
+        margen_por_kg = (utilidad_por_kg / precio_unitario_promedio * 100) if precio_unitario_promedio > 0 else 0
+        
         # Calcular cobranza sin IVA
         cobranza_sin_iva = sum(c.importe_pagado / 1.16 for c in cobranzas_relacionadas if c.importe_pagado > 0)
         
@@ -213,6 +223,8 @@ class KPIAggregator:
             "toneladas_total": round(toneladas_total / 1000, 2),
             "precio_unitario_promedio": round(precio_unitario_promedio, 2),
             "costo_unitario_promedio": round(costo_unitario_promedio, 2),
+            "utilidad_por_kg": round(utilidad_por_kg, 2),
+            "margen_por_kg": round(margen_por_kg, 2),
             "aging_cartera": aging_cartera,
             "top_clientes": top_clientes,
             "consumo_material": consumo_material,
@@ -240,6 +252,8 @@ class KPIAggregator:
             "toneladas_total": 0.0,
             "precio_unitario_promedio": 0.0,
             "costo_unitario_promedio": 0.0,
+            "utilidad_por_kg": 0.0,
+            "margen_por_kg": 0.0,
             "aging_cartera": {},
             "top_clientes": {},
             "consumo_material": {},

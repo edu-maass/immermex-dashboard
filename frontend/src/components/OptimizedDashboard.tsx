@@ -46,7 +46,7 @@ const KPIsSection = memo(({ kpis, loading }: { kpis: KPIs | null; loading: boole
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
       {/* Facturación Total */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between">
@@ -158,31 +158,42 @@ const KPIsSection = memo(({ kpis, loading }: { kpis: KPIs | null; loading: boole
         </div>
       </div>
 
-      {/* Precio Unitario Promedio */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center justify-between">
+      {/* Unit Economics - KPI Consolidado */}
+      <div className="bg-white rounded-lg shadow p-6 lg:col-span-2">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
-            <DollarSign className="h-5 w-5 text-green-600" />
-            <h3 className="text-sm font-medium text-gray-500">Precio Unitario</h3>
+            <TrendingUp className="h-5 w-5 text-blue-600" />
+            <h3 className="text-lg font-medium text-gray-900">Unit Economics</h3>
           </div>
         </div>
-        <div className="mt-2">
-          <p className="text-2xl font-bold text-gray-900">${kpis.precio_unitario_promedio?.toFixed(2)}</p>
-          <p className="text-sm text-gray-500 mt-1">Promedio por kg</p>
-        </div>
-      </div>
-
-      {/* Costo Unitario Promedio */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <TrendingUp className="h-5 w-5 text-red-600" />
-            <h3 className="text-sm font-medium text-gray-500">Costo Unitario</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Precio Unitario */}
+          <div className="text-center">
+            <p className="text-sm text-gray-500 mb-1">Precio por kg</p>
+            <p className="text-xl font-bold text-green-600">${kpis.precio_unitario_promedio?.toFixed(2)}</p>
           </div>
-        </div>
-        <div className="mt-2">
-          <p className="text-2xl font-bold text-gray-900">${kpis.costo_unitario_promedio?.toFixed(2)}</p>
-          <p className="text-sm text-gray-500 mt-1">Promedio por kg</p>
+          
+          {/* Costo Unitario */}
+          <div className="text-center">
+            <p className="text-sm text-gray-500 mb-1">Costo por kg</p>
+            <p className="text-xl font-bold text-red-600">${kpis.costo_unitario_promedio?.toFixed(2)}</p>
+          </div>
+          
+          {/* Utilidad por kg */}
+          <div className="text-center">
+            <p className="text-sm text-gray-500 mb-1">Utilidad por kg</p>
+            <p className={`text-xl font-bold ${(kpis.utilidad_por_kg || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              ${kpis.utilidad_por_kg?.toFixed(2)}
+            </p>
+          </div>
+          
+          {/* Margen por kg */}
+          <div className="text-center">
+            <p className="text-sm text-gray-500 mb-1">Margen por kg</p>
+            <p className={`text-xl font-bold ${(kpis.margen_por_kg || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {kpis.margen_por_kg?.toFixed(1)}%
+            </p>
+          </div>
         </div>
       </div>
     </div>

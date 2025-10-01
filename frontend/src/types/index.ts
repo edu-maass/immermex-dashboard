@@ -28,6 +28,8 @@ export interface KPIs {
   // Precios y Costos
   precio_unitario_promedio: number;
   costo_unitario_promedio: number;
+  utilidad_por_kg: number;
+  margen_por_kg: number;
   
   // Inventario
   rotacion_inventario: number;
