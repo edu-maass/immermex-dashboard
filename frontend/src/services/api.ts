@@ -160,6 +160,55 @@ class ApiService {
     }
   }
 
+  // ==================== MÉTODOS DE COMPRAS ====================
+
+  async getComprasKPIs(filtros?: any): Promise<any> {
+    const params = new URLSearchParams();
+    if (filtros?.mes) params.append('mes', filtros.mes.toString());
+    if (filtros?.año) params.append('año', filtros.año.toString());
+    if (filtros?.material) params.append('material', filtros.material);
+    
+    const response = await fetch(`${this.baseUrl}/api/compras/kpis?${params}`);
+    if (!response.ok) throw new Error('Error obteniendo KPIs de compras');
+    return response.json();
+  }
+
+  async getEvolucionPrecios(material?: string, moneda: string = 'USD'): Promise<any> {
+    const params = new URLSearchParams();
+    if (material) params.append('material', material);
+    params.append('moneda', moneda);
+    
+    const response = await fetch(`${this.baseUrl}/api/compras/evolucion-precios?${params}`);
+    if (!response.ok) throw new Error('Error obteniendo evolución de precios');
+    return response.json();
+  }
+
+  async getFlujoPagosCompras(filtros?: any): Promise<any> {
+    const params = new URLSearchParams();
+    if (filtros?.mes) params.append('mes', filtros.mes.toString());
+    if (filtros?.año) params.append('año', filtros.año.toString());
+    
+    const response = await fetch(`${this.baseUrl}/api/compras/flujo-pagos?${params}`);
+    if (!response.ok) throw new Error('Error obteniendo flujo de pagos');
+    return response.json();
+  }
+
+  async getAgingCuentasPagar(filtros?: any): Promise<any> {
+    const params = new URLSearchParams();
+    if (filtros?.mes) params.append('mes', filtros.mes.toString());
+    if (filtros?.año) params.append('año', filtros.año.toString());
+    
+    const response = await fetch(`${this.baseUrl}/api/compras/aging-cuentas-pagar?${params}`);
+    if (!response.ok) throw new Error('Error obteniendo aging de cuentas por pagar');
+    return response.json();
+  }
+
+  async getMaterialesCompras(): Promise<string[]> {
+    const response = await fetch(`${this.baseUrl}/api/compras/materiales`);
+    if (!response.ok) throw new Error('Error obteniendo materiales de compras');
+    return response.json();
+  }
+
   // Archivos
   async uploadFile(file: File): Promise<{ registros_procesados?: number; [key: string]: any }> {
     const formData = new FormData();

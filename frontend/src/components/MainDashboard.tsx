@@ -3,8 +3,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 import { DualUpload } from './DualUpload';
 import { OptimizedDashboard } from './OptimizedDashboard';
 import { DashboardFiltrado } from './DashboardFiltrado';
+import { ComprasDashboard } from './ComprasDashboard';
 import { DataManagement } from './DataManagement';
-import { Upload, BarChart3, Package, Database } from 'lucide-react';
+import { Upload, BarChart3, Package, Database, ShoppingCart } from 'lucide-react';
 import { apiService } from '../services/api';
 
 export const MainDashboard: FC = () => {
@@ -100,7 +101,7 @@ export const MainDashboard: FC = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="upload" className="flex items-center gap-2">
               <Upload className="h-4 w-4" />
               Carga de Archivos
@@ -112,6 +113,10 @@ export const MainDashboard: FC = () => {
             <TabsTrigger value="pedidos" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
               Análisis por Pedido
+            </TabsTrigger>
+            <TabsTrigger value="compras" className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              Compras
             </TabsTrigger>
             <TabsTrigger value="data" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
@@ -131,6 +136,10 @@ export const MainDashboard: FC = () => {
 
           <TabsContent value="pedidos" className="mt-6">
             <DashboardFiltrado onUploadSuccess={handleUploadSuccess} dataLoaded={dataLoaded} />
+          </TabsContent>
+
+          <TabsContent value="compras" className="mt-6">
+            <ComprasDashboard onUploadSuccess={handleUploadSuccess} dataLoaded={dataLoaded} />
           </TabsContent>
 
           <TabsContent value="data" className="mt-6">

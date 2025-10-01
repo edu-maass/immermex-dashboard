@@ -799,6 +799,114 @@ async def get_paginated_data(
         logger.error(f"Error obteniendo datos paginados: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ==================== ENDPOINTS DE COMPRAS ====================
+
+@app.get("/api/compras/kpis")
+async def get_compras_kpis(
+    mes: Optional[int] = Query(None, description="Filtrar por mes"),
+    año: Optional[int] = Query(None, description="Filtrar por año"),
+    material: Optional[str] = Query(None, description="Filtrar por material"),
+    db: Session = Depends(get_db)
+):
+    """Obtiene KPIs principales de compras con filtros opcionales"""
+    try:
+        db_service = DatabaseService(db)
+        
+        # Preparar filtros
+        filtros = {}
+        if mes:
+            filtros['mes'] = mes
+        if año:
+            filtros['año'] = año
+        if material:
+            filtros['material'] = material
+        
+        kpis = db_service.calculate_compras_kpis(filtros)
+        return kpis
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo KPIs de compras: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/compras/evolucion-precios")
+async def get_evolucion_precios(
+    material: Optional[str] = Query(None, description="Filtrar por material"),
+    moneda: str = Query("USD", description="Moneda para mostrar precios (USD/MXN)"),
+    db: Session = Depends(get_db)
+):
+    """Obtiene evolución mensual de precios por kg"""
+    try:
+        db_service = DatabaseService(db)
+        
+        filtros = {}
+        if material:
+            filtros['material'] = material
+        
+        evolucion = db_service.get_evolucion_precios(filtros, moneda)
+        return evolucion
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo evolución de precios: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/compras/flujo-pagos")
+async def get_flujo_pagos(
+    mes: Optional[int] = Query(None, description="Filtrar por mes"),
+    año: Optional[int] = Query(None, description="Filtrar por año"),
+    db: Session = Depends(get_db)
+):
+    """Obtiene flujo de pagos de compras"""
+    try:
+        db_service = DatabaseService(db)
+        
+        filtros = {}
+        if mes:
+            filtros['mes'] = mes
+        if año:
+            filtros['año'] = año
+        
+        flujo = db_service.get_flujo_pagos_compras(filtros)
+        return flujo
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo flujo de pagos: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/compras/aging-cuentas-pagar")
+async def get_aging_cuentas_pagar(
+    mes: Optional[int] = Query(None, description="Filtrar por mes"),
+    año: Optional[int] = Query(None, description="Filtrar por año"),
+    db: Session = Depends(get_db)
+):
+    """Obtiene aging de cuentas por pagar"""
+    try:
+        db_service = DatabaseService(db)
+        
+        filtros = {}
+        if mes:
+            filtros['mes'] = mes
+        if año:
+            filtros['año'] = año
+        
+        aging = db_service.get_aging_cuentas_pagar(filtros)
+        return aging
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo aging de cuentas por pagar: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/compras/materiales")
+async def get_materiales_compras(db: Session = Depends(get_db)):
+    """Obtiene lista de materiales disponibles en compras"""
+    try:
+        db_service = DatabaseService(db)
+        materiales = db_service.get_materiales_compras()
+        return materiales
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo materiales de compras: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
     print("🚀 Iniciando servidor Immermex Dashboard (Con Base de Datos)")

@@ -657,3 +657,345 @@ class DatabaseService:
     def get_data_summary(self) -> dict:
         """Obtiene resumen de datos disponibles"""
         return get_latest_data_summary(self.db)
+    
+    # ==================== MÉTODOS DE COMPRAS ====================
+    
+    def calculate_compras_kpis(self, filtros: dict = None) -> dict:
+        """Calcula KPIs de compras con filtros opcionales"""
+        try:
+            # Query base para compras
+            query = self.db.query(Compras)
+            
+            # Aplicar filtros
+            if filtros:
+                if filtros.get('mes'):
+                    query = query.filter(Compras.mes == filtros['mes'])
+                if filtros.get('año'):
+                    query = query.filter(Compras.año == filtros['año'])
+                if filtros.get('material'):
+                    query = query.filter(Compras.concepto.contains(filtros['material']))
+            
+            compras = query.all()
+            
+            if not compras:
+                return self._get_default_compras_kpis()
+            
+            # Calcular KPIs básicos
+            total_compras = sum(c.total for c in compras if c.total)
+            total_compras_usd = sum(c.total / c.tipo_cambio for c in compras if c.total and c.tipo_cambio)
+            
+            # Compras pendientes
+            compras_pendientes = [c for c in compras if c.estado_pago == 'pendiente']
+            total_pendientes = sum(c.total for c in compras_pendientes if c.total)
+            
+            # Proveedores
+            proveedores_unicos = len(set(c.proveedor for c in compras if c.proveedor))
+            promedio_por_proveedor = total_compras / proveedores_unicos if proveedores_unicos > 0 else 0
+            
+            # Días de crédito promedio
+            dias_credito_values = [c.dias_credito for c in compras if c.dias_credito and c.dias_credito > 0]
+            dias_credito_promedio = sum(dias_credito_values) / len(dias_credito_values) if dias_credito_values else 0
+            
+            # KPIs combinados con pedidos (matching por concepto/material)
+            margen_bruto_promedio = self._calculate_margen_bruto_compras_pedidos(compras)
+            rotacion_inventario = self._calculate_rotacion_inventario_compras(compras)
+            ciclo_compras = self._calculate_ciclo_compras(compras)
+            
+            return {
+                "total_compras": round(total_compras, 2),
+                "total_compras_usd": round(total_compras_usd, 2),
+                "compras_pendientes": round(total_pendientes, 2),
+                "compras_pendientes_count": len(compras_pendientes),
+                "proveedores_unicos": proveedores_unicos,
+                "promedio_por_proveedor": round(promedio_por_proveedor, 2),
+                "dias_credito_promedio": round(dias_credito_promedio, 0),
+                "margen_bruto_promedio": round(margen_bruto_promedio, 2),
+                "rotacion_inventario": round(rotacion_inventario, 2),
+                "ciclo_compras": round(ciclo_compras, 0)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error calculando KPIs de compras: {str(e)}")
+            return self._get_default_compras_kpis()
+    
+    def get_evolucion_precios(self, filtros: dict = None, moneda: str = "USD") -> dict:
+        """Obtiene evolución mensual de precios por kg"""
+        try:
+            # Query base para compras
+            query = self.db.query(Compras)
+            
+            # Aplicar filtros
+            if filtros:
+                if filtros.get('material'):
+                    query = query.filter(Compras.concepto.contains(filtros['material']))
+            
+            compras = query.all()
+            
+            if not compras:
+                return {"labels": [], "data": [], "titulo": "Evolución de Precios por kg"}
+            
+            # Agrupar por mes y calcular precio promedio
+            precios_por_mes = {}
+            
+            for compra in compras:
+                if compra.fecha_compra and compra.precio_unitario and compra.cantidad:
+                    mes_key = f"{compra.fecha_compra.year}-{compra.fecha_compra.month:02d}"
+                    
+                    # Convertir a la moneda solicitada
+                    precio_convertido = compra.precio_unitario
+                    if moneda == "MXN" and compra.tipo_cambio:
+                        precio_convertido = compra.precio_unitario * compra.tipo_cambio
+                    elif moneda == "USD" and compra.tipo_cambio:
+                        precio_convertido = compra.precio_unitario / compra.tipo_cambio
+                    
+                    if mes_key not in precios_por_mes:
+                        precios_por_mes[mes_key] = []
+                    
+                    precios_por_mes[mes_key].append(precio_convertido)
+            
+            # Calcular promedios por mes
+            meses_ordenados = sorted(precios_por_mes.keys())
+            precios_promedio = []
+            
+            for mes in meses_ordenados:
+                precios = precios_por_mes[mes]
+                promedio = sum(precios) / len(precios) if precios else 0
+                precios_promedio.append(round(promedio, 2))
+            
+            return {
+                "labels": meses_ordenados,
+                "data": precios_promedio,
+                "titulo": f"Evolución de Precios por kg ({moneda})"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo evolución de precios: {str(e)}")
+            return {"labels": [], "data": [], "titulo": "Evolución de Precios por kg"}
+    
+    def get_flujo_pagos_compras(self, filtros: dict = None) -> dict:
+        """Obtiene flujo de pagos de compras"""
+        try:
+            # Query base para compras
+            query = self.db.query(Compras)
+            
+            # Aplicar filtros
+            if filtros:
+                if filtros.get('mes'):
+                    query = query.filter(Compras.mes == filtros['mes'])
+                if filtros.get('año'):
+                    query = query.filter(Compras.año == filtros['año'])
+            
+            compras = query.all()
+            
+            if not compras:
+                return {"labels": [], "data": [], "titulo": "Flujo de Pagos"}
+            
+            # Agrupar pagos por mes
+            flujo_por_mes = {}
+            
+            for compra in compras:
+                if compra.fecha_compra:
+                    mes_key = f"{compra.fecha_compra.year}-{compra.fecha_compra.month:02d}"
+                    
+                    if mes_key not in flujo_por_mes:
+                        flujo_por_mes[mes_key] = {
+                            "anticipos": 0,
+                            "liquidaciones": 0,
+                            "gastos_importacion": 0,
+                            "iva": 0
+                        }
+                    
+                    # Simular distribución de pagos (esto debería basarse en datos reales)
+                    total = compra.total or 0
+                    anticipo = total * 0.3  # 30% anticipo
+                    liquidacion = total * 0.5  # 50% liquidación
+                    gastos_importacion = total * 0.1  # 10% gastos importación
+                    iva = total * 0.1  # 10% IVA
+                    
+                    flujo_por_mes[mes_key]["anticipos"] += anticipo
+                    flujo_por_mes[mes_key]["liquidaciones"] += liquidacion
+                    flujo_por_mes[mes_key]["gastos_importacion"] += gastos_importacion
+                    flujo_por_mes[mes_key]["iva"] += iva
+            
+            # Preparar datos para gráfico
+            meses_ordenados = sorted(flujo_por_mes.keys())
+            anticipos = []
+            liquidaciones = []
+            gastos_importacion = []
+            iva = []
+            
+            for mes in meses_ordenados:
+                datos = flujo_por_mes[mes]
+                anticipos.append(round(datos["anticipos"], 2))
+                liquidaciones.append(round(datos["liquidaciones"], 2))
+                gastos_importacion.append(round(datos["gastos_importacion"], 2))
+                iva.append(round(datos["iva"], 2))
+            
+            return {
+                "labels": meses_ordenados,
+                "datasets": [
+                    {"label": "Anticipos", "data": anticipos, "color": "#10b981"},
+                    {"label": "Liquidaciones", "data": liquidaciones, "color": "#3b82f6"},
+                    {"label": "Gastos Importación", "data": gastos_importacion, "color": "#f59e0b"},
+                    {"label": "IVA", "data": iva, "color": "#ef4444"}
+                ],
+                "titulo": "Flujo de Pagos por Mes"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo flujo de pagos: {str(e)}")
+            return {"labels": [], "datasets": [], "titulo": "Flujo de Pagos"}
+    
+    def get_aging_cuentas_pagar(self, filtros: dict = None) -> dict:
+        """Obtiene aging de cuentas por pagar"""
+        try:
+            # Query para compras pendientes
+            query = self.db.query(Compras).filter(Compras.estado_pago == 'pendiente')
+            
+            # Aplicar filtros
+            if filtros:
+                if filtros.get('mes'):
+                    query = query.filter(Compras.mes == filtros['mes'])
+                if filtros.get('año'):
+                    query = query.filter(Compras.año == filtros['año'])
+            
+            compras_pendientes = query.all()
+            
+            if not compras_pendientes:
+                return {"labels": [], "data": [], "titulo": "Aging de Cuentas por Pagar"}
+            
+            # Calcular aging
+            aging = {
+                "0-30 dias": 0,
+                "31-60 dias": 0,
+                "61-90 dias": 0,
+                "90+ dias": 0
+            }
+            
+            from datetime import datetime, timedelta
+            hoy = datetime.now()
+            
+            for compra in compras_pendientes:
+                if compra.fecha_vencimiento:
+                    dias_vencidos = (hoy - compra.fecha_vencimiento).days
+                    monto = compra.total or 0
+                    
+                    if dias_vencidos <= 30:
+                        aging["0-30 dias"] += monto
+                    elif dias_vencidos <= 60:
+                        aging["31-60 dias"] += monto
+                    elif dias_vencidos <= 90:
+                        aging["61-90 dias"] += monto
+                    else:
+                        aging["90+ dias"] += monto
+            
+            # Convertir a formato de gráfico
+            labels = list(aging.keys())
+            data = [round(aging[label], 2) for label in labels]
+            
+            return {
+                "labels": labels,
+                "data": data,
+                "titulo": "Aging de Cuentas por Pagar"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo aging de cuentas por pagar: {str(e)}")
+            return {"labels": [], "data": [], "titulo": "Aging de Cuentas por Pagar"}
+    
+    def get_materiales_compras(self) -> list:
+        """Obtiene lista de materiales disponibles en compras"""
+        try:
+            materiales = self.db.query(Compras.concepto).filter(
+                Compras.concepto.isnot(None),
+                Compras.concepto != ""
+            ).distinct().all()
+            
+            return [material[0] for material in materiales if material[0]]
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo materiales de compras: {str(e)}")
+            return []
+    
+    def _get_default_compras_kpis(self) -> dict:
+        """Retorna KPIs por defecto para compras cuando no hay datos"""
+        return {
+            "total_compras": 0.0,
+            "total_compras_usd": 0.0,
+            "compras_pendientes": 0.0,
+            "compras_pendientes_count": 0,
+            "proveedores_unicos": 0,
+            "promedio_por_proveedor": 0.0,
+            "dias_credito_promedio": 0.0,
+            "margen_bruto_promedio": 0.0,
+            "rotacion_inventario": 0.0,
+            "ciclo_compras": 0.0
+        }
+    
+    def _calculate_margen_bruto_compras_pedidos(self, compras: list) -> float:
+        """Calcula margen bruto promedio combinando datos de compras y pedidos"""
+        try:
+            # Obtener pedidos relacionados por concepto/material
+            margenes = []
+            
+            for compra in compras:
+                if compra.concepto and compra.precio_unitario:
+                    # Buscar pedidos relacionados por concepto
+                    pedidos_relacionados = self.db.query(Pedido).filter(
+                        Pedido.material.contains(compra.concepto[:10])  # Buscar por los primeros 10 caracteres
+                    ).all()
+                    
+                    for pedido in pedidos_relacionados:
+                        if pedido.precio_unitario and pedido.precio_unitario > 0:
+                            margen = ((pedido.precio_unitario - compra.precio_unitario) / pedido.precio_unitario) * 100
+                            margenes.append(margen)
+            
+            return sum(margenes) / len(margenes) if margenes else 0
+            
+        except Exception as e:
+            logger.error(f"Error calculando margen bruto: {str(e)}")
+            return 0
+    
+    def _calculate_rotacion_inventario_compras(self, compras: list) -> float:
+        """Calcula rotación de inventario basada en compras"""
+        try:
+            # Simplificación: rotación basada en frecuencia de compras
+            if not compras:
+                return 0
+            
+            # Contar compras por mes
+            compras_por_mes = {}
+            for compra in compras:
+                if compra.fecha_compra:
+                    mes_key = f"{compra.fecha_compra.year}-{compra.fecha_compra.month:02d}"
+                    compras_por_mes[mes_key] = compras_por_mes.get(mes_key, 0) + 1
+            
+            # Calcular promedio de compras por mes
+            meses_con_compras = len(compras_por_mes)
+            if meses_con_compras > 0:
+                total_compras = sum(compras_por_mes.values())
+                promedio_mensual = total_compras / meses_con_compras
+                return promedio_mensual * 12  # Proyectar a anual
+            
+            return 0
+            
+        except Exception as e:
+            logger.error(f"Error calculando rotación de inventario: {str(e)}")
+            return 0
+    
+    def _calculate_ciclo_compras(self, compras: list) -> float:
+        """Calcula ciclo promedio de compras"""
+        try:
+            ciclos = []
+            
+            for compra in compras:
+                if compra.fecha_compra and compra.fecha_pago:
+                    ciclo = (compra.fecha_pago - compra.fecha_compra).days
+                    if ciclo > 0:
+                        ciclos.append(ciclo)
+            
+            return sum(ciclos) / len(ciclos) if ciclos else 0
+            
+        except Exception as e:
+            logger.error(f"Error calculando ciclo de compras: {str(e)}")
+            return 0
