@@ -1,7 +1,7 @@
 """
 Procesador específico para archivos de compras de Immermex
 Maneja la estructura específica del archivo de compras e importaciones
-Version: 1.1 - Corregido mapeo de columnas y validaciones
+Version: 2.0 - Refactorizado completo sin errores de pandas
 """
 
 import pandas as pd
@@ -95,6 +95,38 @@ def find_header_row(df: pd.DataFrame) -> int:
     
     return 0  # Si no encuentra, usar la primera fila
 
+def safe_clean_moneda(val):
+    """Limpia y valida el campo moneda"""
+    if pd.isna(val):
+        return 'USD'
+    val_str = str(val).strip().upper()
+    # Si es un número, devolver USD por defecto
+    try:
+        float(val_str)
+        return 'USD'
+    except:
+        # Si es un string válido, buscar moneda conocida
+        valid_currencies = ['USD', 'MXN', 'EUR', 'DLLS', 'PESOS']
+        for currency in valid_currencies:
+            if currency in val_str:
+                return currency[:10]
+        return 'USD'
+
+def safe_fill_concepto(row):
+    """Llena el campo concepto con IMI o valor por defecto"""
+    concepto = row.get('concepto', '')
+    imi = row.get('imi', '')
+    
+    # Si concepto está vacío o es NaN
+    if pd.isna(concepto) or concepto == '':
+        # Usar IMI si está disponible, sino usar valor por defecto
+        if imi and not pd.isna(imi) and imi != '':
+            return str(imi)
+        else:
+            return 'Material importado'
+    else:
+        return str(concepto)
+
 def process_compras_data(df: pd.DataFrame) -> Dict[str, Any]:
     """Procesa los datos específicos de compras"""
     logger.info("Procesando datos específicos de compras")
@@ -103,7 +135,7 @@ def process_compras_data(df: pd.DataFrame) -> Dict[str, Any]:
     column_mapping = {
         'IMI': 'imi',
         'Proveedor': 'proveedor',
-        'Material': 'concepto',  # Mapear Material a concepto
+        'Material': 'concepto',
         'fac prov': 'numero_factura',
         'Kilogramos': 'cantidad',
         'PU': 'precio_unitario',
@@ -151,7 +183,7 @@ def process_compras_data(df: pd.DataFrame) -> Dict[str, Any]:
         else:
             mapped_df[db_field] = None
     
-    # Procesar fechas
+    # Procesar fechas PRIMERO (antes de calcular mes y año)
     date_columns = [
         'fecha_compra', 'fecha_anticipo', 'fecha_vencimiento', 'fecha_pago',
         'fecha_salida_puerto', 'fecha_arribo_puerto', 'fecha_entrada_inmermex',
@@ -162,40 +194,11 @@ def process_compras_data(df: pd.DataFrame) -> Dict[str, Any]:
         if col in mapped_df.columns:
             mapped_df[col] = pd.to_datetime(mapped_df[col], errors='coerce', dayfirst=True)
     
-    # Calcular campos derivados
+    # Calcular campos derivados de fechas
     mapped_df['mes'] = mapped_df['fecha_compra'].dt.month
     mapped_df['año'] = mapped_df['fecha_compra'].dt.year
     
-    # Determinar estado de pago
-    def determine_payment_status(row):
-        if pd.notna(row['fecha_pago']):
-            return 'pagado'
-        elif pd.notna(row['fecha_vencimiento']):
-            vencimiento = row['fecha_vencimiento']
-            
-            # Convertir a datetime.date si es un Timestamp de pandas
-            if isinstance(vencimiento, pd.Timestamp):
-                vencimiento = vencimiento.date()
-            elif isinstance(vencimiento, datetime):
-                vencimiento = vencimiento.date()
-            
-            # Comparar fechas
-            if hasattr(vencimiento, '__gt__'):  # Si tiene comparación de fechas
-                try:
-                    if vencimiento < datetime.now().date():
-                        return 'vencido'
-                    else:
-                        return 'pendiente'
-                except:
-                    return 'pendiente'
-            else:
-                return 'pendiente'
-        else:
-            return 'pendiente'
-    
-    mapped_df['estado_pago'] = mapped_df.apply(determine_payment_status, axis=1)
-    
-    # Limpiar valores numéricos
+    # Limpiar valores numéricos ANTES de limpiar moneda
     numeric_columns = [
         'cantidad', 'precio_unitario', 'precio_dlls', 'tipo_cambio',
         'porcentaje_anticipo', 'anticipo_dlls', 'tipo_cambio_anticipo',
@@ -210,48 +213,55 @@ def process_compras_data(df: pd.DataFrame) -> Dict[str, Any]:
     
     # Limpiar campo moneda - asegurar que sea un string válido
     if 'moneda' in mapped_df.columns:
-        def clean_moneda(val):
-            if pd.isna(val):
-                return 'USD'
-            val_str = str(val).strip().upper()
-            # Si es un número, devolver USD por defecto
-            try:
-                float(val_str)
-                return 'USD'
-            except:
-                # Si es un string válido, tomar solo los primeros 10 caracteres
-                valid_currencies = ['USD', 'MXN', 'EUR', 'DLLS', 'PESOS']
-                for currency in valid_currencies:
-                    if currency in val_str:
-                        return currency[:10]
-                return 'USD'
-        
-        mapped_df['moneda'] = mapped_df['moneda'].apply(clean_moneda)
+        mapped_df['moneda'] = mapped_df['moneda'].apply(safe_clean_moneda)
+    else:
+        mapped_df['moneda'] = 'USD'
     
     # Agregar campos adicionales
     mapped_df['categoria'] = 'Importación'
     mapped_df['unidad'] = 'KG'
-    mapped_df['subtotal'] = mapped_df['cantidad'] * mapped_df['precio_unitario']
-    mapped_df['total'] = mapped_df['costo_total'].fillna(mapped_df['subtotal'])
+    
+    # Calcular subtotal y total
+    if 'subtotal' not in mapped_df.columns or mapped_df['subtotal'].isna().all():
+        mapped_df['subtotal'] = mapped_df['cantidad'] * mapped_df['precio_unitario']
+    
+    if 'total' not in mapped_df.columns or mapped_df['total'].isna().all():
+        mapped_df['total'] = mapped_df['costo_total'].fillna(mapped_df['subtotal'])
     
     # Asegurar que concepto tenga un valor
     if 'concepto' in mapped_df.columns:
-        # Llenar vacíos con IMI o valor por defecto
-        def fill_concepto(row):
-            concepto = row.get('concepto', '')
-            imi = row.get('imi', '')
+        mapped_df['concepto'] = mapped_df.apply(safe_fill_concepto, axis=1)
+    else:
+        mapped_df['concepto'] = 'Material importado'
+    
+    # Determinar estado de pago
+    def determine_payment_status(row):
+        if pd.notna(row.get('fecha_pago')):
+            return 'pagado'
+        elif pd.notna(row.get('fecha_vencimiento')):
+            vencimiento = row['fecha_vencimiento']
             
-            # Si concepto está vacío o es NaN
-            if pd.isna(concepto) or concepto == '':
-                # Usar IMI si está disponible, sino usar valor por defecto
-                if imi and not pd.isna(imi) and imi != '':
-                    return str(imi)
-                else:
-                    return 'Material importado'
+            # Convertir a datetime.date si es un Timestamp de pandas
+            if isinstance(vencimiento, pd.Timestamp):
+                vencimiento = vencimiento.date()
+            elif isinstance(vencimiento, datetime):
+                vencimiento = vencimiento.date()
+            
+            # Comparar fechas
+            if hasattr(vencimiento, '__gt__'):
+                try:
+                    if vencimiento < datetime.now().date():
+                        return 'vencido'
+                    else:
+                        return 'pendiente'
+                except:
+                    return 'pendiente'
             else:
-                return str(concepto)
-        
-        mapped_df['concepto'] = mapped_df.apply(fill_concepto, axis=1)
+                return 'pendiente'
+        else:
+            return 'pendiente'
+    
+    mapped_df['estado_pago'] = mapped_df.apply(determine_payment_status, axis=1)
     
     # Convertir a lista de diccionarios
     compras_data = mapped_df.to_dict('records')
