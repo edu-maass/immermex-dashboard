@@ -345,15 +345,15 @@ async def upload_compras_file(
         
         logger.info(f"Procesando archivo de compras: {file.filename}")
         
-        # Procesar archivo de compras usando el procesador específico
+        # Procesar archivo de compras usando el procesador específico V2
         try:
-            from compras_processor import process_compras_excel_from_bytes
+            from compras_processor_v2 import process_compras_v2
             
-            logger.info(f"Procesando archivo de compras desde memoria: {file.filename}")
-            logger.info(f"Tamaño del archivo: {len(content)} bytes")
+            logger.info(f"[V2] Procesando archivo de compras desde memoria: {file.filename}")
+            logger.info(f"[V2] Tamaño del archivo: {len(content)} bytes")
             
-            # Procesar usando el procesador específico de compras
-            processed_data_dict, kpis = process_compras_excel_from_bytes(content, file.filename)
+            # Procesar usando el procesador V2
+            processed_data_dict, kpis = process_compras_v2(content, file.filename)
             logger.info(f"Datos de compras procesados exitosamente. Claves: {list(processed_data_dict.keys())}")
             
             # Preparar información del archivo
