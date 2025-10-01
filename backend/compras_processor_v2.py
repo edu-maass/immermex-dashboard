@@ -89,7 +89,12 @@ def process_compras_v2(content: bytes, filename: str) -> Tuple[Dict[str, Any], D
         result_df['categoria'] = 'Importación'
         result_df['unidad'] = 'KG'
         result_df['subtotal'] = result_df['cantidad'] * result_df['precio_unitario']
-        result_df['total'] = result_df.get('costo_total', result_df['subtotal'])
+        
+        # Total - usar costo_total si existe, sino subtotal
+        if 'costo_total' in result_df.columns:
+            result_df['total'] = result_df['costo_total'].fillna(result_df['subtotal'])
+        else:
+            result_df['total'] = result_df['subtotal']
         
         # Estado de pago
         def get_estado(row):
