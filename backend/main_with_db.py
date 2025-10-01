@@ -16,7 +16,7 @@ from typing import List, Optional
 
 # Imports locales
 from database import get_db, init_db, ArchivoProcesado
-from database_service_refactored import DatabaseService
+from database_service import DatabaseService
 from utils import setup_logging, handle_api_error, FileProcessingError, DatabaseError
 from datetime import datetime
 from data_processor import process_immermex_file_advanced
