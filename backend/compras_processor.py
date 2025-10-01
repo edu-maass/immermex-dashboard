@@ -1,6 +1,7 @@
 """
 Procesador específico para archivos de compras de Immermex
 Maneja la estructura específica del archivo de compras e importaciones
+Version: 1.1 - Corregido mapeo de columnas y validaciones
 """
 
 import pandas as pd
