@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 from database import (
     Facturacion, Cobranza, CFDIRelacionado, Inventario, Pedido, 
-    ArchivoProcesado, KPI, get_latest_data_summary
+    ArchivoProcesado, KPI, Compras, get_latest_data_summary
 )
 from services import FacturacionService, CobranzaService, PedidosService, KPIAggregator
 from utils.validators import DataValidator
