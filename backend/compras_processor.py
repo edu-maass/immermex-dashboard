@@ -171,15 +171,21 @@ def process_compras_data(df: pd.DataFrame) -> Dict[str, Any]:
             return 'pagado'
         elif pd.notna(row['fecha_vencimiento']):
             vencimiento = row['fecha_vencimiento']
-            if pd.is_datetime64_any_dtype(vencimiento):
+            
+            # Convertir a datetime.date si es un Timestamp de pandas
+            if isinstance(vencimiento, pd.Timestamp):
+                vencimiento = vencimiento.date()
+            elif isinstance(vencimiento, datetime):
                 vencimiento = vencimiento.date()
             
-            if isinstance(vencimiento, datetime) or isinstance(vencimiento, pd.Timestamp):
-                if hasattr(vencimiento, 'date'):
-                    vencimiento = vencimiento.date()
-                if vencimiento < datetime.now().date():
-                    return 'vencido'
-                else:
+            # Comparar fechas
+            if hasattr(vencimiento, '__gt__'):  # Si tiene comparación de fechas
+                try:
+                    if vencimiento < datetime.now().date():
+                        return 'vencido'
+                    else:
+                        return 'pendiente'
+                except:
                     return 'pendiente'
             else:
                 return 'pendiente'
