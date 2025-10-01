@@ -37,9 +37,21 @@ class DatabaseService:
             # Crear registro de archivo
             archivo = self._create_archivo_record(archivo_info)
             
-            # Limpiar datos anteriores si es necesario
+            # Limpiar datos anteriores si es necesario (solo para el tipo de datos correcto)
+            tipo_datos = archivo_info.get("tipo_datos", "facturacion")
             if archivo_info.get("reemplazar_datos", False):
-                self._clear_existing_data()
+                if tipo_datos == "compras":
+                    # Solo limpiar tabla de compras
+                    try:
+                        from sqlalchemy import text
+                        self.db.execute(text("DELETE FROM compras"))
+                        self.db.commit()
+                        logger.info("Datos de compras existentes eliminados")
+                    except Exception as e:
+                        logger.error(f"Error limpiando datos de compras: {str(e)}")
+                else:
+                    # Limpiar datos de facturación
+                    self._clear_existing_data()
             
             # Guardar cada tipo de datos usando servicios especializados
             facturas_count = self.facturacion_service.save_facturas(processed_data_dict.get("facturacion_clean", []), archivo.id)
@@ -148,6 +160,15 @@ class DatabaseService:
         self.db.commit()
         return count
     
+    def _clean_nat_values(self, value):
+        """Convierte valores NaT de pandas a None para PostgreSQL"""
+        import pandas as pd
+        if pd.isna(value):
+            return None
+        if isinstance(value, pd.Timestamp):
+            return value.to_pydatetime()
+        return value
+    
     def _save_compras(self, compras_data: list, archivo_id: int) -> int:
         """Guarda datos de compras"""
         count = 0
@@ -155,7 +176,7 @@ class DatabaseService:
             try:
                 # Crear registro de compra usando SQL directo para evitar problemas de modelo
                 compra_values = {
-                    'fecha_compra': compra_data.get('fecha_compra'),
+                    'fecha_compra': self._clean_nat_values(compra_data.get('fecha_compra')),
                     'numero_factura': DataValidator.safe_string(compra_data.get('numero_factura', '')),
                     'proveedor': DataValidator.safe_string(compra_data.get('proveedor', '')),
                     'concepto': DataValidator.safe_string(compra_data.get('concepto', '')),
@@ -171,8 +192,8 @@ class DatabaseService:
                     'tipo_cambio': DataValidator.safe_float(compra_data.get('tipo_cambio', 1.0)),
                     'forma_pago': DataValidator.safe_string(compra_data.get('forma_pago', '')),
                     'dias_credito': DataValidator.safe_int(compra_data.get('dias_credito', 0)),
-                    'fecha_vencimiento': compra_data.get('fecha_vencimiento'),
-                    'fecha_pago': compra_data.get('fecha_pago'),
+                    'fecha_vencimiento': self._clean_nat_values(compra_data.get('fecha_vencimiento')),
+                    'fecha_pago': self._clean_nat_values(compra_data.get('fecha_pago')),
                     'estado_pago': DataValidator.safe_string(compra_data.get('estado_pago', 'pendiente')),
                     'centro_costo': DataValidator.safe_string(compra_data.get('centro_costo', '')),
                     'proyecto': DataValidator.safe_string(compra_data.get('proyecto', '')),
@@ -184,14 +205,14 @@ class DatabaseService:
                     # Campos específicos de importación
                     'imi': DataValidator.safe_string(compra_data.get('imi', '')),
                     'puerto_origen': DataValidator.safe_string(compra_data.get('puerto_origen', '')),
-                    'fecha_salida_puerto': compra_data.get('fecha_salida_puerto'),
-                    'fecha_arribo_puerto': compra_data.get('fecha_arribo_puerto'),
-                    'fecha_entrada_inmermex': compra_data.get('fecha_entrada_inmermex'),
+                    'fecha_salida_puerto': self._clean_nat_values(compra_data.get('fecha_salida_puerto')),
+                    'fecha_arribo_puerto': self._clean_nat_values(compra_data.get('fecha_arribo_puerto')),
+                    'fecha_entrada_inmermex': self._clean_nat_values(compra_data.get('fecha_entrada_inmermex')),
                     'precio_dlls': DataValidator.safe_float(compra_data.get('precio_dlls', 0)),
                     'xr': DataValidator.safe_float(compra_data.get('xr', 0)),
                     'financiera': DataValidator.safe_string(compra_data.get('financiera', '')),
                     'porcentaje_anticipo': DataValidator.safe_float(compra_data.get('porcentaje_anticipo', 0)),
-                    'fecha_anticipo': compra_data.get('fecha_anticipo'),
+                    'fecha_anticipo': self._clean_nat_values(compra_data.get('fecha_anticipo')),
                     'anticipo_dlls': DataValidator.safe_float(compra_data.get('anticipo_dlls', 0)),
                     'tipo_cambio_anticipo': DataValidator.safe_float(compra_data.get('tipo_cambio_anticipo', 0)),
                     'pago_factura_dlls': DataValidator.safe_float(compra_data.get('pago_factura_dlls', 0)),
@@ -199,14 +220,14 @@ class DatabaseService:
                     'pu_mxn': DataValidator.safe_float(compra_data.get('pu_mxn', 0)),
                     'precio_mxn': DataValidator.safe_float(compra_data.get('precio_mxn', 0)),
                     'porcentaje_imi': DataValidator.safe_float(compra_data.get('porcentaje_imi', 0)),
-                    'fecha_entrada_aduana': compra_data.get('fecha_entrada_aduana'),
+                    'fecha_entrada_aduana': self._clean_nat_values(compra_data.get('fecha_entrada_aduana')),
                     'pedimento': DataValidator.safe_string(compra_data.get('pedimento', '')),
                     'gastos_aduanales': DataValidator.safe_float(compra_data.get('gastos_aduanales', 0)),
                     'costo_total': DataValidator.safe_float(compra_data.get('costo_total', 0)),
                     'porcentaje_gastos_aduanales': DataValidator.safe_float(compra_data.get('porcentaje_gastos_aduanales', 0)),
                     'pu_total': DataValidator.safe_float(compra_data.get('pu_total', 0)),
-                    'fecha_pago_impuestos': compra_data.get('fecha_pago_impuestos'),
-                    'fecha_salida_aduana': compra_data.get('fecha_salida_aduana'),
+                    'fecha_pago_impuestos': self._clean_nat_values(compra_data.get('fecha_pago_impuestos')),
+                    'fecha_salida_aduana': self._clean_nat_values(compra_data.get('fecha_salida_aduana')),
                     'dias_en_puerto': DataValidator.safe_int(compra_data.get('dias_en_puerto', 0)),
                     'agente': DataValidator.safe_string(compra_data.get('agente', '')),
                     'fac_agente': DataValidator.safe_string(compra_data.get('fac_agente', ''))
