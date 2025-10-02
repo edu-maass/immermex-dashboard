@@ -77,17 +77,20 @@ class DatabaseService:
         # Calcular hash del archivo para evitar duplicados
         file_hash = hashlib.md5(f"{archivo_info['nombre']}_{archivo_info['tamaño']}".encode()).hexdigest()
         
-        # Buscar si ya existe
+        # Buscar si ya existe por nombre de archivo (debido a la constraint unique)
         archivo = self.db.query(ArchivoProcesado).filter(
-            ArchivoProcesado.hash_archivo == file_hash
+            ArchivoProcesado.nombre_archivo == archivo_info['nombre']
         ).first()
         
         if archivo:
             # Actualizar archivo existente
-            archivo.nombre_archivo = archivo_info['nombre']
+            archivo.hash_archivo = file_hash
             archivo.tamaño_archivo = archivo_info['tamaño']
             archivo.estado = "en_proceso"
             archivo.updated_at = datetime.utcnow()
+            archivo.fecha_procesamiento = datetime.utcnow()
+            archivo.registros_procesados = 0  # Resetear contador
+            archivo.error_message = None  # Limpiar errores previos
         else:
             # Crear nuevo archivo
             archivo = ArchivoProcesado(
