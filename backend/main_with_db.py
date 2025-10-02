@@ -805,6 +805,7 @@ async def get_paginated_data(
 async def get_compras_kpis(
     mes: Optional[int] = Query(None, description="Filtrar por mes"),
     año: Optional[int] = Query(None, description="Filtrar por año"),
+    proveedor: Optional[str] = Query(None, description="Filtrar por proveedor"),
     material: Optional[str] = Query(None, description="Filtrar por material"),
     db: Session = Depends(get_db)
 ):
@@ -813,7 +814,7 @@ async def get_compras_kpis(
         import time
         start_time = time.time()
         
-        logger.info(f"Iniciando cálculo de KPIs de compras - filtros: {mes}, {año}, {material}")
+        logger.info(f"Iniciando cálculo de KPIs de compras - filtros: {mes}, {año}, {proveedor}, {material}")
         
         db_service = DatabaseService(db)
         
@@ -823,6 +824,8 @@ async def get_compras_kpis(
             filtros['mes'] = mes
         if año:
             filtros['año'] = año
+        if proveedor:
+            filtros['proveedor'] = proveedor
         if material:
             filtros['material'] = material
         
@@ -864,6 +867,8 @@ async def get_evolucion_precios(
 async def get_flujo_pagos(
     mes: Optional[int] = Query(None, description="Filtrar por mes"),
     año: Optional[int] = Query(None, description="Filtrar por año"),
+    proveedor: Optional[str] = Query(None, description="Filtrar por proveedor"),
+    material: Optional[str] = Query(None, description="Filtrar por material"),
     moneda: str = Query("USD", description="Moneda para mostrar (USD o MXN)"),
     db: Session = Depends(get_db)
 ):
@@ -876,6 +881,10 @@ async def get_flujo_pagos(
             filtros['mes'] = mes
         if año:
             filtros['año'] = año
+        if proveedor:
+            filtros['proveedor'] = proveedor
+        if material:
+            filtros['material'] = material
         
         # Validar moneda
         if moneda not in ['USD', 'MXN']:
@@ -892,6 +901,8 @@ async def get_flujo_pagos(
 async def get_aging_cuentas_pagar(
     mes: Optional[int] = Query(None, description="Filtrar por mes"),
     año: Optional[int] = Query(None, description="Filtrar por año"),
+    proveedor: Optional[str] = Query(None, description="Filtrar por proveedor"),
+    material: Optional[str] = Query(None, description="Filtrar por material"),
     db: Session = Depends(get_db)
 ):
     """Obtiene aging de cuentas por pagar"""
@@ -903,6 +914,10 @@ async def get_aging_cuentas_pagar(
             filtros['mes'] = mes
         if año:
             filtros['año'] = año
+        if proveedor:
+            filtros['proveedor'] = proveedor
+        if material:
+            filtros['material'] = material
         
         aging = db_service.get_aging_cuentas_pagar(filtros)
         return aging
@@ -921,6 +936,18 @@ async def get_materiales_compras(db: Session = Depends(get_db)):
         
     except Exception as e:
         logger.error(f"Error obteniendo materiales de compras: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/compras/proveedores")
+async def get_proveedores_compras(db: Session = Depends(get_db)):
+    """Obtiene lista de proveedores únicos de compras"""
+    try:
+        db_service = DatabaseService(db)
+        proveedores = db_service.get_proveedores_compras()
+        return proveedores
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo proveedores de compras: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ==================== ENDPOINTS ADICIONALES (404 FIXES) ====================

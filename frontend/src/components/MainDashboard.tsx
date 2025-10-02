@@ -101,24 +101,39 @@ export const MainDashboard: FC = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="upload" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-5 bg-white shadow-lg border border-gray-200">
+            <TabsTrigger 
+              value="upload" 
+              className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-blue-700 data-[state=inactive]:hover:bg-blue-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
+            >
               <Upload className="h-4 w-4" />
               Carga de Archivos
             </TabsTrigger>
-            <TabsTrigger value="dashboard" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="dashboard" 
+              className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-green-700 data-[state=inactive]:hover:bg-green-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
+            >
               <BarChart3 className="h-4 w-4" />
               Facturación
             </TabsTrigger>
-            <TabsTrigger value="pedidos" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="pedidos" 
+              className="flex items-center gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-purple-700 data-[state=inactive]:hover:bg-purple-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
+            >
               <Package className="h-4 w-4" />
               Análisis por Pedido
             </TabsTrigger>
-            <TabsTrigger value="compras" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="compras" 
+              className="flex items-center gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-orange-700 data-[state=inactive]:hover:bg-orange-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
+            >
               <ShoppingCart className="h-4 w-4" />
               Compras
             </TabsTrigger>
-            <TabsTrigger value="data" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="data" 
+              className="flex items-center gap-2 data-[state=active]:bg-gray-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-gray-700 data-[state=inactive]:hover:bg-gray-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
+            >
               <Database className="h-4 w-4" />
               Gestión de Datos
             </TabsTrigger>

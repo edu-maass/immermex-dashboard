@@ -167,6 +167,7 @@ class ApiService {
     if (filtros?.mes) params.append('mes', filtros.mes.toString());
     if (filtros?.año) params.append('año', filtros.año.toString());
     if (filtros?.material) params.append('material', filtros.material);
+    if (filtros?.proveedor) params.append('proveedor', filtros.proveedor);
     
     const response = await fetch(`${this.baseUrl}/api/compras/kpis?${params}`);
     if (!response.ok) throw new Error('Error obteniendo KPIs de compras');
@@ -187,6 +188,8 @@ class ApiService {
     const params = new URLSearchParams();
     if (filtros?.mes) params.append('mes', filtros.mes.toString());
     if (filtros?.año) params.append('año', filtros.año.toString());
+    if (filtros?.material) params.append('material', filtros.material);
+    if (filtros?.proveedor) params.append('proveedor', filtros.proveedor);
     params.append('moneda', moneda);
     
     const response = await fetch(`${this.baseUrl}/api/compras/flujo-pagos?${params}`);
@@ -198,6 +201,8 @@ class ApiService {
     const params = new URLSearchParams();
     if (filtros?.mes) params.append('mes', filtros.mes.toString());
     if (filtros?.año) params.append('año', filtros.año.toString());
+    if (filtros?.material) params.append('material', filtros.material);
+    if (filtros?.proveedor) params.append('proveedor', filtros.proveedor);
     
     const response = await fetch(`${this.baseUrl}/api/compras/aging-cuentas-pagar?${params}`);
     if (!response.ok) throw new Error('Error obteniendo aging de cuentas por pagar');
@@ -207,6 +212,12 @@ class ApiService {
   async getMaterialesCompras(): Promise<string[]> {
     const response = await fetch(`${this.baseUrl}/api/compras/materiales`);
     if (!response.ok) throw new Error('Error obteniendo materiales de compras');
+    return response.json();
+  }
+
+  async getProveedoresCompras(): Promise<string[]> {
+    const response = await fetch(`${this.baseUrl}/api/compras/proveedores`);
+    if (!response.ok) throw new Error('Error obteniendo proveedores de compras');
     return response.json();
   }
 

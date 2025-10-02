@@ -29,8 +29,9 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
   const [kpis, setKpis] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filtros, setFiltros] = useState<{ mes?: number; año?: number; material?: string }>({});
+  const [filtros, setFiltros] = useState<{ mes?: number; año?: number; material?: string; proveedor?: string }>({});
   const [materiales, setMateriales] = useState<string[]>([]);
+  const [proveedores, setProveedores] = useState<string[]>([]);
   const [monedaPrecios, setMonedaPrecios] = useState<'USD' | 'MXN'>('USD');
   const [monedaFlujoPagos, setMonedaFlujoPagos] = useState<'USD' | 'MXN'>('USD');
   const [evolucionPrecios, setEvolucionPrecios] = useState<any>(null);
@@ -61,6 +62,15 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
     }
   };
 
+  const loadProveedores = async () => {
+    try {
+      const proveedoresData = await apiService.getProveedoresCompras();
+      setProveedores(proveedoresData);
+    } catch (err) {
+      console.error('Error cargando proveedores:', err);
+    }
+  };
+
   const loadChartData = async () => {
     try {
       // Cargar evolución de precios
@@ -82,6 +92,7 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
   useEffect(() => {
     loadComprasData(filtros);
     loadMateriales();
+    loadProveedores();
     loadChartData();
   }, [filtros, monedaPrecios, monedaFlujoPagos]);
 
@@ -164,19 +175,6 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight">Dashboard de Compras</h1>
-          <p className="text-muted-foreground mt-1">
-            Análisis de compras, proveedores y flujo de pagos
-          </p>
-        </div>
-        <Button onClick={() => loadComprasData(filtros)} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Actualizar
-        </Button>
-      </div>
 
       {/* Filtros */}
       <Card>
@@ -184,7 +182,7 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
           <CardTitle>Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Mes</label>
               <select
@@ -217,6 +215,19 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
                 <option value="">Todos los años</option>
                 {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(año => (
                   <option key={año} value={año}>{año}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+              <select
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={filtros.proveedor || ''}
+                onChange={(e) => handleFiltroChange('proveedor', e.target.value || undefined)}
+              >
+                <option value="">Todos los proveedores</option>
+                {proveedores.map((proveedor, index) => (
+                  <option key={index} value={proveedor}>{proveedor}</option>
                 ))}
               </select>
             </div>
