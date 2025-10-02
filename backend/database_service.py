@@ -45,9 +45,10 @@ class DatabaseService:
             cobranzas_count = self.cobranza_service.save_cobranzas(processed_data_dict.get("cobranza_clean", []), archivo.id)
             anticipos_count = self._save_anticipos(processed_data_dict.get("cfdi_clean", []), archivo.id)
             pedidos_count = self.pedidos_service.save_pedidos(processed_data_dict.get("pedidos_clean", []), archivo.id)
+            compras_count = self._save_compras(processed_data_dict.get("compras", []), archivo.id)
             
             # Actualizar registro de archivo
-            total_registros = facturas_count + cobranzas_count + anticipos_count + pedidos_count
+            total_registros = facturas_count + cobranzas_count + anticipos_count + pedidos_count + compras_count
             archivo.registros_procesados = total_registros
             archivo.estado = "procesado"
             self.db.commit()
@@ -61,7 +62,8 @@ class DatabaseService:
                     "facturas": facturas_count,
                     "cobranzas": cobranzas_count,
                     "anticipos": anticipos_count,
-                    "pedidos": pedidos_count
+                    "pedidos": pedidos_count,
+                    "compras": compras_count
                 }
             }
             
@@ -120,6 +122,48 @@ class DatabaseService:
                 count += 1
             except Exception as e:
                 logger.warning(f"Error guardando anticipo: {str(e)}")
+                continue
+        
+        self.db.commit()
+        return count
+    
+    def _save_compras(self, compras_data: list, archivo_id: int) -> int:
+        """Guarda datos de compras"""
+        count = 0
+        for compra_data in compras_data:
+            try:
+                compra = Compras(
+                    fecha_compra=DataValidator.safe_date(compra_data.get('fecha_compra')),
+                    numero_factura=DataValidator.safe_string(compra_data.get('numero_factura', '')),
+                    proveedor=DataValidator.safe_string(compra_data.get('proveedor', '')),
+                    concepto=DataValidator.safe_string(compra_data.get('concepto', '')),
+                    categoria=DataValidator.safe_string(compra_data.get('categoria', '')),
+                    subcategoria=DataValidator.safe_string(compra_data.get('subcategoria', '')),
+                    cantidad=DataValidator.safe_float(compra_data.get('cantidad', 0)),
+                    unidad=DataValidator.safe_string(compra_data.get('unidad', 'KG')),
+                    precio_unitario=DataValidator.safe_float(compra_data.get('precio_unitario', 0)),
+                    subtotal=DataValidator.safe_float(compra_data.get('subtotal', 0)),
+                    iva=DataValidator.safe_float(compra_data.get('iva', 0)),
+                    total=DataValidator.safe_float(compra_data.get('total', 0)),
+                    moneda=DataValidator.safe_string(compra_data.get('moneda', 'USD')),
+                    tipo_cambio=DataValidator.safe_float(compra_data.get('tipo_cambio', 1.0)),
+                    forma_pago=DataValidator.safe_string(compra_data.get('forma_pago', '')),
+                    dias_credito=DataValidator.safe_int(compra_data.get('dias_credito', 0)),
+                    fecha_vencimiento=DataValidator.safe_date(compra_data.get('fecha_vencimiento')),
+                    fecha_pago=DataValidator.safe_date(compra_data.get('fecha_pago')),
+                    estado_pago=DataValidator.safe_string(compra_data.get('estado_pago', 'pendiente')),
+                    centro_costo=DataValidator.safe_string(compra_data.get('centro_costo', '')),
+                    proyecto=DataValidator.safe_string(compra_data.get('proyecto', '')),
+                    notas=DataValidator.safe_string(compra_data.get('notas', '')),
+                    archivo_origen=DataValidator.safe_string(compra_data.get('archivo_origen', '')),
+                    archivo_id=archivo_id,
+                    mes=DataValidator.safe_int(compra_data.get('mes')),
+                    año=DataValidator.safe_int(compra_data.get('año'))
+                )
+                self.db.add(compra)
+                count += 1
+            except Exception as e:
+                logger.warning(f"Error guardando compra: {str(e)}")
                 continue
         
         self.db.commit()
@@ -279,6 +323,7 @@ class DatabaseService:
             self.db.query(CFDIRelacionado).delete()
             self.db.query(Cobranza).delete()
             self.db.query(Facturacion).delete()
+            self.db.query(Compras).delete()
             self.db.query(KPI).delete()
             self.db.query(ArchivoProcesado).delete()  # Limpiar también archivos procesados
             self.db.commit()

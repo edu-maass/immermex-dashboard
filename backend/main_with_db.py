@@ -358,6 +358,8 @@ async def upload_compras_file(
             
             # Preparar información del archivo
             archivo_info = {
+                "nombre": file.filename,  # Key expected by _create_archivo_record
+                "tamaño": len(content),    # Key expected by _create_archivo_record
                 "nombre_archivo": file.filename,
                 "tipo_archivo": file.content_type or "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "reemplazar_datos": reemplazar_datos,
@@ -368,6 +370,13 @@ async def upload_compras_file(
             logger.info("Iniciando guardado de datos de compras en base de datos...")
             db_service = DatabaseService(db)
             result = db_service.save_processed_data(processed_data_dict, archivo_info)
+            
+            # Verificar si hubo error en el guardado
+            if not result.get("success", True):
+                error_msg = result.get("error", "Error desconocido al guardar datos")
+                logger.error(f"Error guardando datos: {error_msg}")
+                raise Exception(f"Error guardando datos: {error_msg}")
+            
             logger.info(f"Guardado de compras completado: {result}")
             
             logger.info(f"Archivo de compras procesado y guardado exitosamente: {file.filename}")
@@ -376,8 +385,8 @@ async def upload_compras_file(
                 "mensaje": "Archivo de compras procesado y guardado exitosamente en base de datos",
                 "nombre_archivo": file.filename,
                 "archivo_id": result["archivo_id"],
-                "total_registros": result["total_registros"],
-                "registros_procesados": result["total_registros"],
+                "total_registros": result["registros_procesados"],
+                "registros_procesados": result["registros_procesados"],
                 "kpis_compras": kpis,
                 "datos_procesados": {
                     "compras": len(processed_data_dict.get('compras', []))
