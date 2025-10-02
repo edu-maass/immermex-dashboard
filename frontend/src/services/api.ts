@@ -183,10 +183,11 @@ class ApiService {
     return response.json();
   }
 
-  async getFlujoPagosCompras(filtros?: any): Promise<any> {
+  async getFlujoPagosCompras(filtros?: any, moneda: string = 'USD'): Promise<any> {
     const params = new URLSearchParams();
     if (filtros?.mes) params.append('mes', filtros.mes.toString());
     if (filtros?.año) params.append('año', filtros.año.toString());
+    params.append('moneda', moneda);
     
     const response = await fetch(`${this.baseUrl}/api/compras/flujo-pagos?${params}`);
     if (!response.ok) throw new Error('Error obteniendo flujo de pagos');

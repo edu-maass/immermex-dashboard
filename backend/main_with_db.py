@@ -864,9 +864,10 @@ async def get_evolucion_precios(
 async def get_flujo_pagos(
     mes: Optional[int] = Query(None, description="Filtrar por mes"),
     año: Optional[int] = Query(None, description="Filtrar por año"),
+    moneda: str = Query("USD", description="Moneda para mostrar (USD o MXN)"),
     db: Session = Depends(get_db)
 ):
-    """Obtiene flujo de pagos de compras"""
+    """Obtiene flujo de pagos de compras por semana"""
     try:
         db_service = DatabaseService(db)
         
@@ -876,7 +877,11 @@ async def get_flujo_pagos(
         if año:
             filtros['año'] = año
         
-        flujo = db_service.get_flujo_pagos_compras(filtros)
+        # Validar moneda
+        if moneda not in ['USD', 'MXN']:
+            moneda = 'USD'
+        
+        flujo = db_service.get_flujo_pagos_compras(filtros, moneda)
         return flujo
         
     except Exception as e:

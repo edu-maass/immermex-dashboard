@@ -1,7 +1,8 @@
 import { FC } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { FileText } from 'lucide-react';
+import { Button } from '../ui/button';
+import { FileText, DollarSign } from 'lucide-react';
 
 interface FlujoPagosChartProps {
   data: {
@@ -11,13 +12,19 @@ interface FlujoPagosChartProps {
       data: number[];
       color: string;
     }>;
+    totales?: number[];
+    moneda?: string;
   };
   titulo?: string;
+  moneda?: string;
+  onMonedaChange?: (moneda: string) => void;
 }
 
 export const FlujoPagosChart: FC<FlujoPagosChartProps> = ({
   data,
-  titulo = "Flujo de Pagos por Mes"
+  titulo = "Flujo de Pagos Semanal",
+  moneda = 'USD',
+  onMonedaChange
 }) => {
   if (!data || !data.datasets || data.datasets.length === 0) {
     return (
@@ -38,37 +45,63 @@ export const FlujoPagosChart: FC<FlujoPagosChartProps> = ({
     );
   }
 
-  // Transformar datos para Recharts
+  // Transformar datos para Recharts (columnas apiladas)
   const chartData = data.labels.map((label, index) => {
-    const dataPoint: any = { mes: label };
+    const dataPoint: any = { semana: label };
     data.datasets.forEach(dataset => {
       dataPoint[dataset.label] = dataset.data[index] || 0;
     });
+    // Agregar total si está disponible
+    if (data.totales && data.totales[index]) {
+      dataPoint['Total'] = data.totales[index];
+    }
     return dataPoint;
   });
 
   const formatTooltipValue = (value: number) => {
+    const currency = moneda || data.moneda || 'USD';
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
-      currency: 'MXN',
+      currency: currency === 'USD' ? 'USD' : 'MXN',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
   };
 
   const formatYAxisValue = (value: number) => {
+    const currency = moneda || data.moneda || 'USD';
+    const symbol = currency === 'USD' ? '$' : '$';
+    
     if (value >= 1000000) {
-      return `${(value / 1000000).toFixed(1)}M`;
+      return `${symbol}${(value / 1000000).toFixed(1)}M`;
     } else if (value >= 1000) {
-      return `${(value / 1000).toFixed(1)}K`;
+      return `${symbol}${(value / 1000).toFixed(1)}K`;
     }
-    return value.toString();
+    return `${symbol}${value}`;
+  };
+
+  const handleMonedaChange = () => {
+    if (onMonedaChange) {
+      const newMoneda = moneda === 'USD' ? 'MXN' : 'USD';
+      onMonedaChange(newMoneda);
+    }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{titulo}</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>{titulo}</CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleMonedaChange}
+            className="flex items-center gap-2"
+          >
+            <DollarSign className="h-4 w-4" />
+            {moneda || data.moneda || 'USD'}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="h-80">
@@ -76,7 +109,7 @@ export const FlujoPagosChart: FC<FlujoPagosChartProps> = ({
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
-                dataKey="mes" 
+                dataKey="semana" 
                 tick={{ fontSize: 12 }}
                 angle={-45}
                 textAnchor="end"
@@ -88,7 +121,12 @@ export const FlujoPagosChart: FC<FlujoPagosChartProps> = ({
               />
               <Tooltip 
                 formatter={(value: number, name: string) => [formatTooltipValue(value), name]}
-                labelFormatter={(label) => `Mes: ${label}`}
+                labelFormatter={(label) => `Semana: ${label}`}
+                contentStyle={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                }}
               />
               <Legend />
               {data.datasets.map((dataset, index) => (
@@ -97,6 +135,7 @@ export const FlujoPagosChart: FC<FlujoPagosChartProps> = ({
                   dataKey={dataset.label} 
                   fill={dataset.color}
                   name={dataset.label}
+                  stackId="pagos"
                 />
               ))}
             </BarChart>

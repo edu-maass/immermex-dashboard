@@ -32,6 +32,7 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
   const [filtros, setFiltros] = useState<{ mes?: number; año?: number; material?: string }>({});
   const [materiales, setMateriales] = useState<string[]>([]);
   const [monedaPrecios, setMonedaPrecios] = useState<'USD' | 'MXN'>('USD');
+  const [monedaFlujoPagos, setMonedaFlujoPagos] = useState<'USD' | 'MXN'>('USD');
   const [evolucionPrecios, setEvolucionPrecios] = useState<any>(null);
   const [flujoPagos, setFlujoPagos] = useState<any>(null);
   const [agingCuentasPagar, setAgingCuentasPagar] = useState<any>(null);
@@ -67,7 +68,7 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
       setEvolucionPrecios(evolucionData);
 
       // Cargar flujo de pagos
-      const flujoData = await apiService.getFlujoPagosCompras(filtros);
+      const flujoData = await apiService.getFlujoPagosCompras(filtros, monedaFlujoPagos);
       setFlujoPagos(flujoData);
 
       // Cargar aging de cuentas por pagar
@@ -82,7 +83,7 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
     loadComprasData(filtros);
     loadMateriales();
     loadChartData();
-  }, [filtros, monedaPrecios]);
+  }, [filtros, monedaPrecios, monedaFlujoPagos]);
 
   const handleFiltroChange = (campo: string, valor: any) => {
     setFiltros(prev => ({
@@ -93,6 +94,17 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
 
   const handleClearFilters = () => {
     setFiltros({});
+  };
+
+  const handleMonedaFlujoPagosChange = async (nuevaMoneda: string) => {
+    setMonedaFlujoPagos(nuevaMoneda as 'USD' | 'MXN');
+    // Recargar datos del flujo de pagos con la nueva moneda
+    try {
+      const flujoData = await apiService.getFlujoPagosCompras(filtros, nuevaMoneda);
+      setFlujoPagos(flujoData);
+    } catch (err) {
+      console.error('Error recargando flujo de pagos:', err);
+    }
   };
 
   const formatCurrency = (value: number) => {
@@ -353,6 +365,8 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
         <FlujoPagosChart
           data={flujoPagos || { labels: [], datasets: [] }}
           titulo={flujoPagos?.titulo}
+          moneda={monedaFlujoPagos}
+          onMonedaChange={handleMonedaFlujoPagosChange}
         />
       </div>
 

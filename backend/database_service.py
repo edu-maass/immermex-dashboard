@@ -772,9 +772,11 @@ class DatabaseService:
             logger.error(f"Error obteniendo evolución de precios: {str(e)}")
             return {"labels": [], "data": [], "titulo": "Evolución de Precios por kg"}
     
-    def get_flujo_pagos_compras(self, filtros: dict = None) -> dict:
-        """Obtiene flujo de pagos de compras"""
+    def get_flujo_pagos_compras(self, filtros: dict = None, moneda: str = 'USD') -> dict:
+        """Obtiene flujo de pagos de compras por semana a partir de hoy"""
         try:
+            from datetime import datetime, timedelta
+            
             # Query base para compras
             query = self.db.query(Compras)
             
@@ -788,63 +790,114 @@ class DatabaseService:
             compras = query.all()
             
             if not compras:
-                return {"labels": [], "data": [], "titulo": "Flujo de Pagos"}
+                return {"labels": [], "datasets": [], "titulo": "Flujo de Pagos Semanal"}
             
-            # Agrupar pagos por mes
-            flujo_por_mes = {}
+            # Obtener fecha de hoy y calcular semanas futuras
+            hoy = datetime.now().date()
+            semanas_futuras = 12  # Mostrar 12 semanas a partir de hoy
             
+            # Crear estructura de semanas
+            flujo_por_semana = {}
+            for i in range(semanas_futuras):
+                fecha_semana = hoy + timedelta(weeks=i)
+                # Obtener el lunes de esa semana
+                lunes = fecha_semana - timedelta(days=fecha_semana.weekday())
+                semana_key = f"Sem {lunes.strftime('%m/%d')}"
+                
+                flujo_por_semana[semana_key] = {
+                    "anticipos": 0,
+                    "liquidaciones": 0,
+                    "gastos_importacion": 0,
+                    "iva": 0,
+                    "total": 0
+                }
+            
+            # Procesar compras y distribuir pagos por semanas
             for compra in compras:
                 if compra.fecha_compra:
-                    mes_key = f"{compra.fecha_compra.year}-{compra.fecha_compra.month:02d}"
+                    # Convertir a la moneda solicitada
+                    total_usd = compra.total or 0
+                    if compra.tipo_cambio and compra.tipo_cambio > 0:
+                        total_mxn = total_usd * compra.tipo_cambio
+                    else:
+                        total_mxn = total_usd * 20  # Tipo de cambio por defecto
                     
-                    if mes_key not in flujo_por_mes:
-                        flujo_por_mes[mes_key] = {
-                            "anticipos": 0,
-                            "liquidaciones": 0,
-                            "gastos_importacion": 0,
-                            "iva": 0
-                        }
+                    total = total_mxn if moneda == 'MXN' else total_usd
                     
-                    # Simular distribución de pagos (esto debería basarse en datos reales)
-                    total = compra.total or 0
-                    anticipo = total * 0.3  # 30% anticipo
-                    liquidacion = total * 0.5  # 50% liquidación
-                    gastos_importacion = total * 0.1  # 10% gastos importación
-                    iva = total * 0.1  # 10% IVA
+                    # Distribuir pagos por semanas basado en fechas
+                    fecha_compra = compra.fecha_compra.date()
                     
-                    flujo_por_mes[mes_key]["anticipos"] += anticipo
-                    flujo_por_mes[mes_key]["liquidaciones"] += liquidacion
-                    flujo_por_mes[mes_key]["gastos_importacion"] += gastos_importacion
-                    flujo_por_mes[mes_key]["iva"] += iva
+                    # Anticipo: en la fecha de compra (semana 0)
+                    anticipo = total * 0.3
+                    semana_anticipo = self._get_semana_from_fecha(fecha_compra, hoy)
+                    if semana_anticipo in flujo_por_semana:
+                        flujo_por_semana[semana_anticipo]["anticipos"] += anticipo
+                        flujo_por_semana[semana_anticipo]["total"] += anticipo
+                    
+                    # Liquidación: 30 días después de la compra
+                    fecha_liquidacion = fecha_compra + timedelta(days=30)
+                    liquidacion = total * 0.5
+                    semana_liquidacion = self._get_semana_from_fecha(fecha_liquidacion, hoy)
+                    if semana_liquidacion in flujo_por_semana:
+                        flujo_por_semana[semana_liquidacion]["liquidaciones"] += liquidacion
+                        flujo_por_semana[semana_liquidacion]["total"] += liquidacion
+                    
+                    # Gastos de importación e IVA: 60 días después (ETA)
+                    fecha_eta = fecha_compra + timedelta(days=60)
+                    gastos_importacion = total * 0.1
+                    iva = total * 0.1
+                    semana_eta = self._get_semana_from_fecha(fecha_eta, hoy)
+                    if semana_eta in flujo_por_semana:
+                        flujo_por_semana[semana_eta]["gastos_importacion"] += gastos_importacion
+                        flujo_por_semana[semana_eta]["iva"] += iva
+                        flujo_por_semana[semana_eta]["total"] += gastos_importacion + iva
             
             # Preparar datos para gráfico
-            meses_ordenados = sorted(flujo_por_mes.keys())
+            semanas_ordenadas = list(flujo_por_semana.keys())
             anticipos = []
             liquidaciones = []
             gastos_importacion = []
             iva = []
+            totales = []
             
-            for mes in meses_ordenados:
-                datos = flujo_por_mes[mes]
+            for semana in semanas_ordenadas:
+                datos = flujo_por_semana[semana]
                 anticipos.append(round(datos["anticipos"], 2))
                 liquidaciones.append(round(datos["liquidaciones"], 2))
                 gastos_importacion.append(round(datos["gastos_importacion"], 2))
                 iva.append(round(datos["iva"], 2))
+                totales.append(round(datos["total"], 2))
             
             return {
-                "labels": meses_ordenados,
+                "labels": semanas_ordenadas,
                 "datasets": [
                     {"label": "Anticipos", "data": anticipos, "color": "#10b981"},
                     {"label": "Liquidaciones", "data": liquidaciones, "color": "#3b82f6"},
                     {"label": "Gastos Importación", "data": gastos_importacion, "color": "#f59e0b"},
                     {"label": "IVA", "data": iva, "color": "#ef4444"}
                 ],
-                "titulo": "Flujo de Pagos por Mes"
+                "totales": totales,
+                "titulo": f"Flujo de Pagos Semanal ({moneda})",
+                "moneda": moneda
             }
             
         except Exception as e:
             logger.error(f"Error obteniendo flujo de pagos: {str(e)}")
-            return {"labels": [], "datasets": [], "titulo": "Flujo de Pagos"}
+            return {"labels": [], "datasets": [], "titulo": "Flujo de Pagos Semanal"}
+    
+    def _get_semana_from_fecha(self, fecha, fecha_inicio):
+        """Convierte una fecha a la semana correspondiente desde fecha_inicio"""
+        from datetime import timedelta
+        
+        dias_diferencia = (fecha - fecha_inicio).days
+        semanas_diferencia = dias_diferencia // 7
+        
+        if semanas_diferencia < 0 or semanas_diferencia >= 12:
+            return None
+            
+        fecha_semana = fecha_inicio + timedelta(weeks=semanas_diferencia)
+        lunes = fecha_semana - timedelta(days=fecha_semana.weekday())
+        return f"Sem {lunes.strftime('%m/%d')}"
     
     def get_aging_cuentas_pagar(self, filtros: dict = None) -> dict:
         """Obtiene aging de cuentas por pagar"""
