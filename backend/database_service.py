@@ -145,14 +145,12 @@ class DatabaseService:
                 self.db.add(archivo)
                 logger.info("ArchivoProcesado agregado a la sesión")
             
-            # Commit inmediatamente para asegurar que el registro existe
-            logger.info("Realizando commit...")
-            self.db.commit()
-            logger.info("Commit exitoso")
+            # No hacer commit aquí - dejar que el método principal maneje la transacción
+            logger.info("ArchivoProcesado creado/actualizado en memoria")
             
-            # Refrescar el objeto para obtener el ID
+            # Refrescar el objeto para obtener el ID (sin commit)
             logger.info("Refrescando objeto...")
-            self.db.refresh(archivo)
+            self.db.flush()  # Solo flush para obtener el ID
             logger.info("Objeto refrescado")
             
             # Verificar que el archivo fue creado correctamente y es visible
