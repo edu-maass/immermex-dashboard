@@ -54,8 +54,13 @@ class FacturacionService:
         query = self.db.query(Facturacion)
         
         if filtros:
-            if filtros.get('mes'):
+            # Solo aplicar filtro de mes si también hay año seleccionado
+            if filtros.get('mes') and filtros.get('año'):
                 query = query.filter(Facturacion.mes == filtros['mes'])
+            elif filtros.get('mes') and not filtros.get('año'):
+                # Si hay mes pero no año, ignorar el filtro de mes
+                logger.warning("Filtro de mes ignorado porque no hay año seleccionado")
+            
             if filtros.get('año'):
                 query = query.filter(Facturacion.año == filtros['año'])
             if filtros.get('pedidos'):

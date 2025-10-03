@@ -95,8 +95,13 @@ class PedidosService:
         query = self.db.query(Pedido)
         
         if filtros:
-            if filtros.get('mes'):
+            # Solo aplicar filtro de mes si también hay año seleccionado
+            if filtros.get('mes') and filtros.get('año'):
                 query = query.filter(func.extract('month', Pedido.fecha_factura) == filtros['mes'])
+            elif filtros.get('mes') and not filtros.get('año'):
+                # Si hay mes pero no año, ignorar el filtro de mes
+                logger.warning("Filtro de mes ignorado porque no hay año seleccionado")
+            
             if filtros.get('año'):
                 query = query.filter(func.extract('year', Pedido.fecha_factura) == filtros['año'])
             if filtros.get('pedidos'):

@@ -8,6 +8,7 @@ interface SearchableSelectProps {
   placeholder?: string
   options: Array<{ value: string; label: string }>
   className?: string
+  disabled?: boolean
 }
 
 export const SearchableSelect: React.FC<SearchableSelectProps> = ({
@@ -15,7 +16,8 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   onValueChange,
   placeholder = "Seleccionar...",
   options,
-  className
+  className,
+  disabled = false
 }) => {
   const [isOpen, setIsOpen] = React.useState(false)
   const [searchTerm, setSearchTerm] = React.useState("")
@@ -54,10 +56,12 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
       {/* Trigger */}
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
         className={cn(
           "flex h-10 w-full items-center justify-between rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-          "hover:bg-gray-50"
+          !disabled && "hover:bg-gray-50",
+          disabled && "bg-gray-50 text-gray-400"
         )}
       >
         <span className="truncate">
@@ -78,7 +82,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
       </button>
 
       {/* Dropdown */}
-      {isOpen && (
+      {isOpen && !disabled && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-hidden">
           {/* Search Input */}
           <div className="p-2 border-b border-gray-100">

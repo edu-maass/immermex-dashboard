@@ -33,6 +33,10 @@ class DatabaseService:
         Guarda los datos procesados en la base de datos
         """
         try:
+            logger.info(f"=== INICIANDO save_processed_data ===")
+            logger.info(f"Datos recibidos: {list(processed_data_dict.keys())}")
+            logger.info(f"Archivo info: {archivo_info}")
+            
             # Crear registro de archivo
             logger.info(f"Creando registro de archivo para: {archivo_info.get('nombre', 'unknown')}")
             archivo = self._create_archivo_record(archivo_info)
@@ -82,8 +86,12 @@ class DatabaseService:
             }
             
         except Exception as e:
-            self.db.rollback()
+            logger.error(f"=== EXCEPCIÓN EN save_processed_data ===")
             logger.error(f"Error guardando datos: {str(e)}")
+            logger.error(f"Tipo de error: {type(e)}")
+            import traceback
+            logger.error(f"Traceback completo: {traceback.format_exc()}")
+            self.db.rollback()
             return {"success": False, "error": str(e)}
     
     def _create_archivo_record(self, archivo_info: dict) -> ArchivoProcesado:

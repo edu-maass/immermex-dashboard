@@ -16,6 +16,12 @@ export const Filters: FC<FiltersProps> = ({ onFiltersChange, onClearFilters }) =
 
   const handleInputChange = (field: keyof FiltrosDashboard, value: string | number) => {
     const newFiltros = { ...filtros, [field]: value || undefined };
+    
+    // Si se deselecciona el año, limpiar también el mes
+    if (field === 'año' && !value) {
+      newFiltros.mes = undefined;
+    }
+    
     setFiltros(newFiltros);
   };
 
@@ -72,12 +78,15 @@ export const Filters: FC<FiltersProps> = ({ onFiltersChange, onClearFilters }) =
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Mes */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Mes</label>
+            <label className="text-sm font-medium">
+              Mes {!filtros.año && <span className="text-gray-400 text-xs">(Selecciona un año primero)</span>}
+            </label>
             <SearchableSelect
               value={filtros.mes?.toString() || ''}
               onValueChange={(value) => handleInputChange('mes', parseInt(value))}
               placeholder="Seleccionar mes"
               options={meses}
+              disabled={!filtros.año}
             />
           </div>
 
