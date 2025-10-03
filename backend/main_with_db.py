@@ -1,6 +1,9 @@
 """
 API REST para Immermex Dashboard con persistencia en base de datos
 Integra el procesador avanzado con almacenamiento persistente
+
+VERCEL DEPLOYMENT VERIFICATION - 2025-10-03 16:37
+UPDATED CODE RUNNING - DEBUGGING ENABLED
 """
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Query
