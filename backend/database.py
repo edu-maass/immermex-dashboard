@@ -24,6 +24,24 @@ POSTGRES_URL = os.getenv("POSTGRES_URL", "")
 if POSTGRES_URL and POSTGRES_URL.startswith("postgresql://"):
     DATABASE_URL = POSTGRES_URL
     logger.info("Usando URL PostgreSQL directa de POSTGRES_URL")
+elif os.getenv("SUPABASE_URL") and os.getenv("SUPABASE_PASSWORD"):
+    # Construir URL PostgreSQL desde variables de Supabase
+    try:
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_password = os.getenv("SUPABASE_PASSWORD")
+        
+        # Extraer project ref de la URL de Supabase
+        # Formato: https://your-project-ref.supabase.co
+        if "supabase.co" in supabase_url:
+            project_ref = supabase_url.replace("https://", "").replace(".supabase.co", "")
+            DATABASE_URL = f"postgresql://postgres:{supabase_password}@db.{project_ref}.supabase.co:5432/postgres"
+            logger.info(f"Construida URL PostgreSQL desde Supabase: db.{project_ref}.supabase.co")
+        else:
+            logger.warning("Formato de SUPABASE_URL no reconocido, usando SQLite")
+            DATABASE_URL = "sqlite:///./immermex.db"
+    except Exception as e:
+        logger.error(f"Error construyendo URL de Supabase: {str(e)}")
+        DATABASE_URL = "sqlite:///./immermex.db"
 elif DATABASE_URL.startswith("https://supabase.com/"):
     # Extraer información de la URL de Supabase
     # Formato: https://supabase.com/project/ref/rest/v1/
