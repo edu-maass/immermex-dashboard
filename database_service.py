@@ -87,8 +87,9 @@ class DatabaseService:
                 estado="en_proceso"
             )
             self.db.add(archivo)
-        
-        self.db.commit()
+
+        # Evitar commit intermedio en Serverless; usar flush para obtener ID
+        self.db.flush()
         self.db.refresh(archivo)
         return archivo
     
