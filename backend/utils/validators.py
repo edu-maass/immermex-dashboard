@@ -20,26 +20,40 @@ class DataValidator:
         """Detecta si un valor es NaN de cualquier tipo"""
         if value is None:
             return True
+        
+        # Manejar pandas NaT específicamente
+        if hasattr(value, '__class__') and str(value.__class__) == "<class 'pandas._libs.tslibs.nattype.NaTType'>":
+            return True
+        
         if isinstance(value, (int, float)):
             return np.isnan(value)
         if isinstance(value, str):
             value_lower = value.lower().strip()
-            return value_lower in ['nan', 'none', 'null', '']
+            return value_lower in ['nan', 'none', 'null', 'nat', '']
         return False
     
     @staticmethod
     def safe_date(value: Any) -> Optional[datetime]:
-        """Convierte valor a fecha segura, manejando NaN"""
+        """Convierte valor a fecha segura, manejando NaN y NaT"""
         try:
             if DataValidator.is_nan_value(value):
                 return None
+            
+            # Manejar pandas NaT específicamente
+            if hasattr(value, '__class__') and str(value.__class__) == "<class 'pandas._libs.tslibs.nattype.NaTType'>":
+                return None
+            
+            # Verificar si es pandas NaT usando numpy
+            if isinstance(value, (int, float)) and np.isnan(value):
+                return None
+            
             if isinstance(value, datetime):
                 return value
             if isinstance(value, (int, float)):
                 return None  # Los números no son fechas válidas
             if isinstance(value, str):
                 value = value.strip()
-                if not value or value.lower() in ['nan', 'none', 'null']:
+                if not value or value.lower() in ['nan', 'none', 'null', 'nat']:
                     return None
                 # Intentar parsear como fecha
                 try:
