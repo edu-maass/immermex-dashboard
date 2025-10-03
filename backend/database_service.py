@@ -755,8 +755,13 @@ class DatabaseService:
             
             # Aplicar filtros
             if filtros:
-                if filtros.get('mes'):
+                # Solo aplicar filtro de mes si también hay año seleccionado
+                if filtros.get('mes') and filtros.get('año'):
                     query = query.filter(Compras.mes == filtros['mes'])
+                elif filtros.get('mes') and not filtros.get('año'):
+                    # Si hay mes pero no año, ignorar el filtro de mes
+                    logger.warning("Filtro de mes ignorado porque no hay año seleccionado")
+                
                 if filtros.get('año'):
                     query = query.filter(Compras.año == filtros['año'])
                 if filtros.get('material'):
@@ -871,8 +876,13 @@ class DatabaseService:
             
             # Aplicar filtros
             if filtros:
-                if filtros.get('mes'):
+                # Solo aplicar filtro de mes si también hay año seleccionado
+                if filtros.get('mes') and filtros.get('año'):
                     query = query.filter(Compras.mes == filtros['mes'])
+                elif filtros.get('mes') and not filtros.get('año'):
+                    # Si hay mes pero no año, ignorar el filtro de mes
+                    logger.warning("Filtro de mes ignorado porque no hay año seleccionado")
+                
                 if filtros.get('año'):
                     query = query.filter(Compras.año == filtros['año'])
                 if filtros.get('material'):
@@ -1079,8 +1089,13 @@ class DatabaseService:
             
             # Aplicar filtros
             if filtros:
-                if filtros.get('mes'):
+                # Solo aplicar filtro de mes si también hay año seleccionado
+                if filtros.get('mes') and filtros.get('año'):
                     query = query.filter(Compras.mes == filtros['mes'])
+                elif filtros.get('mes') and not filtros.get('año'):
+                    # Si hay mes pero no año, ignorar el filtro de mes
+                    logger.warning("Filtro de mes ignorado porque no hay año seleccionado")
+                
                 if filtros.get('año'):
                     query = query.filter(Compras.año == filtros['año'])
             
