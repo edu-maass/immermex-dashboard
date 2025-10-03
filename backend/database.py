@@ -19,8 +19,12 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./immermex.db")
 if not DATABASE_URL or DATABASE_URL == "":
     DATABASE_URL = "sqlite:///./immermex.db"
 
-# Convertir URL de Supabase de https:// a postgresql://
-if DATABASE_URL.startswith("https://supabase.com/"):
+# Verificar si hay una URL PostgreSQL directa configurada
+POSTGRES_URL = os.getenv("POSTGRES_URL", "")
+if POSTGRES_URL and POSTGRES_URL.startswith("postgresql://"):
+    DATABASE_URL = POSTGRES_URL
+    logger.info("Usando URL PostgreSQL directa de POSTGRES_URL")
+elif DATABASE_URL.startswith("https://supabase.com/"):
     # Extraer información de la URL de Supabase
     # Formato: https://supabase.com/project/ref/rest/v1/
     # Convertir a: postgresql://postgres:[password]@db.ref.supabase.co:5432/postgres

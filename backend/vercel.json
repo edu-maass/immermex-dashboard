@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "main_debug.py",
+      "src": "main_with_db.py",
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "50mb"
@@ -12,12 +12,13 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "main_debug.py"
+      "dest": "main_with_db.py"
     }
   ],
   "env": {
     "ENVIRONMENT": "production",
     "DEBUG": "true",
-    "LOG_LEVEL": "debug"
+    "LOG_LEVEL": "debug",
+    "DATABASE_URL": "sqlite:///./immermex.db"
   }
 }
