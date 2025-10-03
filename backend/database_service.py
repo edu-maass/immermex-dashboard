@@ -53,9 +53,11 @@ class DatabaseService:
                 raise
             
             # CRITICAL: Commit del ArchivoProcesado ANTES de guardar datos
+            logger.info("🔥🔥🔥 NEW DEPLOYMENT CONFIRMATION - DATABASE SERVICE 🔥🔥🔥")
             logger.info("Haciendo commit del ArchivoProcesado para que sea visible...")
             self.db.commit()
             logger.info("Commit del ArchivoProcesado exitoso")
+            logger.info("🔥🔥🔥 COMMIT COMPLETED - ArchivoProcesado should be visible now 🔥🔥🔥")
             
             # Verificar que el archivo es visible después del commit
             archivo_check = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo.id).first()
