@@ -81,7 +81,7 @@ class PedidosService:
                 logger.warning(f"Error guardando pedido: {str(e)}")
                 continue
         
-        self.db.commit()
+        # No hacer commit aquí - dejar que el método principal maneje la transacción
         
         if fechas_asignadas > 0:
             logger.info(f"Se asignaron automáticamente {fechas_asignadas} fechas de factura a pedidos")

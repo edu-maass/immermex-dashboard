@@ -46,7 +46,7 @@ class FacturacionService:
                 logger.warning(f"Error guardando factura: {str(e)}")
                 continue
         
-        self.db.commit()
+        # No hacer commit aquí - dejar que el método principal maneje la transacción
         return count
     
     def get_facturas_by_filtros(self, filtros: dict = None):

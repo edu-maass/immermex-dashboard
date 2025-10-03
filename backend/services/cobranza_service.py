@@ -42,7 +42,7 @@ class CobranzaService:
                 logger.warning(f"Error guardando cobranza: {str(e)}")
                 continue
         
-        self.db.commit()
+        # No hacer commit aquí - dejar que el método principal maneje la transacción
         return count
     
     def get_cobranzas_validas(self, cobranzas: list) -> list:
