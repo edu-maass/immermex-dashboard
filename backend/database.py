@@ -34,8 +34,9 @@ elif os.getenv("SUPABASE_URL") and os.getenv("SUPABASE_PASSWORD"):
         # Formato: https://your-project-ref.supabase.co
         if "supabase.co" in supabase_url:
             project_ref = supabase_url.replace("https://", "").replace(".supabase.co", "")
-            DATABASE_URL = f"postgresql://postgres:{supabase_password}@db.{project_ref}.supabase.co:5432/postgres"
-            logger.info(f"Construida URL PostgreSQL desde Supabase: db.{project_ref}.supabase.co")
+            # Usar pooler de Supabase para IPv4 compatibility
+            DATABASE_URL = f"postgresql://postgres.{project_ref}:{supabase_password}@aws-1-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require"
+            logger.info(f"Construida URL PostgreSQL desde Supabase pooler: aws-1-us-west-1.pooler.supabase.com")
         else:
             logger.warning("Formato de SUPABASE_URL no reconocido, usando SQLite")
             DATABASE_URL = "sqlite:///./immermex.db"
@@ -53,8 +54,9 @@ elif DATABASE_URL.startswith("https://supabase.com/"):
             # Construir URL PostgreSQL (necesitará password en variable separada)
             postgres_password = os.getenv("SUPABASE_PASSWORD", "")
             if postgres_password:
-                DATABASE_URL = f"postgresql://postgres:{postgres_password}@db.{project_ref}.supabase.co:5432/postgres"
-                logger.info(f"Convertida URL de Supabase a PostgreSQL: db.{project_ref}.supabase.co")
+                # Usar pooler de Supabase para IPv4 compatibility
+                DATABASE_URL = f"postgresql://postgres.{project_ref}:{postgres_password}@aws-1-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require"
+                logger.info(f"Convertida URL de Supabase a PostgreSQL pooler: aws-1-us-west-1.pooler.supabase.com")
             else:
                 logger.warning("SUPABASE_PASSWORD no configurada, usando SQLite")
                 DATABASE_URL = "sqlite:///./immermex.db"
