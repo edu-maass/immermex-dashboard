@@ -342,15 +342,12 @@ async def upload_file(
 @app.post("/api/upload/compras")
 async def upload_compras_file(
     file: UploadFile = File(...),
-    reemplazar_datos: bool = Query(True, description="Si true, reemplaza todos los datos existentes"),
-    db: Session = Depends(get_db)
+    reemplazar_datos: bool = Query(True, description="Si true, reemplaza todos los datos existentes")
 ):
-    """Endpoint específico para subir archivos Excel de compras"""
+    """Endpoint específico para subir archivos Excel de compras - NUEVO SERVICIO"""
     try:
-        # VERIFICATION LOG - 2025-10-03 16:45
-        logger.info("🚨🚨🚨 COMPRAS ENDPOINT CALLED - VERIFICATION LOG 🚨🚨🚨")
-        logger.info("🔥🔥🔥 COMPLETELY NEW DEPLOYMENT - FORCE REFRESH - " + str(datetime.now()) + " 🔥🔥🔥")
-        logger.info("🎯🎯🎯 VERCEL MUST DEPLOY THIS NOW 🎯🎯🎯")
+        logger.info("🚀🚀🚀 NUEVO SERVICIO DE COMPRAS ACTIVADO 🚀🚀🚀")
+        logger.info(f"Procesando archivo: {file.filename}")
         
         # Validación básica del archivo
         if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
@@ -361,80 +358,29 @@ async def upload_compras_file(
         if len(content) > 10 * 1024 * 1024:  # 10MB
             raise HTTPException(status_code=400, detail="El archivo es demasiado grande. Máximo 10MB permitido.")
         
-        logger.info(f"Procesando archivo de compras: {file.filename}")
+        logger.info(f"Archivo leído: {len(content)} bytes")
         
-        # Procesar archivo de compras usando el procesador específico V2
-        try:
-            from compras_processor_v2 import process_compras_v2
-            
-            logger.info(f"[V2] Procesando archivo de compras desde memoria: {file.filename}")
-            logger.info(f"[V2] Tamaño del archivo: {len(content)} bytes")
-            
-            # Procesar usando el procesador V2
-            processed_data_dict, kpis = process_compras_v2(content, file.filename)
-            logger.info(f"Datos de compras procesados exitosamente. Claves: {list(processed_data_dict.keys())}")
-            logger.info(f"KPIs recibidos: {kpis}")
-            logger.info(f"Tipo de KPIs: {type(kpis)}")
-            
-            # Preparar información del archivo
-            archivo_info = {
-                "nombre": file.filename,  # Key expected by _create_archivo_record
-                "tamaño": len(content),    # Key expected by _create_archivo_record
+        # Usar el nuevo servicio especializado
+        from compras_upload_service import ComprasUploadService
+        
+        service = ComprasUploadService()
+        result = service.upload_compras_file(content, file.filename, reemplazar_datos)
+        
+        if result.get("success"):
+            logger.info(f"✅ Upload exitoso: {result['registros_procesados']} compras guardadas")
+            return {
+                "mensaje": "Archivo de compras procesado y guardado exitosamente",
                 "nombre_archivo": file.filename,
-                "tipo_archivo": file.content_type or "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "reemplazar_datos": reemplazar_datos,
-                "tipo_datos": "compras"  # Marcar como datos de compras
+                "archivo_id": result["archivo_id"],
+                "total_registros": result["registros_procesados"],
+                "registros_procesados": result["registros_procesados"],
+                "kpis_compras": result.get("kpis_compras", {}),
+                "estado": "procesado",
+                "servicio_usado": "ComprasUploadService"
             }
-            logger.info(f"Archivo info preparado: {archivo_info}")
-            
-            # Guardar en base de datos
-            logger.info("Iniciando guardado de datos de compras en base de datos...")
-            db_service = DatabaseService(db)
-            result = db_service.save_processed_data(processed_data_dict, archivo_info)
-            
-            # Verificar si hubo error en el guardado
-            if not result.get("success", True):
-                error_msg = result.get("error", "Error desconocido al guardar datos")
-                logger.error(f"Error guardando datos: {error_msg}")
-                raise Exception(f"Error guardando datos: {error_msg}")
-            
-            logger.info(f"Guardado de compras completado: {result}")
-            
-            logger.info(f"Archivo de compras procesado y guardado exitosamente: {file.filename}")
-            
-            # Preparar respuesta con manejo de errores
-            try:
-                response_data = {
-                    "mensaje": "Archivo de compras procesado y guardado exitosamente en base de datos",
-                    "nombre_archivo": file.filename,
-                    "archivo_id": result["archivo_id"],
-                    "total_registros": result["registros_procesados"],
-                    "registros_procesados": result["registros_procesados"],
-                    "kpis_compras": kpis,
-                    "datos_procesados": {
-                        "compras": len(processed_data_dict.get('compras', []))
-                    },
-                    "archivo_info": archivo_info
-                }
-                logger.info(f"Respuesta preparada exitosamente: {response_data}")
-                return response_data
-            except Exception as e:
-                logger.error(f"Error preparando respuesta: {str(e)}")
-                # Respuesta simplificada en caso de error
-                return {
-                    "mensaje": "Archivo de compras procesado y guardado exitosamente en base de datos",
-                    "nombre_archivo": file.filename,
-                    "archivo_id": result["archivo_id"],
-                    "total_registros": result["registros_procesados"],
-                    "registros_procesados": result["registros_procesados"],
-                    "error_response": f"Error en respuesta: {str(e)}"
-                }
-            
-        except Exception as e:
-            logger.error(f"Error procesando archivo de compras: {str(e)}")
-            import traceback
-            logger.error(f"Traceback completo: {traceback.format_exc()}")
-            raise HTTPException(status_code=500, detail=f"Error procesando archivo de compras: {str(e)}")
+        else:
+            logger.error(f"❌ Upload falló: {result.get('error', 'Error desconocido')}")
+            raise HTTPException(status_code=500, detail=f"Error procesando archivo: {result.get('error', 'Error desconocido')}")
         
     except HTTPException:
         raise
