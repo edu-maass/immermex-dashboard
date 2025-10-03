@@ -19,10 +19,10 @@
     "ENVIRONMENT": "production",
     "DEBUG": "true",
     "LOG_LEVEL": "debug",
-    "DATABASE_URL": "",
-    "SUPABASE_URL": "",
+    "DATABASE_URL": "postgresql://postgres.ldxahcawfrvlmdiwapli:Database_Immermex@aws-1-us-west-1.pooler.supabase.com:6543/postgres",
+    "SUPABASE_URL": "https://ldxahcawfrvlmdiwapli.supabase.co",
     "SUPABASE_KEY": "",
     "SUPABASE_SERVICE_ROLE_KEY": "",
-    "SUPABASE_PASSWORD": ""
+    "SUPABASE_PASSWORD": "Database_Immermex"
   }
 }
