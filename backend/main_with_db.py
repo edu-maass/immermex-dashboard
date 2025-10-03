@@ -60,7 +60,7 @@ app.add_middleware(
 # Agregar compresión GZIP para optimizar el ancho de banda
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-@app.on_event("startup")
+# @app.on_event("startup")
 async def startup_event():
     """Inicializar base de datos al arrancar la aplicación"""
     try:
