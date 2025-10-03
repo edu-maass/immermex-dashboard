@@ -19,6 +19,27 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./immermex.db")
 if not DATABASE_URL or DATABASE_URL == "":
     DATABASE_URL = "sqlite:///./immermex.db"
 
+# Convertir URL de Supabase de https:// a postgresql://
+if DATABASE_URL.startswith("https://supabase.com/"):
+    # Extraer información de la URL de Supabase
+    # Formato: https://supabase.com/project/ref/rest/v1/
+    # Convertir a: postgresql://postgres:[password]@db.ref.supabase.co:5432/postgres
+    try:
+        parts = DATABASE_URL.split('/')
+        if len(parts) >= 4:
+            project_ref = parts[4]  # El ref del proyecto
+            # Construir URL PostgreSQL (necesitará password en variable separada)
+            postgres_password = os.getenv("SUPABASE_PASSWORD", "")
+            if postgres_password:
+                DATABASE_URL = f"postgresql://postgres:{postgres_password}@db.{project_ref}.supabase.co:5432/postgres"
+                logger.info(f"Convertida URL de Supabase a PostgreSQL: db.{project_ref}.supabase.co")
+            else:
+                logger.warning("SUPABASE_PASSWORD no configurada, usando SQLite")
+                DATABASE_URL = "sqlite:///./immermex.db"
+    except Exception as e:
+        logger.error(f"Error convirtiendo URL de Supabase: {str(e)}")
+        DATABASE_URL = "sqlite:///./immermex.db"
+
 # Configuración específica para Supabase/PostgreSQL en la nube
 if DATABASE_URL.startswith("postgresql://"):
     try:
