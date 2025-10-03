@@ -18,7 +18,8 @@ from typing import List, Optional
 from database import get_db, init_db, ArchivoProcesado
 from database_service import DatabaseService
 from logging_config import setup_logging
-from data_processor import process_immermex_file_advanced
+# Nota: Evitar importar procesadores pesados en cold start para Vercel
+# Se importará dinámicamente dentro del endpoint de upload
 
 # Configurar logging
 logger = setup_logging()
@@ -258,6 +259,8 @@ async def upload_file(
             temp_file.write(contents)
         
         try:
+            # Importar de forma diferida para reducir riesgo de fallos en cold start
+            from data_processor import process_immermex_file_advanced
             # Procesar archivo con algoritmo avanzado
             logger.info(f"Procesando archivo: {temp_file_path}")
             processed_data_dict, kpis = process_immermex_file_advanced(temp_file_path)
