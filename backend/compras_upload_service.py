@@ -190,15 +190,23 @@ class ComprasUploadService:
     # Helper methods for data validation
     def _safe_date(self, value):
         """Convierte valor a date de forma segura"""
-        if not value:
+        if not value or value == 'NaT' or str(value) == 'NaT':
             return None
         try:
+            # Verificar si es NaT de pandas
+            if hasattr(value, 'strftime') and str(value) == 'NaT':
+                return None
             if isinstance(value, str):
+                if value.lower() in ['nat', 'nan', '']:
+                    return None
                 return datetime.strptime(value, '%Y-%m-%d').date()
             elif isinstance(value, datetime):
                 return value.date()
+            elif hasattr(value, 'date'):  # Para objetos date
+                return value
             return value
-        except:
+        except Exception as e:
+            logger.debug(f"Error convirtiendo fecha {value}: {str(e)}")
             return None
     
     def _safe_int(self, value, default=0):

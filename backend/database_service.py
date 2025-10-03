@@ -87,38 +87,48 @@ class DatabaseService:
             if archivo_info.get("reemplazar_datos", False):
                 self._clear_existing_data()
             
+            # CRITICAL: Guardar el ID del archivo ANTES de usarlo para evitar ObjectDeletedError
+            archivo_id = archivo.id
+            logger.info(f"🔑 Archivo ID guardado: {archivo_id}")
+            
             # Guardar cada tipo de datos usando servicios especializados
             logger.info("Guardando facturas...")
-            facturas_count = self.facturacion_service.save_facturas(processed_data_dict.get("facturacion_clean", []), archivo.id)
+            facturas_count = self.facturacion_service.save_facturas(processed_data_dict.get("facturacion_clean", []), archivo_id)
             logger.info("Guardando cobranzas...")
-            cobranzas_count = self.cobranza_service.save_cobranzas(processed_data_dict.get("cobranza_clean", []), archivo.id)
+            cobranzas_count = self.cobranza_service.save_cobranzas(processed_data_dict.get("cobranza_clean", []), archivo_id)
             logger.info("Guardando anticipos...")
-            anticipos_count = self._save_anticipos(processed_data_dict.get("cfdi_clean", []), archivo.id)
+            anticipos_count = self._save_anticipos(processed_data_dict.get("cfdi_clean", []), archivo_id)
             logger.info("Guardando pedidos...")
-            pedidos_count = self.pedidos_service.save_pedidos(processed_data_dict.get("pedidos_clean", []), archivo.id)
+            pedidos_count = self.pedidos_service.save_pedidos(processed_data_dict.get("pedidos_clean", []), archivo_id)
             logger.info("Guardando compras...")
-            logger.info(f"🔴🔴🔴 ANTES DE LLAMAR _save_compras - archivo.id = {archivo.id}")
+            logger.info(f"🔴🔴🔴 ANTES DE LLAMAR _save_compras - archivo_id = {archivo_id}")
             logger.info(f"🚨🚨🚨 VERCEL DEPLOYMENT TEST - {datetime.now()} 🚨🚨🧨")
             
             # CRITICAL: Verificar que archivo_id existe antes de intentar insertar compras
-            archivo_exists = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo.id).first()
+            archivo_exists = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo_id).first()
             if not archivo_exists:
-                logger.error(f"CRITICAL ERROR: archivo_id {archivo.id} no existe en archivos_procesados")
-                # raise Exception(f"CRITICAL ERROR: archivo_id {archivo.id} no existe en archivos_procesados") # Removed critical raise
-            logger.info(f"✅ Verificación exitosa: archivo_id {archivo.id} existe en archivos_procesados")
+                logger.error(f"CRITICAL ERROR: archivo_id {archivo_id} no existe en archivos_procesados")
+                # raise Exception(f"CRITICAL ERROR: archivo_id {archivo_id} no existe en archivos_procesados") # Removed critical raise
+            logger.info(f"✅ Verificación exitosa: archivo_id {archivo_id} existe en archivos_procesados")
             
-            compras_count = self._save_compras(processed_data_dict.get("compras", []), archivo.id)
+            compras_count = self._save_compras(processed_data_dict.get("compras", []), archivo_id)
             
             # Actualizar registro de archivo y hacer commit final
             total_registros = facturas_count + cobranzas_count + anticipos_count + pedidos_count + compras_count
-            archivo.registros_procesados = total_registros
-            archivo.estado = "procesado"
-            self.db.commit()  # Commit final para actualizar el estado del archivo
             
-            logger.info(f"Datos guardados exitosamente: {total_registros} registros")
+            # Buscar el archivo nuevamente para actualizarlo
+            archivo_final = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo_id).first()
+            if archivo_final:
+                archivo_final.registros_procesados = total_registros
+                archivo_final.estado = "procesado"
+                self.db.commit()  # Commit final para actualizar el estado del archivo
+                logger.info(f"Datos guardados exitosamente: {total_registros} registros")
+            else:
+                logger.error(f"No se encontró archivo con ID {archivo_id} para actualizar")
+            
             return {
                 "success": True,
-                "archivo_id": archivo.id,
+                "archivo_id": archivo_id,
                 "registros_procesados": total_registros,
                 "desglose": {
                     "facturas": facturas_count,
@@ -136,13 +146,13 @@ class DatabaseService:
             import traceback
             logger.error(f"Traceback completo: {traceback.format_exc()}")
             self.db.rollback()
-            if 'archivo' in locals() and archivo:
-                error_archivo = self.db.query(ArchivoProcesado).get(archivo.id)
+            if 'archivo_id' in locals() and archivo_id:
+                error_archivo = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo_id).first()
                 if error_archivo:
                     error_archivo.estado = "error"
                     error_archivo.error_message = str(e)
                     self.db.commit()
-                    logger.info(f"Updated archivo {archivo.id} to error state")
+                    logger.info(f"Updated archivo {archivo_id} to error state")
             return {"success": False, "error": str(e)}
     
     def _create_archivo_record(self, archivo_info: dict) -> ArchivoProcesado:
