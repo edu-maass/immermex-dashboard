@@ -15,21 +15,32 @@ logger = logging.getLogger(__name__)
 # Configuración de base de datos
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./immermex.db")
 
+# Validar URL de base de datos
+if not DATABASE_URL or DATABASE_URL == "":
+    DATABASE_URL = "sqlite:///./immermex.db"
+
 # Configuración específica para Supabase/PostgreSQL en la nube
 if DATABASE_URL.startswith("postgresql://"):
-    # Para Supabase/PostgreSQL en la nube
-    engine = create_engine(
-        DATABASE_URL,
-        pool_size=5,          # Reducido para Supabase
-        max_overflow=10,      # Reducido para Supabase
-        pool_pre_ping=True,
-        pool_recycle=300,
-        echo=False,           # Cambiar a True para debug
-        connect_args={
-            "sslmode": "require"  # SSL requerido para Supabase
-        }
-    )
-    logger.info("Conectando a Supabase/PostgreSQL en la nube")
+    try:
+        # Para Supabase/PostgreSQL en la nube
+        engine = create_engine(
+            DATABASE_URL,
+            pool_size=5,          # Reducido para Supabase
+            max_overflow=10,      # Reducido para Supabase
+            pool_pre_ping=True,
+            pool_recycle=300,
+            echo=False,           # Cambiar a True para debug
+            connect_args={
+                "sslmode": "require"  # SSL requerido para Supabase
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error creando engine PostgreSQL: {str(e)}")
+        logger.info("Fallando a SQLite local")
+        DATABASE_URL = "sqlite:///./immermex.db"
+        engine = create_engine(DATABASE_URL, echo=False)
+    else:
+        logger.info("Conectando a Supabase/PostgreSQL en la nube")
 else:
     # Para SQLite local (desarrollo)
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
