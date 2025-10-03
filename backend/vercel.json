@@ -2,23 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "main_with_db.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "50mb"
-      }
+      "src": "main_debug.py",
+      "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "main_with_db.py"
+      "dest": "main_debug.py"
     }
-  ],
-  "env": {
-    "ENVIRONMENT": "production",
-    "DEBUG": "true",
-    "LOG_LEVEL": "debug",
-    "FORCE_DEPLOYMENT": "2025-10-03-17:25"
-  }
+  ]
 }
