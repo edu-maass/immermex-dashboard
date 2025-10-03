@@ -123,64 +123,50 @@ class DatabaseService:
             
             if archivo:
                 logger.info(f"Archivo existente encontrado: ID={archivo.id}")
+                # Actualizar archivo existente
+                archivo.hash_archivo = file_hash
+                archivo.tamaño_archivo = archivo_info['tamaño']
+                archivo.estado = "en_proceso"
+                archivo.updated_at = datetime.utcnow()
+                archivo.fecha_procesamiento = datetime.utcnow()
+                archivo.registros_procesados = 0  # Resetear contador
+                archivo.error_message = None  # Limpiar errores previos
             else:
                 logger.info("No se encontró archivo existente, creando nuevo...")
-        except Exception as e:
-            logger.error(f"Error en _create_archivo_record: {str(e)}")
-            raise
-        
-        if archivo:
-            # Actualizar archivo existente
-            archivo.hash_archivo = file_hash
-            archivo.tamaño_archivo = archivo_info['tamaño']
-            archivo.estado = "en_proceso"
-            archivo.updated_at = datetime.utcnow()
-            archivo.fecha_procesamiento = datetime.utcnow()
-            archivo.registros_procesados = 0  # Resetear contador
-            archivo.error_message = None  # Limpiar errores previos
-        else:
-            # Crear nuevo archivo
-            logger.info("Creando nuevo ArchivoProcesado...")
-            archivo = ArchivoProcesado(
-                nombre_archivo=archivo_info['nombre'],
-                hash_archivo=file_hash,
-                tamaño_archivo=archivo_info['tamaño'],
-                algoritmo_usado=archivo_info.get('algoritmo', 'advanced_cleaning'),
-                estado="en_proceso"
-            )
-            logger.info(f"ArchivoProcesado creado en memoria: {archivo}")
-            self.db.add(archivo)
-            logger.info("ArchivoProcesado agregado a la sesión")
-        
-        # Commit inmediatamente para asegurar que el registro existe
-        logger.info("Realizando commit...")
-        try:
+                # Crear nuevo archivo
+                archivo = ArchivoProcesado(
+                    nombre_archivo=archivo_info['nombre'],
+                    hash_archivo=file_hash,
+                    tamaño_archivo=archivo_info['tamaño'],
+                    algoritmo_usado=archivo_info.get('algoritmo', 'advanced_cleaning'),
+                    estado="en_proceso"
+                )
+                logger.info(f"ArchivoProcesado creado en memoria: {archivo}")
+                self.db.add(archivo)
+                logger.info("ArchivoProcesado agregado a la sesión")
+            
+            # Commit inmediatamente para asegurar que el registro existe
+            logger.info("Realizando commit...")
             self.db.commit()
             logger.info("Commit exitoso")
+            
+            # Refrescar el objeto para obtener el ID
+            logger.info("Refrescando objeto...")
+            self.db.refresh(archivo)
+            logger.info("Objeto refrescado")
+            
+            # Verificar que el archivo fue creado correctamente y es visible
+            logger.info(f"ArchivoProcesado creado/actualizado: ID={archivo.id}, nombre={archivo.nombre_archivo}")
+            
+            return archivo
+            
         except Exception as e:
-            logger.error(f"Error en commit: {str(e)}")
+            logger.error(f"Error en _create_archivo_record: {str(e)}")
+            logger.error(f"Tipo de error: {type(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            self.db.rollback()
             raise
-        
-        logger.info("Realizando flush...")
-        self.db.flush()  # Forzar flush para asegurar que los cambios son visibles
-        logger.info("Flush exitoso")
-        
-        logger.info("Refrescando objeto...")
-        self.db.refresh(archivo)
-        logger.info("Objeto refrescado")
-        
-        # Verificar que el archivo fue creado correctamente y es visible
-        logger.info(f"ArchivoProcesado creado/actualizado: ID={archivo.id}, nombre={archivo.nombre_archivo}")
-        
-        # Verificación adicional: buscar el registro para confirmar que es visible
-        logger.info("Verificando que el archivo es visible...")
-        archivo_verificado = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo.id).first()
-        if not archivo_verificado:
-            logger.error(f"ERROR: ArchivoProcesado con ID {archivo.id} no es visible después de commit")
-            raise Exception(f"ArchivoProcesado con ID {archivo.id} no es visible después de commit")
-        
-        logger.info(f"ArchivoProcesado verificado y visible: ID={archivo_verificado.id}")
-        return archivo
     
     
     
@@ -208,17 +194,6 @@ class DatabaseService:
     
     def _save_compras(self, compras_data: list, archivo_id: int) -> int:
         """Guarda datos de compras"""
-        # Verificar que el archivo_id existe en la base de datos
-        # Usar flush para asegurar que los cambios previos son visibles
-        self.db.flush()
-        archivo_exists = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo_id).first()
-        if not archivo_exists:
-            logger.error(f"ERROR: ArchivoProcesado con ID {archivo_id} no existe en la base de datos")
-            # Intentar una búsqueda más amplia para debugging
-            all_archivos = self.db.query(ArchivoProcesado).all()
-            logger.error(f"Archivos disponibles en la base de datos: {[(a.id, a.nombre_archivo) for a in all_archivos]}")
-            raise Exception(f"ArchivoProcesado con ID {archivo_id} no existe")
-        
         logger.info(f"Guardando {len(compras_data)} registros de compras para archivo_id={archivo_id}")
         count = 0
         for compra_data in compras_data:
