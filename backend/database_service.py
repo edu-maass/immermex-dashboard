@@ -88,13 +88,26 @@ class DatabaseService:
     
     def _create_archivo_record(self, archivo_info: dict) -> ArchivoProcesado:
         """Crea o actualiza el registro de archivo"""
-        # Calcular hash del archivo para evitar duplicados
-        file_hash = hashlib.md5(f"{archivo_info['nombre']}_{archivo_info['tamaño']}".encode()).hexdigest()
-        
-        # Buscar si ya existe por nombre de archivo (debido a la constraint unique)
-        archivo = self.db.query(ArchivoProcesado).filter(
-            ArchivoProcesado.nombre_archivo == archivo_info['nombre']
-        ).first()
+        try:
+            logger.info(f"Iniciando _create_archivo_record para: {archivo_info.get('nombre', 'unknown')}")
+            
+            # Calcular hash del archivo para evitar duplicados
+            file_hash = hashlib.md5(f"{archivo_info['nombre']}_{archivo_info['tamaño']}".encode()).hexdigest()
+            logger.info(f"Hash calculado: {file_hash}")
+            
+            # Buscar si ya existe por nombre de archivo (debido a la constraint unique)
+            logger.info("Buscando archivo existente...")
+            archivo = self.db.query(ArchivoProcesado).filter(
+                ArchivoProcesado.nombre_archivo == archivo_info['nombre']
+            ).first()
+            
+            if archivo:
+                logger.info(f"Archivo existente encontrado: ID={archivo.id}")
+            else:
+                logger.info("No se encontró archivo existente, creando nuevo...")
+        except Exception as e:
+            logger.error(f"Error en _create_archivo_record: {str(e)}")
+            raise
         
         if archivo:
             # Actualizar archivo existente
@@ -107,6 +120,7 @@ class DatabaseService:
             archivo.error_message = None  # Limpiar errores previos
         else:
             # Crear nuevo archivo
+            logger.info("Creando nuevo ArchivoProcesado...")
             archivo = ArchivoProcesado(
                 nombre_archivo=archivo_info['nombre'],
                 hash_archivo=file_hash,
@@ -114,17 +128,32 @@ class DatabaseService:
                 algoritmo_usado=archivo_info.get('algoritmo', 'advanced_cleaning'),
                 estado="en_proceso"
             )
+            logger.info(f"ArchivoProcesado creado en memoria: {archivo}")
             self.db.add(archivo)
+            logger.info("ArchivoProcesado agregado a la sesión")
         
         # Commit inmediatamente para asegurar que el registro existe
-        self.db.commit()
+        logger.info("Realizando commit...")
+        try:
+            self.db.commit()
+            logger.info("Commit exitoso")
+        except Exception as e:
+            logger.error(f"Error en commit: {str(e)}")
+            raise
+        
+        logger.info("Realizando flush...")
         self.db.flush()  # Forzar flush para asegurar que los cambios son visibles
+        logger.info("Flush exitoso")
+        
+        logger.info("Refrescando objeto...")
         self.db.refresh(archivo)
+        logger.info("Objeto refrescado")
         
         # Verificar que el archivo fue creado correctamente y es visible
         logger.info(f"ArchivoProcesado creado/actualizado: ID={archivo.id}, nombre={archivo.nombre_archivo}")
         
         # Verificación adicional: buscar el registro para confirmar que es visible
+        logger.info("Verificando que el archivo es visible...")
         archivo_verificado = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo.id).first()
         if not archivo_verificado:
             logger.error(f"ERROR: ArchivoProcesado con ID {archivo.id} no es visible después de commit")
