@@ -10,6 +10,10 @@ import os
 
 # Probar importaciones locales una por una
 try:
+    # Verificar DATABASE_URL antes de importar
+    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./immermex.db")
+    print(f"🔍 DATABASE_URL: {DATABASE_URL[:50]}..." if len(DATABASE_URL) > 50 else f"🔍 DATABASE_URL: {DATABASE_URL}")
+    
     from database import get_db, init_db, ArchivoProcesado
     DB_IMPORTS_OK = True
     DB_ERROR = None
@@ -60,7 +64,8 @@ async def root():
         "sqlalchemy_ok": SQLALCHEMY_OK,
         "sqlalchemy_error": SQLALCHEMY_ERROR,
         "psycopg2_ok": PSYCOPG2_OK,
-        "psycopg2_error": PSYCOPG2_ERROR
+        "psycopg2_error": PSYCOPG2_ERROR,
+        "database_url_preview": os.getenv("DATABASE_URL", "not_set")[:20] + "..." if len(os.getenv("DATABASE_URL", "")) > 20 else os.getenv("DATABASE_URL", "not_set")
     }
 
 @app.get("/test")
