@@ -70,7 +70,8 @@ async def root():
         "postgres_url_set": "yes" if os.getenv("POSTGRES_URL") else "no",
         "supabase_url_set": "yes" if os.getenv("SUPABASE_URL") else "no",
         "supabase_key_set": "yes" if os.getenv("SUPABASE_KEY") else "no",
-        "final_database_url_preview": os.getenv("DATABASE_URL", "not_set")[:30] + "..." if len(os.getenv("DATABASE_URL", "")) > 30 else os.getenv("DATABASE_URL", "not_set")
+        "final_database_url_preview": os.getenv("DATABASE_URL", "not_set")[:30] + "..." if len(os.getenv("DATABASE_URL", "")) > 30 else os.getenv("DATABASE_URL", "not_set"),
+        "supabase_url_value": os.getenv("SUPABASE_URL", "not_set")[:30] + "..." if len(os.getenv("SUPABASE_URL", "")) > 30 else os.getenv("SUPABASE_URL", "not_set")
     }
 
 @app.get("/test")
