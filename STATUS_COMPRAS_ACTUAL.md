@@ -134,3 +134,4 @@ Cuando funcione correctamente, deberías ver en la tabla `compras`:
 
 
 
+

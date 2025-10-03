@@ -99,10 +99,19 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
   }, [filtros, monedaPrecios, monedaFlujoPagos]);
 
   const handleFiltroChange = (campo: string, valor: any) => {
-    setFiltros(prev => ({
-      ...prev,
-      [campo]: valor || undefined
-    }));
+    setFiltros(prev => {
+      const nuevosFiltros = {
+        ...prev,
+        [campo]: valor || undefined
+      };
+      
+      // Si se deselecciona el año, limpiar también el mes
+      if (campo === 'año' && !valor) {
+        nuevosFiltros.mes = undefined;
+      }
+      
+      return nuevosFiltros;
+    });
   };
 
   const handleClearFilters = () => {
@@ -216,10 +225,17 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mes</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mes {!filtros.año && <span className="text-gray-400 text-xs">(Selecciona un año primero)</span>}
+              </label>
               <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  !filtros.año 
+                    ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed' 
+                    : 'border-gray-300 bg-white text-gray-900'
+                }`}
                 value={filtros.mes || ''}
+                disabled={!filtros.año}
                 onChange={(e) => handleFiltroChange('mes', e.target.value ? parseInt(e.target.value) : undefined)}
               >
                 <option value="">Todos los meses</option>
