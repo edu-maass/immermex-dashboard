@@ -232,7 +232,7 @@ class DatabaseService:
                 logger.warning(f"Error guardando compra: {str(e)}")
                 continue
         
-        self.db.commit()
+        # No hacer commit aquí - dejar que el método principal maneje la transacción
         return count
     
     def _save_pedidos(self, pedidos_data: list, archivo_id: int) -> int:
