@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "main_with_db.py",
+      "src": "main_debug.py",
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "50mb"
@@ -12,7 +12,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "main_with_db.py"
+      "dest": "main_debug.py"
     }
   ],
   "env": {

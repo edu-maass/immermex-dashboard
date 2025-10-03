@@ -67,6 +67,9 @@ async def root():
         "psycopg2_error": PSYCOPG2_ERROR,
         "database_url_preview": os.getenv("DATABASE_URL", "not_set")[:20] + "..." if len(os.getenv("DATABASE_URL", "")) > 20 else os.getenv("DATABASE_URL", "not_set"),
         "supabase_password_set": "yes" if os.getenv("SUPABASE_PASSWORD") else "no",
+        "postgres_url_set": "yes" if os.getenv("POSTGRES_URL") else "no",
+        "supabase_url_set": "yes" if os.getenv("SUPABASE_URL") else "no",
+        "supabase_key_set": "yes" if os.getenv("SUPABASE_KEY") else "no",
         "final_database_url_preview": os.getenv("DATABASE_URL", "not_set")[:30] + "..." if len(os.getenv("DATABASE_URL", "")) > 30 else os.getenv("DATABASE_URL", "not_set")
     }
 
