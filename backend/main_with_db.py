@@ -97,10 +97,11 @@ async def startup_event():
 async def root():
     """Endpoint de salud de la API"""
     return {
-        "message": "Immermex Dashboard API (Con Base de Datos)", 
+        "message": "Immermex Dashboard API (Con Base de Datos) - SUPABASE POSTGRESQL", 
         "status": "active",
         "version": "2.0.0",
-        "features": ["persistencia_db", "procesamiento_avanzado", "filtros_dinamicos"]
+        "features": ["persistencia_db", "procesamiento_avanzado", "filtros_dinamicos"],
+        "database": "supabase_postgresql"
     }
 
 @app.get("/api/simple-health")
