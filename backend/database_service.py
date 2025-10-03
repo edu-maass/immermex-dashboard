@@ -34,17 +34,24 @@ class DatabaseService:
         """
         try:
             # Crear registro de archivo
+            logger.info(f"Creando registro de archivo para: {archivo_info.get('nombre', 'unknown')}")
             archivo = self._create_archivo_record(archivo_info)
+            logger.info(f"ArchivoProcesado creado con ID: {archivo.id}")
             
             # Limpiar datos anteriores si es necesario
             if archivo_info.get("reemplazar_datos", False):
                 self._clear_existing_data()
             
             # Guardar cada tipo de datos usando servicios especializados
+            logger.info("Guardando facturas...")
             facturas_count = self.facturacion_service.save_facturas(processed_data_dict.get("facturacion_clean", []), archivo.id)
+            logger.info("Guardando cobranzas...")
             cobranzas_count = self.cobranza_service.save_cobranzas(processed_data_dict.get("cobranza_clean", []), archivo.id)
+            logger.info("Guardando anticipos...")
             anticipos_count = self._save_anticipos(processed_data_dict.get("cfdi_clean", []), archivo.id)
+            logger.info("Guardando pedidos...")
             pedidos_count = self.pedidos_service.save_pedidos(processed_data_dict.get("pedidos_clean", []), archivo.id)
+            logger.info("Guardando compras...")
             compras_count = self._save_compras(processed_data_dict.get("compras", []), archivo.id)
             
             # Actualizar registro de archivo
@@ -102,8 +109,13 @@ class DatabaseService:
             )
             self.db.add(archivo)
         
+        # Commit inmediatamente para asegurar que el registro existe
         self.db.commit()
         self.db.refresh(archivo)
+        
+        # Verificar que el archivo fue creado correctamente
+        logger.info(f"ArchivoProcesado creado/actualizado: ID={archivo.id}, nombre={archivo.nombre_archivo}")
+        
         return archivo
     
     
@@ -132,6 +144,13 @@ class DatabaseService:
     
     def _save_compras(self, compras_data: list, archivo_id: int) -> int:
         """Guarda datos de compras"""
+        # Verificar que el archivo_id existe en la base de datos
+        archivo_exists = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo_id).first()
+        if not archivo_exists:
+            logger.error(f"ERROR: ArchivoProcesado con ID {archivo_id} no existe en la base de datos")
+            raise Exception(f"ArchivoProcesado con ID {archivo_id} no existe")
+        
+        logger.info(f"Guardando {len(compras_data)} registros de compras para archivo_id={archivo_id}")
         count = 0
         for compra_data in compras_data:
             try:
