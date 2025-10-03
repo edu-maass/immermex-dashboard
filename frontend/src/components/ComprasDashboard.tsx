@@ -64,7 +64,9 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
 
   const loadProveedores = async () => {
     try {
+      console.log('Cargando proveedores...');
       const proveedoresData = await apiService.getProveedoresCompras();
+      console.log('Proveedores cargados:', proveedoresData);
       setProveedores(proveedoresData);
     } catch (err) {
       console.error('Error cargando proveedores:', err);
@@ -151,6 +153,36 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
     );
   }
 
+  // Mostrar mensaje si no hay datos de compras
+  if (kpis && kpis.total_compras === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-8 w-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-lg font-medium text-blue-800">
+                No hay datos de compras disponibles
+              </h3>
+              <div className="mt-2 text-sm text-blue-700">
+                <p>
+                  Para usar el filtro de proveedores y ver los análisis de compras, necesitas subir un archivo de compras.
+                </p>
+                <p className="mt-1">
+                  Ve a la pestaña "Carga de Archivos" y sube un archivo Excel con datos de compras.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="text-center py-8">
@@ -226,9 +258,11 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
                 onChange={(e) => handleFiltroChange('proveedor', e.target.value || undefined)}
               >
                 <option value="">Todos los proveedores</option>
-                {proveedores.map((proveedor, index) => (
+                {proveedores.length > 0 ? proveedores.map((proveedor, index) => (
                   <option key={index} value={proveedor}>{proveedor}</option>
-                ))}
+                )) : (
+                  <option value="" disabled>Sube un archivo de compras para ver proveedores</option>
+                )}
               </select>
             </div>
             <div>
