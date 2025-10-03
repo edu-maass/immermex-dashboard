@@ -52,12 +52,17 @@ class DatabaseService:
                 logger.error(f"Traceback: {traceback.format_exc()}")
                 raise
             
-            # Verificar que el archivo es visible antes de continuar
+            # CRITICAL: Commit del ArchivoProcesado ANTES de guardar datos
+            logger.info("Haciendo commit del ArchivoProcesado para que sea visible...")
+            self.db.commit()
+            logger.info("Commit del ArchivoProcesado exitoso")
+            
+            # Verificar que el archivo es visible después del commit
             archivo_check = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo.id).first()
             if not archivo_check:
-                logger.error(f"ERROR: ArchivoProcesado con ID {archivo.id} no es visible después de creación")
-                raise Exception(f"ArchivoProcesado con ID {archivo.id} no es visible después de creación")
-            logger.info(f"ArchivoProcesado verificado antes de guardar datos: ID={archivo_check.id}")
+                logger.error(f"ERROR: ArchivoProcesado con ID {archivo.id} no es visible después del commit")
+                raise Exception(f"ArchivoProcesado con ID {archivo.id} no es visible después del commit")
+            logger.info(f"ArchivoProcesado verificado después del commit: ID={archivo_check.id}")
             
             # Limpiar datos anteriores si es necesario
             if archivo_info.get("reemplazar_datos", False):
@@ -77,11 +82,11 @@ class DatabaseService:
             logger.info(f"🚨🚨🚨 VERCEL DEPLOYMENT TEST - {datetime.now()} 🚨🚨🚨")
             compras_count = self._save_compras(processed_data_dict.get("compras", []), archivo.id)
             
-            # Actualizar registro de archivo
+            # Actualizar registro de archivo y hacer commit final
             total_registros = facturas_count + cobranzas_count + anticipos_count + pedidos_count + compras_count
             archivo.registros_procesados = total_registros
             archivo.estado = "procesado"
-            self.db.commit()
+            self.db.commit()  # Commit final para actualizar el estado del archivo
             
             logger.info(f"Datos guardados exitosamente: {total_registros} registros")
             return {
