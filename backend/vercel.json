@@ -17,7 +17,8 @@
   ],
   "env": {
     "ENVIRONMENT": "production",
-    "DEBUG": "false",
-    "LOG_LEVEL": "info"
+    "DEBUG": "true",
+    "LOG_LEVEL": "debug",
+    "FORCE_DEPLOYMENT": "2025-10-03-16:50"
   }
 }
