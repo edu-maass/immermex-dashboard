@@ -33,7 +33,7 @@ class DatabaseService:
         Guarda los datos procesados en la base de datos
         """
         try:
-            logger.info(f"=== INICIANDO save_processed_data ===")
+            logger.info(f"🚀🚀🚀 VERSIÓN ACTUALIZADA EJECUTÁNDOSE - INICIANDO save_processed_data 🚀🚀🚀")
             logger.info(f"Datos recibidos: {list(processed_data_dict.keys())}")
             logger.info(f"Archivo info: {archivo_info}")
             
