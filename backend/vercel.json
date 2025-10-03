@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "main_debug.py",
+      "src": "main_with_db.py",
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "50mb"
@@ -12,17 +12,17 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "main_debug.py"
+      "dest": "main_with_db.py"
     }
   ],
   "env": {
     "ENVIRONMENT": "production",
     "DEBUG": "true",
     "LOG_LEVEL": "debug",
-    "DATABASE_URL": "sqlite:///./immermex.db",
-    "SUPABASE_URL": "https://your-project-ref.supabase.co",
-    "SUPABASE_KEY": "your-anon-key",
-    "SUPABASE_SERVICE_ROLE_KEY": "your-service-role-key",
-    "SUPABASE_PASSWORD": "your-db-password"
+    "DATABASE_URL": "",
+    "SUPABASE_URL": "",
+    "SUPABASE_KEY": "",
+    "SUPABASE_SERVICE_ROLE_KEY": "",
+    "SUPABASE_PASSWORD": ""
   }
 }
