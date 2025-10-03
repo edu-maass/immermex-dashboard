@@ -152,14 +152,8 @@ export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPe
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Package className="h-5 w-5" />
-          Filtro por Pedido
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="space-y-3">
         {/* Selector de pedido con búsqueda */}
         <div className="relative" ref={dropdownRef}>
           <div className="flex gap-2">
@@ -167,12 +161,12 @@ export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPe
               <Input
                 ref={inputRef}
                 type="text"
-                placeholder="Buscar pedido por número..."
+                placeholder="Buscar pedido..."
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 onFocus={handleInputFocus}
                 onKeyDown={handleInputKeyDown}
-                className="pr-8"
+                className="pr-8 h-8 text-sm"
               />
               <ChevronDown 
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 cursor-pointer"
@@ -257,7 +251,7 @@ export const PedidoFilter: FC<PedidoFilterProps> = ({ onPedidosChange, onClearPe
             ⚠️ No hay pedidos disponibles. Sube un archivo Excel en la pestaña "Carga de Archivos" para comenzar.
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };

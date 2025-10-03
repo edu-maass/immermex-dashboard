@@ -67,19 +67,12 @@ export const Filters: FC<FiltersProps> = ({ onFiltersChange, onClearFilters }) =
 
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Search className="h-5 w-5" />
-          Filtros
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="grid grid-cols-2 gap-3">
           {/* Mes */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Mes {!filtros.año && <span className="text-gray-400 text-xs">(Selecciona un año primero)</span>}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Mes {!filtros.año && <span className="text-gray-400">(Selecciona año)</span>}
             </label>
             <SearchableSelect
               value={filtros.mes?.toString() || ''}
@@ -91,8 +84,8 @@ export const Filters: FC<FiltersProps> = ({ onFiltersChange, onClearFilters }) =
           </div>
 
           {/* Año */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Año</label>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Año</label>
             <SearchableSelect
               value={filtros.año?.toString() || ''}
               onValueChange={(value) => handleInputChange('año', parseInt(value))}
@@ -101,19 +94,6 @@ export const Filters: FC<FiltersProps> = ({ onFiltersChange, onClearFilters }) =
             />
           </div>
         </div>
-
-        {/* Botones de acción */}
-        <div className="flex gap-2 pt-4">
-          <Button onClick={handleApplyFilters} className="flex-1">
-            <Search className="h-4 w-4 mr-2" />
-            Aplicar Filtros
-          </Button>
-          <Button variant="outline" onClick={handleClearFilters}>
-            <X className="h-4 w-4 mr-2" />
-            Limpiar
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
   );
 };

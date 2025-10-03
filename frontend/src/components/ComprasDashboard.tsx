@@ -218,18 +218,14 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
     <div className="space-y-6">
 
       {/* Filtros */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtros</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mes {!filtros.año && <span className="text-gray-400 text-xs">(Selecciona un año primero)</span>}
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Mes {!filtros.año && <span className="text-gray-400">(Selecciona año)</span>}
               </label>
               <select
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`w-full px-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${
                   !filtros.año 
                     ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed' 
                     : 'border-gray-300 bg-white text-gray-900'
@@ -254,9 +250,9 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Año</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Año</label>
               <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                 value={filtros.año || ''}
                 onChange={(e) => handleFiltroChange('año', e.target.value ? parseInt(e.target.value) : undefined)}
               >
@@ -267,9 +263,9 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Proveedor</label>
               <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                 value={filtros.proveedor || ''}
                 onChange={(e) => handleFiltroChange('proveedor', e.target.value || undefined)}
               >
@@ -282,9 +278,9 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Material</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Material</label>
               <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                 value={filtros.material || ''}
                 onChange={(e) => handleFiltroChange('material', e.target.value || undefined)}
               >
@@ -297,13 +293,7 @@ export const ComprasDashboard: FC<ComprasDashboardProps> = ({ onUploadSuccess, d
               </select>
             </div>
           </div>
-          <div className="mt-4">
-            <Button variant="outline" onClick={handleClearFilters}>
-              Limpiar Filtros
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
 
       {/* KPIs Principales de Compras */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

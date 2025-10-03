@@ -91,14 +91,6 @@ export const MainDashboard: FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Dashboard Immermex
-          </h1>
-          <p className="text-gray-600">
-            Sistema de análisis de datos financieros y operativos
-          </p>
-        </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-5 bg-white shadow-lg border border-gray-200">
