@@ -349,8 +349,8 @@ async def upload_compras_file(
     try:
         # VERIFICATION LOG - 2025-10-03 16:45
         logger.info("🚨🚨🚨 COMPRAS ENDPOINT CALLED - VERIFICATION LOG 🚨🚨🚨")
-    logger.info("🔥🔥🔥 COMPLETELY NEW DEPLOYMENT - FORCE REFRESH - " + str(datetime.now()) + " 🔥🔥🔥")
-    logger.info("🎯🎯🎯 VERCEL MUST DEPLOY THIS NOW 🎯🎯🎯")
+        logger.info("🔥🔥🔥 COMPLETELY NEW DEPLOYMENT - FORCE REFRESH - " + str(datetime.now()) + " 🔥🔥🔥")
+        logger.info("🎯🎯🎯 VERCEL MUST DEPLOY THIS NOW 🎯🎯🎯")
         
         # Validación básica del archivo
         if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
