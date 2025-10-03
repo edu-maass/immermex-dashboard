@@ -103,6 +103,15 @@ async def root():
         "features": ["persistencia_db", "procesamiento_avanzado", "filtros_dinamicos"]
     }
 
+@app.get("/api/simple-health")
+async def simple_health():
+    """Endpoint simple de salud sin base de datos"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "message": "API funcionando correctamente"
+    }
+
 @app.get("/api/health")
 async def health_check(db: Session = Depends(get_db)):
     """Endpoint de verificación de salud con base de datos"""
