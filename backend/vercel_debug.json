@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "main_minimal_debug.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "main_minimal_debug.py"
+    }
+  ],
+  "env": {
+    "ENVIRONMENT": "debug",
+    "DEBUG": "true"
+  }
+}
