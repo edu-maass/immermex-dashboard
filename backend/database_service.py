@@ -74,6 +74,7 @@ class DatabaseService:
             pedidos_count = self.pedidos_service.save_pedidos(processed_data_dict.get("pedidos_clean", []), archivo.id)
             logger.info("Guardando compras...")
             logger.info(f"🔴🔴🔴 ANTES DE LLAMAR _save_compras - archivo.id = {archivo.id} 🔴🔴🔴")
+            logger.info(f"🚨🚨🚨 VERCEL DEPLOYMENT TEST - {datetime.now()} 🚨🚨🚨")
             compras_count = self._save_compras(processed_data_dict.get("compras", []), archivo.id)
             
             # Actualizar registro de archivo
