@@ -19,6 +19,6 @@
     "ENVIRONMENT": "production",
     "DEBUG": "true",
     "LOG_LEVEL": "debug",
-    "FORCE_DEPLOYMENT": "2025-10-03-16:50"
+    "FORCE_DEPLOYMENT": "2025-10-03-17:25"
   }
 }

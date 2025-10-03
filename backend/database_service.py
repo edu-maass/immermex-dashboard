@@ -16,8 +16,32 @@ from datetime import datetime, timedelta
 import logging
 import hashlib
 import time
+import numpy as np
 
 logger = setup_logging()
+
+# Helper functions for data validation
+def safe_date(value):
+    """Convierte valor a date de forma segura"""
+    if not value:
+        return None
+    try:
+        if isinstance(value, str):
+            return datetime.strptime(value, '%Y-%m-%d').date()
+        elif isinstance(value, datetime):
+            return value.date()
+        return value
+    except:
+        return None
+
+def safe_int(value, default=0):
+    """Convierte valor a int de forma segura"""
+    if value is None or value == '':
+        return default
+    try:
+        return int(float(value))
+    except:
+        return default
 
 class DatabaseService:
     def __init__(self, db: Session):
@@ -52,19 +76,19 @@ class DatabaseService:
                 logger.error(f"Traceback: {traceback.format_exc()}")
                 raise
             
-            # CRITICAL: Commit del ArchivoProcesado ANTES de guardar datos
+            # CRITICAL: No hacer commit intermedio - usar flush() para asegurar visibilidad
             logger.info("🔥🔥🔥 NEW DEPLOYMENT CONFIRMATION - DATABASE SERVICE 🔥🔥🔥")
-            logger.info("Haciendo commit del ArchivoProcesado para que sea visible...")
-            self.db.commit()
-            logger.info("Commit del ArchivoProcesado exitoso")
-            logger.info("🔥🔥🔥 COMMIT COMPLETED - ArchivoProcesado should be visible now 🔥🔥🔥")
+            logger.info("Usando flush() en lugar de commit para mantener transacción")
+            self.db.flush()
+            logger.info("Flush del ArchivoProcesado exitoso - archivo_id debe ser visible")
+            logger.info("🔥🔥🔥 FLUSH COMPLETED - ArchivoProcesado será visible en la misma transacción 🔥🔥🔥")
             
-            # Verificar que el archivo es visible después del commit
+            # Verificar que el archivo es visible después del flush (sin commit)
             archivo_check = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo.id).first()
             if not archivo_check:
-                logger.error(f"ERROR: ArchivoProcesado con ID {archivo.id} no es visible después del commit")
-                raise Exception(f"ArchivoProcesado con ID {archivo.id} no es visible después del commit")
-            logger.info(f"ArchivoProcesado verificado después del commit: ID={archivo_check.id}")
+                logger.error(f"ERROR: ArchivoProcesado con ID {archivo.id} no es visible después del flush")
+                raise Exception(f"ArchivoProcesado con ID {archivo.id} no es visible después del flush")
+            logger.info(f"ArchivoProcesado verificado después del flush: ID={archivo_check.id}")
             
             # Limpiar datos anteriores si es necesario
             if archivo_info.get("reemplazar_datos", False):
@@ -80,8 +104,16 @@ class DatabaseService:
             logger.info("Guardando pedidos...")
             pedidos_count = self.pedidos_service.save_pedidos(processed_data_dict.get("pedidos_clean", []), archivo.id)
             logger.info("Guardando compras...")
-            logger.info(f"🔴🔴🔴 ANTES DE LLAMAR _save_compras - archivo.id = {archivo.id} 🔴🔴🔴")
-            logger.info(f"🚨🚨🚨 VERCEL DEPLOYMENT TEST - {datetime.now()} 🚨🚨🚨")
+            logger.info(f"🔴🔴🔴 ANTES DE LLAMAR _save_compras - archivo.id = {archivo.id}")
+            logger.info(f"🚨🚨🚨 VERCEL DEPLOYMENT TEST - {datetime.now()} 🚨🚨🧨")
+            
+            # CRITICAL: Verificar que archivo_id existe antes de intentar insertar compras
+            archivo_exists = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo.id).first()
+            if not archivo_exists:
+                logger.error(f"CRITICAL ERROR: archivo_id {archivo.id} no existe en archivos_procesados")
+                raise Exception(f"CRITICAL ERROR: archivo_id {archivo.id} no existe en archivos_procesados")
+            logger.info(f"✅ Verificación exitosa: archivo_id {archivo.id} existe en archivos_procesados")
+            
             compras_count = self._save_compras(processed_data_dict.get("compras", []), archivo.id)
             
             # Actualizar registro de archivo y hacer commit final
@@ -199,7 +231,15 @@ class DatabaseService:
     
     def _save_compras(self, compras_data: list, archivo_id: int) -> int:
         """Guarda datos de compras"""
-        logger.info(f"Guardando {len(compras_data)} registros de compras para archivo_id={archivo_id}")
+        logger.info(f"🔧 _save_compras: Iniciando guardado de {len(compras_data)} registros para archivo_id={archivo_id}")
+        
+        # Verificar que archivo_id existe antes de intentar insertar
+        archivo_check = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo_id).first()
+        if not archivo_check:
+            logger.error(f"❌ CRITICAL ERROR en _save_compras: archivo_id {archivo_id} no existe")
+            raise Exception(f"CRITICAL: archivo_id {archivo_id} no existe en archivos_procesados")
+        logger.info(f"✅ _save_compras: archivo_id {archivo_id} verificado correctamente")
+        
         count = 0
         for compra_data in compras_data:
             try:
@@ -237,6 +277,7 @@ class DatabaseService:
                 logger.warning(f"Error guardando compra: {str(e)}")
                 continue
         
+        logger.info(f"🔧 _save_compras: Guardado completado - {count} registros de compras agregados")
         # No hacer commit aquí - dejar que el método principal maneje la transacción
         return count
     
