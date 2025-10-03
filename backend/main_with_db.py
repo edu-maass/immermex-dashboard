@@ -347,6 +347,9 @@ async def upload_compras_file(
 ):
     """Endpoint específico para subir archivos Excel de compras"""
     try:
+        # VERIFICATION LOG - 2025-10-03 16:45
+        logger.info("🚨🚨🚨 COMPRAS ENDPOINT CALLED - VERIFICATION LOG 🚨🚨🚨")
+        
         # Validación básica del archivo
         if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
             raise HTTPException(status_code=400, detail="Solo se permiten archivos Excel (.xlsx, .xls)")
