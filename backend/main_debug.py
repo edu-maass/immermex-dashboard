@@ -65,7 +65,9 @@ async def root():
         "sqlalchemy_error": SQLALCHEMY_ERROR,
         "psycopg2_ok": PSYCOPG2_OK,
         "psycopg2_error": PSYCOPG2_ERROR,
-        "database_url_preview": os.getenv("DATABASE_URL", "not_set")[:20] + "..." if len(os.getenv("DATABASE_URL", "")) > 20 else os.getenv("DATABASE_URL", "not_set")
+        "database_url_preview": os.getenv("DATABASE_URL", "not_set")[:20] + "..." if len(os.getenv("DATABASE_URL", "")) > 20 else os.getenv("DATABASE_URL", "not_set"),
+        "supabase_password_set": "yes" if os.getenv("SUPABASE_PASSWORD") else "no",
+        "final_database_url_preview": os.getenv("DATABASE_URL", "not_set")[:30] + "..." if len(os.getenv("DATABASE_URL", "")) > 30 else os.getenv("DATABASE_URL", "not_set")
     }
 
 @app.get("/test")
