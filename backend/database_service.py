@@ -39,8 +39,18 @@ class DatabaseService:
             
             # Crear registro de archivo
             logger.info(f"Creando registro de archivo para: {archivo_info.get('nombre', 'unknown')}")
-            archivo = self._create_archivo_record(archivo_info)
-            logger.info(f"ArchivoProcesado creado con ID: {archivo.id}")
+            logger.info(f"Llamando a _create_archivo_record...")
+            try:
+                archivo = self._create_archivo_record(archivo_info)
+                logger.info(f"_create_archivo_record completado exitosamente")
+                logger.info(f"ArchivoProcesado creado con ID: {archivo.id}")
+                logger.info(f"Tipo de archivo: {type(archivo)}")
+            except Exception as e:
+                logger.error(f"ERROR en _create_archivo_record: {str(e)}")
+                logger.error(f"Tipo de error: {type(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                raise
             
             # Verificar que el archivo es visible antes de continuar
             archivo_check = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo.id).first()
