@@ -83,13 +83,6 @@ class DatabaseService:
             logger.info("Commit del ArchivoProcesado exitoso - archivo_id debe ser visible")
             logger.info("🔥🔥🔥 COMMIT COMPLETED - ArchivoProcesado committed 🔥🔥🔥")
             
-            # Verificar que el archivo es visible después del flush (sin commit)
-            archivo_check = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo.id).first()
-            if not archivo_check:
-                logger.error(f"ERROR: ArchivoProcesado con ID {archivo.id} no es visible después del flush")
-                raise Exception(f"ArchivoProcesado con ID {archivo.id} no es visible después del flush")
-            logger.info(f"ArchivoProcesado verificado después del flush: ID={archivo_check.id}")
-            
             # Limpiar datos anteriores si es necesario
             if archivo_info.get("reemplazar_datos", False):
                 self._clear_existing_data()
@@ -285,7 +278,7 @@ class DatabaseService:
                 continue
         
         logger.info(f"🔧 _save_compras: Guardado completado - {count} registros de compras agregados")
-        # No hacer commit aquí - dejar que el método principal maneje la transacción
+        self.db.commit()  # Commit compras inmediatamente
         return count
     
     def _save_pedidos(self, pedidos_data: list, archivo_id: int) -> int:
