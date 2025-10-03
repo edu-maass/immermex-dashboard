@@ -150,7 +150,7 @@ class DatabaseService:
             
             # Refrescar el objeto para obtener el ID (sin commit)
             logger.info("Refrescando objeto...")
-            self.db.refresh(archivo)  # Usar refresh en lugar de flush
+            self.db.flush()  # flush() es correcto para obtener ID sin commit
             logger.info("Objeto refrescado")
             
             # Verificar que el archivo fue creado correctamente y es visible
