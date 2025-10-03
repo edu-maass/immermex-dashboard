@@ -365,6 +365,8 @@ async def upload_compras_file(
             # Procesar usando el procesador V2
             processed_data_dict, kpis = process_compras_v2(content, file.filename)
             logger.info(f"Datos de compras procesados exitosamente. Claves: {list(processed_data_dict.keys())}")
+            logger.info(f"KPIs recibidos: {kpis}")
+            logger.info(f"Tipo de KPIs: {type(kpis)}")
             
             # Preparar información del archivo
             archivo_info = {
@@ -375,6 +377,7 @@ async def upload_compras_file(
                 "reemplazar_datos": reemplazar_datos,
                 "tipo_datos": "compras"  # Marcar como datos de compras
             }
+            logger.info(f"Archivo info preparado: {archivo_info}")
             
             # Guardar en base de datos
             logger.info("Iniciando guardado de datos de compras en base de datos...")
@@ -391,18 +394,33 @@ async def upload_compras_file(
             
             logger.info(f"Archivo de compras procesado y guardado exitosamente: {file.filename}")
             
-            return {
-                "mensaje": "Archivo de compras procesado y guardado exitosamente en base de datos",
-                "nombre_archivo": file.filename,
-                "archivo_id": result["archivo_id"],
-                "total_registros": result["registros_procesados"],
-                "registros_procesados": result["registros_procesados"],
-                "kpis_compras": kpis,
-                "datos_procesados": {
-                    "compras": len(processed_data_dict.get('compras', []))
-                },
-                "archivo_info": archivo_info
-            }
+            # Preparar respuesta con manejo de errores
+            try:
+                response_data = {
+                    "mensaje": "Archivo de compras procesado y guardado exitosamente en base de datos",
+                    "nombre_archivo": file.filename,
+                    "archivo_id": result["archivo_id"],
+                    "total_registros": result["registros_procesados"],
+                    "registros_procesados": result["registros_procesados"],
+                    "kpis_compras": kpis,
+                    "datos_procesados": {
+                        "compras": len(processed_data_dict.get('compras', []))
+                    },
+                    "archivo_info": archivo_info
+                }
+                logger.info(f"Respuesta preparada exitosamente: {response_data}")
+                return response_data
+            except Exception as e:
+                logger.error(f"Error preparando respuesta: {str(e)}")
+                # Respuesta simplificada en caso de error
+                return {
+                    "mensaje": "Archivo de compras procesado y guardado exitosamente en base de datos",
+                    "nombre_archivo": file.filename,
+                    "archivo_id": result["archivo_id"],
+                    "total_registros": result["registros_procesados"],
+                    "registros_procesados": result["registros_procesados"],
+                    "error_response": f"Error en respuesta: {str(e)}"
+                }
             
         except Exception as e:
             logger.error(f"Error procesando archivo de compras: {str(e)}")
