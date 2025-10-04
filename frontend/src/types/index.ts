@@ -43,6 +43,15 @@ export interface KPIs {
   expectativa_cobranza: Record<string, {cobranza_esperada: number, cobranza_real: number}>;
   analisis_pedidos: PedidoAnalisis[];
   clientes_analisis: Record<string, ClienteAnalisis>;
+  
+  // Nuevos gráficos para pedidos
+  top_proveedores?: Record<string, number>;
+  compras_por_material?: Record<string, number>;
+  evolucion_precios?: Record<string, number>;
+  flujo_pagos_semanal?: Record<string, number>;
+  
+  // Datos filtrados para tabla
+  datos_filtrados?: DataTableRow[];
 }
 
 export interface PedidoAnalisis {
@@ -120,4 +129,15 @@ export interface ArchivoProcesado {
   estado: string;
   mes?: number;
   año?: number;
+}
+
+export interface DataTableRow {
+  id: string;
+  fecha_compra: string;
+  proveedor: string;
+  concepto: string; // material in backend
+  cantidad_kg: number;
+  precio_unitario: number;
+  subtotal: number;
+  anticipo: number;
 }

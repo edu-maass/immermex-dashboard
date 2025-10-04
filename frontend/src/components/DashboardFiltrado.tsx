@@ -2,13 +2,13 @@ import { FC, useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { RefreshCw, Upload, TrendingUp, DollarSign, Package, Users, BarChart3 } from 'lucide-react';
 import { apiService } from '../services/api';
-import { KPIs } from '../types';
+import { KPIs, DataTableRow } from '../types';
 import { PedidoFilter } from './PedidoFilter';
-import { AgingChart } from './Charts/AgingChart';
-import { TopClientesChart } from './Charts/TopClientesChart';
-import { ConsumoMaterialChart } from './Charts/ConsumoMaterialChart';
-import { ExpectativaCobranzaChart } from './Charts/ExpectativaCobranzaChart';
-import { CobranzaPedidosChart } from './Charts/CobranzaPedidosChart';
+import { TopProvidersChart } from './Charts/TopProvidersChart';
+import { ComprasMaterialChart } from './Charts/ComprasMaterialChart';
+import { EvolucionPreciosChart } from './Charts/EvolucionPreciosChart';
+import { FlujoPagosChart } from './Charts/FlujoPagosChart';
+import { DataTable } from './DataTable';
 
 interface DashboardFiltradoProps {
   onUploadSuccess?: () => void;
@@ -33,9 +33,43 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
       
       // Obtener KPIs con filtros de pedidos
       console.log('Obteniendo KPIs...');
-      const kpisData = await apiService.getKPIs({ pedidos: pedidosAplicar?.join(',') });
+      const kpisData = await apiService.getKPIs({ pedidos: pedidosAplicar?.join(',') }) as KPIs;
       console.log('KPIs obtenidos:', kpisData);
-      setKpis(kpisData as KPIs);
+
+      // Obtener datos adicionales para los nuevos gráficos y tabla
+      const filtros = { pedidos: pedidosAplicar?.join(',') };
+
+      try {
+        const [topProveedores, comprasPorMaterial, evolucionPrecios, flujoPagos, datosFiltrados] = await Promise.allSettled([
+          apiService.getTopProveedores(10, filtros),
+          apiService.getComprasPorMaterial(10, filtros),
+          apiService.getEvolucionPreciosPedidos(filtros),
+          apiService.getFlujoPagosSemanal(filtros),
+          apiService.getDatosFiltrados(filtros)
+        ]);
+
+        // Agregar los nuevos datos a los KPIs
+        if (topProveedores.status === 'fulfilled') {
+          kpisData.top_proveedores = topProveedores.value as Record<string, number>;
+        }
+        if (comprasPorMaterial.status === 'fulfilled') {
+          kpisData.compras_por_material = comprasPorMaterial.value as Record<string, number>;
+        }
+        if (evolucionPrecios.status === 'fulfilled') {
+          kpisData.evolucion_precios = evolucionPrecios.value as Record<string, number>;
+        }
+        if (flujoPagos.status === 'fulfilled') {
+          kpisData.flujo_pagos_semanal = flujoPagos.value as Record<string, number>;
+        }
+        if (datosFiltrados.status === 'fulfilled') {
+          kpisData.datos_filtrados = datosFiltrados.value as DataTableRow[];
+        }
+      } catch (chartError) {
+        console.warn('Error cargando gráficos adicionales:', chartError);
+        // No establecer error global para gráficos adicionales
+      }
+
+      setKpis(kpisData);
       
     } catch (err) {
       console.error('Error cargando datos:', err);
@@ -135,24 +169,29 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
     }).format(value);
   };
 
-  const formatExpectativaCobranzaData = (expectativa: Record<string, {cobranza_esperada: number, cobranza_real: number}>) => {
-    return Object.entries(expectativa).map(([semana, datos]) => ({
-      semana,
-      cobranza_esperada: datos.cobranza_esperada,
-      cobranza_real: datos.cobranza_real
+  const formatTopProvidersData = (proveedores: Record<string, number>) => {
+    return Object.entries(proveedores).map(([name, value]) => ({ name, value }));
+  };
+
+  const formatComprasMaterialData = (materiales: Record<string, number>) => {
+    return Object.entries(materiales).map(([name, value]) => ({ name, value }));
+  };
+
+  const formatEvolucionPreciosData = (precios: Record<string, any>) => {
+    return Object.entries(precios).map(([fecha, data]) => ({
+      fecha,
+      precio_promedio: data.precio_promedio || 0,
+      precio_min: data.precio_min || 0,
+      precio_max: data.precio_max || 0
     }));
   };
 
-  const formatAgingData = (aging: Record<string, number>) => {
-    return Object.entries(aging).map(([name, value]) => ({ name, value }));
-  };
-
-  const formatTopClientesData = (clientes: Record<string, number>) => {
-    return Object.entries(clientes).map(([name, value]) => ({ name, value }));
-  };
-
-  const formatConsumoMaterialData = (materiales: Record<string, number>) => {
-    return Object.entries(materiales).map(([name, value]) => ({ name, value }));
+  const formatFlujoPagosData = (pagos: Record<string, any>) => {
+    return Object.entries(pagos).map(([semana, data]) => ({
+      semana,
+      pagos: data.pagos || 0,
+      pendiente: data.pendiente || 0
+    }));
   };
 
   if (loading && !kpis) {
@@ -176,11 +215,29 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
     );
   }
 
+  // Show filters even when no data
+  const renderFilters = () => (
+    <div className="grid grid-cols-1 gap-6">
+      <PedidoFilter
+        onPedidosChange={handlePedidosChange}
+        onClearPedidos={handleClearPedidos}
+        onUploadSuccess={!!onUploadSuccess}
+        dataLoaded={dataLoaded}
+      />
+    </div>
+  );
+
   if (!kpis) {
     return (
-      <div className="text-center py-8">
-        <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-        <p className="text-gray-600">No hay datos disponibles. Sube un archivo para comenzar.</p>
+      <div className="space-y-6">
+        {/* Show filters even when no data */}
+        {renderFilters()}
+        
+        {/* No data message */}
+        <div className="text-center py-8">
+          <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <p className="text-gray-600">No hay datos disponibles. Sube un archivo para comenzar.</p>
+        </div>
       </div>
     );
   }
@@ -200,14 +257,7 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
       )}
 
       {/* Filtros */}
-      <div className="grid grid-cols-1 gap-6">
-        <PedidoFilter
-          onPedidosChange={handlePedidosChange}
-          onClearPedidos={handleClearPedidos}
-          onUploadSuccess={!!onUploadSuccess}
-          dataLoaded={dataLoaded}
-        />
-      </div>
+      {renderFilters()}
 
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
@@ -241,17 +291,18 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
           </div>
         </div>
 
-        {/* Anticipos */}
+        {/* Anticipos Promedio */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Package className="h-5 w-5 text-purple-600" />
-              <h3 className="text-sm font-medium text-gray-500">Anticipos</h3>
+              <h3 className="text-sm font-medium text-gray-500">Anticipos Promedio</h3>
             </div>
           </div>
           <div className="mt-2">
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(kpis.anticipos_total || 0)}</p>
-            <p className="text-sm text-gray-500">{kpis.porcentaje_anticipos?.toFixed(1)}% sobre facturación</p>
+            <p className="text-2xl font-bold text-gray-900">{kpis.porcentaje_anticipos?.toFixed(1)}%</p>
+            <p className="text-sm text-gray-500">de los pedidos tienen anticipo</p>
+            <p className="text-sm text-gray-500">Total: {formatCurrency(kpis.anticipos_total || 0)}</p>
           </div>
         </div>
 
@@ -283,12 +334,12 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
           </div>
         </div>
 
-        {/* Unit Economics - KPI Consolidado */}
+        {/* Unit Economics del Pedido */}
         <div className="bg-white rounded-lg shadow p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
               <TrendingUp className="h-5 w-5 text-blue-600" />
-              <h3 className="text-lg font-medium text-gray-900">Unit Economics</h3>
+              <h3 className="text-lg font-medium text-gray-900">Unit Economics del Pedido</h3>
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -325,22 +376,29 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
 
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {kpis.aging_cartera && Object.keys(kpis.aging_cartera).length > 0 && (
-          <AgingChart data={formatAgingData(kpis.aging_cartera)} />
+        {kpis.top_proveedores && Object.keys(kpis.top_proveedores).length > 0 && (
+          <TopProvidersChart data={formatTopProvidersData(kpis.top_proveedores)} />
         )}
         
-        {kpis.top_clientes && Object.keys(kpis.top_clientes).length > 0 && (
-          <TopClientesChart data={formatTopClientesData(kpis.top_clientes)} />
+        {kpis.compras_por_material && Object.keys(kpis.compras_por_material).length > 0 && (
+          <ComprasMaterialChart data={formatComprasMaterialData(kpis.compras_por_material)} />
         )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {kpis.consumo_material && Object.keys(kpis.consumo_material).length > 0 && (
-          <ConsumoMaterialChart data={formatConsumoMaterialData(kpis.consumo_material)} />
+        {kpis.evolucion_precios && Object.keys(kpis.evolucion_precios).length > 0 && (
+          <EvolucionPreciosChart data={formatEvolucionPreciosData(kpis.evolucion_precios)} />
         )}
-        
-        {kpis.expectativa_cobranza && Object.keys(kpis.expectativa_cobranza).length > 0 && (
-          <CobranzaPedidosChart data={formatExpectativaCobranzaData(kpis.expectativa_cobranza)} />
+
+        {kpis.flujo_pagos_semanal && Object.keys(kpis.flujo_pagos_semanal).length > 0 && (
+          <FlujoPagosChart data={formatFlujoPagosData(kpis.flujo_pagos_semanal)} />
+        )}
+      </div>
+
+      {/* Tabla de datos filtrados */}
+      <div className="grid grid-cols-1 gap-6">
+        {kpis.datos_filtrados && kpis.datos_filtrados.length > 0 && (
+          <DataTable data={kpis.datos_filtrados} />
         )}
       </div>
     </div>

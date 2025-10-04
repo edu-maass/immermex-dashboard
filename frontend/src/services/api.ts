@@ -62,11 +62,14 @@ class ApiService {
       return await response.json();
     } catch (error) {
       clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        throw new Error('Request timeout - El servidor tardó demasiado en responder');
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error('Request timeout - El servidor tardó demasiado en responder');
+        }
+        throw error;
       }
       console.error('API request failed:', error);
-      throw error;
+      throw new Error('Unknown error occurred');
     }
   }
 
@@ -298,6 +301,88 @@ class ApiService {
 
   async getFiltrosDisponibles() {
     return this.request('/filtros/disponibles');
+  }
+
+  // ==================== MÉTODOS DE PEDIDOS ====================
+
+  async getTopProveedores(limite: number = 10, filtros?: any) {
+    const params = new URLSearchParams();
+    params.append('limite', limite.toString());
+    
+    if (filtros) {
+      Object.entries(filtros).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, value.toString());
+        }
+      });
+    }
+    
+    const queryString = params.toString();
+    return this.request(`/pedidos/top-proveedores?${queryString}`);
+  }
+
+  async getComprasPorMaterial(limite: number = 10, filtros?: any) {
+    const params = new URLSearchParams();
+    params.append('limite', limite.toString());
+    
+    if (filtros) {
+      Object.entries(filtros).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, value.toString());
+        }
+      });
+    }
+    
+    const queryString = params.toString();
+    return this.request(`/pedidos/compras-por-material?${queryString}`);
+  }
+
+  async getEvolucionPreciosPedidos(filtros?: any) {
+    const params = new URLSearchParams();
+    
+    if (filtros) {
+      Object.entries(filtros).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, value.toString());
+        }
+      });
+    }
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/pedidos/evolucion-precios?${queryString}` : '/pedidos/evolucion-precios';
+    return this.request(endpoint);
+  }
+
+  async getFlujoPagosSemanal(filtros?: any) {
+    const params = new URLSearchParams();
+    
+    if (filtros) {
+      Object.entries(filtros).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, value.toString());
+        }
+      });
+    }
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/pedidos/flujo-pagos-semanal?${queryString}` : '/pedidos/flujo-pagos-semanal';
+    return this.request(endpoint);
+  }
+
+  async getDatosFiltrados(filtros?: any) {
+    const params = new URLSearchParams();
+    
+    if (filtros) {
+      Object.entries(filtros).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, value.toString());
+        }
+      });
+    }
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/pedidos/datos-filtrados?${queryString}` : '/pedidos/datos-filtrados';
+    return this.request(endpoint);
   }
 }
 

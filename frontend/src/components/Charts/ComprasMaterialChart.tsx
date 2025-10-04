@@ -2,23 +2,23 @@ import { FC } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-interface FlujoPagosChartProps {
-  data: Array<{ semana: string; pagos: number; pendiente: number }>;
+interface ComprasMaterialChartProps {
+  data: Array<{ name: string; value: number }>;
 }
 
-export const FlujoPagosChart: FC<FlujoPagosChartProps> = ({ data }) => {
+export const ComprasMaterialChart: FC<ComprasMaterialChartProps> = ({ data }) => {
   // Safety check for data
   if (!data || !Array.isArray(data) || data.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Flujo de Pagos Semanal</CardTitle>
+          <CardTitle>Compras por Material</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-80 flex items-center justify-center text-gray-500">
             <div className="text-center">
               <p className="text-lg font-medium">Sin datos disponibles</p>
-              <p className="text-sm">No hay información de pagos</p>
+              <p className="text-sm">No hay información de materiales</p>
             </div>
           </div>
         </CardContent>
@@ -32,49 +32,38 @@ export const FlujoPagosChart: FC<FlujoPagosChartProps> = ({ data }) => {
     return `$${value.toFixed(0)}`;
   };
 
-  const formatWeek = (weekString: string) => {
-    // Format week string like "Semana 1" or "Week 1"
-    if (weekString.includes('Semana')) return weekString;
-    if (weekString.includes('Week')) return weekString.replace('Week', 'Semana');
-    return `Semana ${weekString}`;
-  };
-
-  // Format data for the chart
-  const chartData = data.map(item => ({
-    semana: formatWeek(item.semana),
-    pagos: item.pagos,
-    pendiente: item.pendiente
+  // Truncar nombres de materiales a 15 caracteres para mejor visualización
+  const limitedData = data.slice(0, 10).map(item => ({
+    ...item,
+    name: item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name
   }));
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Flujo de Pagos Semanal</CardTitle>
+        <CardTitle>Compras por Material</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
+            <BarChart 
+              data={limitedData} 
               margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="semana"
+              <XAxis 
+                dataKey="name"
                 tick={{ fontSize: 12 }}
                 angle={-45}
                 textAnchor="end"
                 height={60}
               />
-              <YAxis
+              <YAxis 
                 tick={{ fontSize: 12 }}
                 tickFormatter={formatCurrency}
               />
               <Tooltip
-                formatter={(value: number, name: string) => [
-                  formatCurrency(value),
-                  name === 'pagos' ? 'Pagos Realizados' : 'Pendiente'
-                ]}
+                formatter={(value: number) => [formatCurrency(value), 'Compras']}
                 labelStyle={{ color: '#374151' }}
                 contentStyle={{
                   backgroundColor: '#f9fafb',
@@ -82,16 +71,9 @@ export const FlujoPagosChart: FC<FlujoPagosChartProps> = ({ data }) => {
                   borderRadius: '8px',
                 }}
               />
-              <Bar
-                dataKey="pagos"
-                fill="#10b981"
-                name="Pagos Realizados"
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="pendiente"
-                fill="#f59e0b"
-                name="Pendiente"
+              <Bar 
+                dataKey="value" 
+                fill="#10b981" 
                 radius={[4, 4, 0, 0]}
               />
             </BarChart>
