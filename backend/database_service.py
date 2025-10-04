@@ -116,15 +116,27 @@ class DatabaseService:
             # Actualizar registro de archivo y hacer commit final
             total_registros = facturas_count + cobranzas_count + anticipos_count + pedidos_count + compras_count
             
-            # Buscar el archivo nuevamente para actualizarlo
-            archivo_final = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo_id).first()
-            if archivo_final:
-                archivo_final.registros_procesados = total_registros
-                archivo_final.estado = "procesado"
-                self.db.commit()  # Commit final para actualizar el estado del archivo
-                logger.info(f"Datos guardados exitosamente: {total_registros} registros")
-            else:
-                logger.error(f"No se encontró archivo con ID {archivo_id} para actualizar")
+            # Buscar el archivo nuevamente para actualizarlo - usar nueva sesión para evitar ObjectDeletedError
+            try:
+                archivo_final = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo_id).first()
+                if archivo_final:
+                    archivo_final.registros_procesados = total_registros
+                    archivo_final.estado = "procesado"
+                    self.db.commit()  # Commit final para actualizar el estado del archivo
+                    logger.info(f"Datos guardados exitosamente: {total_registros} registros")
+                else:
+                    logger.error(f"No se encontró archivo con ID {archivo_id} para actualizar")
+            except Exception as update_error:
+                logger.error(f"Error actualizando archivo final: {str(update_error)}")
+                # Intentar actualización directa con SQL si falla la ORM
+                try:
+                    from sqlalchemy import text
+                    self.db.execute(text("UPDATE archivos_procesados SET registros_procesados = :total, estado = 'procesado' WHERE id = :archivo_id"), 
+                                  {"total": total_registros, "archivo_id": archivo_id})
+                    self.db.commit()
+                    logger.info(f"Actualización directa exitosa: {total_registros} registros")
+                except Exception as sql_error:
+                    logger.error(f"Error en actualización directa: {str(sql_error)}")
             
             return {
                 "success": True,
@@ -147,12 +159,24 @@ class DatabaseService:
             logger.error(f"Traceback completo: {traceback.format_exc()}")
             self.db.rollback()
             if 'archivo_id' in locals() and archivo_id:
-                error_archivo = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo_id).first()
-                if error_archivo:
-                    error_archivo.estado = "error"
-                    error_archivo.error_message = str(e)
-                    self.db.commit()
-                    logger.info(f"Updated archivo {archivo_id} to error state")
+                try:
+                    error_archivo = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo_id).first()
+                    if error_archivo:
+                        error_archivo.estado = "error"
+                        error_archivo.error_message = str(e)
+                        self.db.commit()
+                        logger.info(f"Updated archivo {archivo_id} to error state")
+                except Exception as error_update_exception:
+                    logger.error(f"Error actualizando archivo a estado error: {str(error_update_exception)}")
+                    # Intentar actualización directa con SQL
+                    try:
+                        from sqlalchemy import text
+                        self.db.execute(text("UPDATE archivos_procesados SET estado = 'error', error_message = :error_msg WHERE id = :archivo_id"), 
+                                      {"error_msg": str(e), "archivo_id": archivo_id})
+                        self.db.commit()
+                        logger.info(f"Updated archivo {archivo_id} to error state via SQL")
+                    except Exception as sql_error:
+                        logger.error(f"Error en actualización SQL de error: {str(sql_error)}")
             return {"success": False, "error": str(e)}
     
     def _create_archivo_record(self, archivo_info: dict) -> ArchivoProcesado:
