@@ -23,7 +23,7 @@ from database_service import DatabaseService
 from utils import setup_logging, handle_api_error, FileProcessingError, DatabaseError
 from datetime import datetime
 from data_processor import process_immermex_file_advanced
-from pedidos_endpoints import add_pedidos_routes
+# from pedidos_endpoints import add_pedidos_routes  # Temporarily commented out
 
 # Configurar logging
 logger = setup_logging()
@@ -35,8 +35,117 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Agregar rutas de pedidos
-app = add_pedidos_routes(app)
+# PEDIDOS ENDPOINTS - Ready for activation
+# To activate these endpoints, uncomment the following code:
+
+"""
+@app.get("/api/pedidos/top-proveedores")
+async def get_top_proveedores(
+    limite: int = Query(10, description="Número máximo de proveedores a retornar"),
+    mes: Optional[int] = Query(None, description="Filtrar por mes"),
+    año: Optional[int] = Query(None, description="Filtrar por año"),
+    pedidos: Optional[str] = Query(None, description="Lista de pedidos separados por coma"),
+    db: Session = Depends(get_db)
+):
+    try:
+        db_service = DatabaseService(db)
+        filtros = {}
+        if mes: filtros['mes'] = mes
+        if año: filtros['año'] = año
+        if pedidos: filtros['pedidos'] = pedidos
+
+        pedidos_service = db_service.pedidos_service
+        result = pedidos_service.get_top_proveedores(limite, filtros)
+        return result
+    except Exception as e:
+        logger.error(f"Error obteniendo top proveedores: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/pedidos/compras-por-material")
+async def get_compras_por_material(
+    limite: int = Query(10, description="Número máximo de materiales a retornar"),
+    mes: Optional[int] = Query(None, description="Filtrar por mes"),
+    año: Optional[int] = Query(None, description="Filtrar por año"),
+    pedidos: Optional[str] = Query(None, description="Lista de pedidos separados por coma"),
+    db: Session = Depends(get_db)
+):
+    try:
+        db_service = DatabaseService(db)
+        filtros = {}
+        if mes: filtros['mes'] = mes
+        if año: filtros['año'] = año
+        if pedidos: filtros['pedidos'] = pedidos
+
+        pedidos_service = db_service.pedidos_service
+        result = pedidos_service.get_compras_por_material(limite, filtros)
+        return result
+    except Exception as e:
+        logger.error(f"Error obteniendo compras por material: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/pedidos/evolucion-precios")
+async def get_evolucion_precios(
+    mes: Optional[int] = Query(None, description="Filtrar por mes"),
+    año: Optional[int] = Query(None, description="Filtrar por año"),
+    pedidos: Optional[str] = Query(None, description="Lista de pedidos separados por coma"),
+    db: Session = Depends(get_db)
+):
+    try:
+        db_service = DatabaseService(db)
+        filtros = {}
+        if mes: filtros['mes'] = mes
+        if año: filtros['año'] = año
+        if pedidos: filtros['pedidos'] = pedidos
+
+        pedidos_service = db_service.pedidos_service
+        result = pedidos_service.get_evolucion_precios(filtros)
+        return result
+    except Exception as e:
+        logger.error(f"Error obteniendo evolución de precios: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/pedidos/flujo-pagos-semanal")
+async def get_flujo_pagos_semanal(
+    mes: Optional[int] = Query(None, description="Filtrar por mes"),
+    año: Optional[int] = Query(None, description="Filtrar por año"),
+    pedidos: Optional[str] = Query(None, description="Lista de pedidos separados por coma"),
+    db: Session = Depends(get_db)
+):
+    try:
+        db_service = DatabaseService(db)
+        filtros = {}
+        if mes: filtros['mes'] = mes
+        if año: filtros['año'] = año
+        if pedidos: filtros['pedidos'] = pedidos
+
+        pedidos_service = db_service.pedidos_service
+        result = pedidos_service.get_flujo_pagos_semanal(filtros)
+        return result
+    except Exception as e:
+        logger.error(f"Error obteniendo flujo de pagos semanal: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/pedidos/datos-filtrados")
+async def get_datos_filtrados(
+    mes: Optional[int] = Query(None, description="Filtrar por mes"),
+    año: Optional[int] = Query(None, description="Filtrar por año"),
+    pedidos: Optional[str] = Query(None, description="Lista de pedidos separados por coma"),
+    db: Session = Depends(get_db)
+):
+    try:
+        db_service = DatabaseService(db)
+        filtros = {}
+        if mes: filtros['mes'] = mes
+        if año: filtros['año'] = año
+        if pedidos: filtros['pedidos'] = pedidos
+
+        pedidos_service = db_service.pedidos_service
+        result = pedidos_service.get_datos_filtrados(filtros)
+        return result
+    except Exception as e:
+        logger.error(f"Error obteniendo datos filtrados: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+"""
 
 # Configurar CORS dinámicamente según el entorno
 def get_cors_origins():
@@ -48,7 +157,7 @@ def get_cors_origins():
         ]
     else:
         return [
-            "http://localhost:3000", 
+            "http://localhost:3000",
             "http://127.0.0.1:3000",
             "https://edu-maass.github.io"
         ]
@@ -64,38 +173,7 @@ app.add_middleware(
 # Agregar compresión GZIP para optimizar el ancho de banda
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# # @app.on_event("startup")
-# async def startup_event():
-#     """Inicializar base de datos al arrancar la aplicación"""
-#     try:
-#         # Verificar configuración de base de datos
-#         database_url = os.getenv("DATABASE_URL", "sqlite:///./immermex.db")
-#
-#         if database_url.startswith("postgresql://"):
-#             logger.info("Conectando a Supabase/PostgreSQL en la nube")
-#             logger.info(f"Host: {database_url.split('@')[1].split('/')[0] if '@' in database_url else 'configurado'}")
-#         else:
-#             logger.info("Usando SQLite local para desarrollo")
-#
-#         success = init_db()
-#         if success:
-#             logger.info("API con base de datos iniciada correctamente")
-#
-#             # Verificar conexión
-#             try:
-#                 from database import SessionLocal
-#                 from sqlalchemy import text
-#                 with SessionLocal() as db:
-#                     db.execute(text("SELECT 1"))
-#             logger.info("Conexion a base de datos verificada")
-#             except Exception as e:
-#                 logger.warning(f"Advertencia en conexion: {str(e)}")
-#
-#         else:
-#             logger.error("Error inicializando base de datos")
-#     except Exception as e:
-#         logger.error(f"Error en startup: {str(e)}")
-#         logger.error("Asegurate de que DATABASE_URL este configurada correctamente")
+# Fully commented out startup event
 
 @app.get("/")
 async def root():
