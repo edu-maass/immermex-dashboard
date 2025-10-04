@@ -136,3 +136,184 @@ class PedidosService:
     def get_folios_pedidos(self, pedidos: list) -> list:
         """Obtiene folios únicos de pedidos"""
         return list(set(p.folio_factura for p in pedidos if p.folio_factura))
+
+    def get_top_proveedores(self, limite: int = 10, filtros: dict = None) -> dict:
+        """Obtiene top proveedores por monto de compras"""
+        from database import Compras
+        from sqlalchemy import func
+
+        query = self.db.query(
+            Compras.proveedor,
+            func.sum(Compras.subtotal).label('total_compras')
+        ).filter(
+            Compras.proveedor.isnot(None),
+            Compras.proveedor != ''
+        ).group_by(Compras.proveedor)
+
+        # Aplicar filtros
+        if filtros:
+            if filtros.get('mes'):
+                query = query.filter(func.extract('month', Compras.fecha_compra) == filtros['mes'])
+            if filtros.get('año'):
+                query = query.filter(func.extract('year', Compras.fecha_compra) == filtros['año'])
+
+        # Ordenar por total y limitar
+        result = query.order_by(func.sum(Compras.subtotal).desc()).limit(limite).all()
+
+        return {proveedor: float(total) for proveedor, total in result}
+
+    def get_compras_por_material(self, limite: int = 10, filtros: dict = None) -> dict:
+        """Obtiene compras agrupadas por material"""
+        from database import Compras
+        from sqlalchemy import func
+
+        query = self.db.query(
+            Compras.concepto,
+            func.sum(Compras.subtotal).label('total_compras')
+        ).filter(
+            Compras.concepto.isnot(None),
+            Compras.concepto != ''
+        ).group_by(Compras.concepto)
+
+        # Aplicar filtros
+        if filtros:
+            if filtros.get('mes'):
+                query = query.filter(func.extract('month', Compras.fecha_compra) == filtros['mes'])
+            if filtros.get('año'):
+                query = query.filter(func.extract('year', Compras.fecha_compra) == filtros['año'])
+
+        # Ordenar por total y limitar
+        result = query.order_by(func.sum(Compras.subtotal).desc()).limit(limite).all()
+
+        return {concepto: float(total) for concepto, total in result}
+
+    def get_evolucion_precios(self, filtros: dict = None) -> list:
+        """Obtiene evolución de precios por período"""
+        from database import Compras
+        from sqlalchemy import func, extract
+
+        # Agrupar por mes y año
+        query = self.db.query(
+            func.extract('year', Compras.fecha_compra).label('año'),
+            func.extract('month', Compras.fecha_compra).label('mes'),
+            func.avg(Compras.precio_unitario).label('precio_promedio'),
+            func.min(Compras.precio_unitario).label('precio_min'),
+            func.max(Compras.precio_unitario).label('precio_max')
+        ).filter(
+            Compras.precio_unitario > 0
+        ).group_by(
+            func.extract('year', Compras.fecha_compra),
+            func.extract('month', Compras.fecha_compra)
+        )
+
+        # Aplicar filtros
+        if filtros:
+            if filtros.get('mes'):
+                query = query.having(func.extract('month', Compras.fecha_compra) == filtros['mes'])
+            if filtros.get('año'):
+                query = query.having(func.extract('year', Compras.fecha_compra) == filtros['año'])
+
+        # Ordenar por fecha
+        result = query.order_by(
+            func.extract('year', Compras.fecha_compra),
+            func.extract('month', Compras.fecha_compra)
+        ).all()
+
+        # Formatear resultado
+        evolucion = []
+        for row in result:
+            fecha = f"{int(row.año)}-{int(row.mes):02d}"
+            evolucion.append({
+                'fecha': fecha,
+                'precio_promedio': float(row.precio_promedio or 0),
+                'precio_min': float(row.precio_min or 0),
+                'precio_max': float(row.precio_max or 0)
+            })
+
+        return evolucion
+
+    def get_flujo_pagos_semanal(self, filtros: dict = None) -> list:
+        """Obtiene flujo de pagos semanal"""
+        from database import Compras
+        from sqlalchemy import func, extract
+
+        # Agrupar por semana
+        query = self.db.query(
+            func.extract('year', Compras.fecha_compra).label('año'),
+            func.extract('week', Compras.fecha_compra).label('semana'),
+            func.sum(Compras.subtotal).label('total_compras'),
+            func.sum(
+                func.case(
+                    [(Compras.estado_pago == 'pagado', Compras.subtotal)],
+                    else_=0
+                )
+            ).label('pagos_realizados'),
+            func.sum(
+                func.case(
+                    [(Compras.estado_pago != 'pagado', Compras.subtotal)],
+                    else_=0
+                )
+            ).label('pendiente')
+        ).group_by(
+            func.extract('year', Compras.fecha_compra),
+            func.extract('week', Compras.fecha_compra)
+        )
+
+        # Aplicar filtros
+        if filtros:
+            if filtros.get('mes'):
+                query = query.having(func.extract('month', Compras.fecha_compra) == filtros['mes'])
+            if filtros.get('año'):
+                query = query.having(func.extract('year', Compras.fecha_compra) == filtros['año'])
+
+        # Ordenar por fecha
+        result = query.order_by(
+            func.extract('year', Compras.fecha_compra),
+            func.extract('week', Compras.fecha_compra)
+        ).all()
+
+        # Formatear resultado
+        flujo = []
+        for row in result:
+            semana = f"Semana {int(row.semana)}"
+            flujo.append({
+                'semana': semana,
+                'pagos': float(row.pagos_realizados or 0),
+                'pendiente': float(row.pendiente or 0)
+            })
+
+        return flujo
+
+    def get_datos_filtrados(self, filtros: dict = None) -> list:
+        """Obtiene datos filtrados para tabla"""
+        from database import Compras
+
+        query = self.db.query(Compras).filter(
+            Compras.fecha_compra.isnot(None)
+        )
+
+        # Aplicar filtros
+        if filtros:
+            if filtros.get('mes'):
+                query = query.filter(func.extract('month', Compras.fecha_compra) == filtros['mes'])
+            if filtros.get('año'):
+                query = query.filter(func.extract('year', Compras.fecha_compra) == filtros['año'])
+
+        # Ordenar por fecha descendente
+        result = query.order_by(Compras.fecha_compra.desc()).all()
+
+        # Formatear resultado
+        datos = []
+        for compra in result:
+            datos.append({
+                'id': str(compra.id),
+                'fecha_compra': compra.fecha_compra.isoformat() if compra.fecha_compra else '',
+                'proveedor': compra.proveedor or '',
+                'concepto': compra.concepto or '',  # Este será el material
+                'cantidad_kg': float(compra.cantidad or 0),
+                'precio_unitario': float(compra.precio_unitario or 0),
+                'subtotal': float(compra.subtotal or 0),
+                'anticipo': 0.0  # Por ahora, asumimos 0 ya que no hay campo específico para anticipo en Compras
+            })
+
+        return datos
