@@ -78,10 +78,8 @@ class DatabaseService:
             
             # CRITICAL: No hacer commit intermedio - usar flush() para asegurar visibilidad
             logger.info("🔥🔥🔥 NEW DEPLOYMENT CONFIRMATION - DATABASE SERVICE 🔥🔥🔥")
-            logger.info("Usando commit para asegurar visibilidad")
-            self.db.commit()
-            logger.info("Commit del ArchivoProcesado exitoso - archivo_id debe ser visible")
-            logger.info("🔥🔥🔥 COMMIT COMPLETED - ArchivoProcesado committed 🔥🔥🔥")
+            logger.info("ArchivoProcesado ya fue committeado en _create_archivo_record")
+            logger.info("🔥🔥🔥 ARCHIVO YA COMMITTED - No need for additional commit 🔥🔥🔥")
             
             # Limpiar datos anteriores si es necesario
             if archivo_info.get("reemplazar_datos", False):
@@ -218,12 +216,14 @@ class DatabaseService:
                 self.db.add(archivo)
                 logger.info("ArchivoProcesado agregado a la sesión")
             
-            # No hacer commit aquí - dejar que el método principal maneje la transacción
-            logger.info("ArchivoProcesado creado/actualizado en memoria")
+            # Hacer commit inmediato para evitar problemas de sesión
+            logger.info("Haciendo commit del ArchivoProcesado...")
+            self.db.commit()
+            logger.info("Commit del ArchivoProcesado exitoso")
             
-            # Refrescar el objeto para obtener el ID (sin commit)
-            logger.info("Refrescando objeto...")
-            self.db.flush()  # flush() es correcto para obtener ID sin commit
+            # Refrescar el objeto para asegurar que esté actualizado
+            logger.info("Refrescando objeto después del commit...")
+            self.db.refresh(archivo)
             logger.info("Objeto refrescado")
             
             # Verificar que el archivo fue creado correctamente y es visible
