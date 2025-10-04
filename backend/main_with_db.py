@@ -23,6 +23,7 @@ from database_service import DatabaseService
 from utils import setup_logging, handle_api_error, FileProcessingError, DatabaseError
 from datetime import datetime
 from data_processor import process_immermex_file_advanced
+from pedidos_endpoints import add_pedidos_routes
 
 # Configurar logging
 logger = setup_logging()
@@ -33,6 +34,9 @@ app = FastAPI(
     description="API REST para dashboard de indicadores financieros con persistencia en base de datos",
     version="2.0.0"
 )
+
+# Agregar rutas de pedidos
+app = add_pedidos_routes(app)
 
 # Configurar CORS dinámicamente según el entorno
 def get_cors_origins():
@@ -60,44 +64,44 @@ app.add_middleware(
 # Agregar compresión GZIP para optimizar el ancho de banda
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# @app.on_event("startup")
-async def startup_event():
-    """Inicializar base de datos al arrancar la aplicación"""
-    try:
-        # Verificar configuración de base de datos
-        database_url = os.getenv("DATABASE_URL", "sqlite:///./immermex.db")
-        
-        if database_url.startswith("postgresql://"):
-            logger.info("Conectando a Supabase/PostgreSQL en la nube")
-            logger.info(f"Host: {database_url.split('@')[1].split('/')[0] if '@' in database_url else 'configurado'}")
-        else:
-            logger.info("Usando SQLite local para desarrollo")
-        
-        success = init_db()
-        if success:
-            logger.info("API con base de datos iniciada correctamente")
-            
-            # Verificar conexión
-            try:
-                from database import SessionLocal
-                from sqlalchemy import text
-                with SessionLocal() as db:
-                    db.execute(text("SELECT 1"))
-                logger.info("Conexion a base de datos verificada")
-            except Exception as e:
-                logger.warning(f"Advertencia en conexion: {str(e)}")
-                
-        else:
-            logger.error("Error inicializando base de datos")
-    except Exception as e:
-        logger.error(f"Error en startup: {str(e)}")
-        logger.error("Asegurate de que DATABASE_URL este configurada correctamente")
+# # @app.on_event("startup")
+# async def startup_event():
+#     """Inicializar base de datos al arrancar la aplicación"""
+#     try:
+#         # Verificar configuración de base de datos
+#         database_url = os.getenv("DATABASE_URL", "sqlite:///./immermex.db")
+#
+#         if database_url.startswith("postgresql://"):
+#             logger.info("Conectando a Supabase/PostgreSQL en la nube")
+#             logger.info(f"Host: {database_url.split('@')[1].split('/')[0] if '@' in database_url else 'configurado'}")
+#         else:
+#             logger.info("Usando SQLite local para desarrollo")
+#
+#         success = init_db()
+#         if success:
+#             logger.info("API con base de datos iniciada correctamente")
+#
+#             # Verificar conexión
+#             try:
+#                 from database import SessionLocal
+#                 from sqlalchemy import text
+#                 with SessionLocal() as db:
+#                     db.execute(text("SELECT 1"))
+#             logger.info("Conexion a base de datos verificada")
+#             except Exception as e:
+#                 logger.warning(f"Advertencia en conexion: {str(e)}")
+#
+#         else:
+#             logger.error("Error inicializando base de datos")
+#     except Exception as e:
+#         logger.error(f"Error en startup: {str(e)}")
+#         logger.error("Asegurate de que DATABASE_URL este configurada correctamente")
 
 @app.get("/")
 async def root():
     """Endpoint de salud de la API"""
     return {
-        "message": "Immermex Dashboard API (Con Base de Datos) - SUPABASE POSTGRESQL", 
+        "message": "Immermex Dashboard API (Con Base de Datos) - SUPABASE POSTGRESQL",
         "status": "active",
         "version": "2.0.0",
         "features": ["persistencia_db", "procesamiento_avanzado", "filtros_dinamicos"],
@@ -151,7 +155,7 @@ async def get_kpis(
     """Obtiene KPIs principales del dashboard con filtros opcionales"""
     try:
         db_service = DatabaseService(db)
-        
+
         # Preparar filtros
         filtros = {}
         if mes:
@@ -161,10 +165,10 @@ async def get_kpis(
         if pedidos:
             pedidos_list = [p.strip() for p in pedidos.split(',') if p.strip()]
             filtros['pedidos'] = pedidos_list
-        
+
         kpis = db_service.calculate_kpis(filtros)
         return kpis
-        
+
     except Exception as e:
         logger.error(f"Error obteniendo KPIs: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -190,6 +194,12 @@ async def get_pedidos_filtro(db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error obteniendo pedidos para filtro: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Test route right after a working endpoint
+@app.get("/api/test-after-filtros")
+def test_after_filtros():
+    """Test route after filtros endpoints"""
+    return {"message": "test after filtros works"}
 
 @app.get("/api/filtros/clientes")
 async def get_clientes_filtro(db: Session = Depends(get_db)):
@@ -245,160 +255,6 @@ async def aplicar_filtros_pedido(
         }
     except Exception as e:
         logger.error(f"Error aplicando filtros de pedidos: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# ==================== PEDIDOS ENDPOINTS ====================
-
-@app.get("/api/pedidos/top-proveedores")
-async def get_top_proveedores(
-    limite: int = Query(10, description="Número máximo de proveedores a retornar"),
-    mes: Optional[int] = Query(None, description="Filtrar por mes"),
-    año: Optional[int] = Query(None, description="Filtrar por año"),
-    pedidos: Optional[str] = Query(None, description="Lista de pedidos separados por coma"),
-    db: Session = Depends(get_db)
-):
-    """Obtiene top proveedores por monto de compras"""
-    try:
-        db_service = DatabaseService(db)
-
-        # Preparar filtros
-        filtros = {}
-        if mes:
-            filtros['mes'] = mes
-        if año:
-            filtros['año'] = año
-        if pedidos:
-            filtros['pedidos'] = pedidos
-
-        # Usar el servicio de pedidos para obtener los datos
-        pedidos_service = db_service.pedidos_service
-        result = pedidos_service.get_top_proveedores(limite, filtros)
-
-        return result
-
-    except Exception as e:
-        logger.error(f"Error obteniendo top proveedores: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/pedidos/compras-por-material")
-async def get_compras_por_material(
-    limite: int = Query(10, description="Número máximo de materiales a retornar"),
-    mes: Optional[int] = Query(None, description="Filtrar por mes"),
-    año: Optional[int] = Query(None, description="Filtrar por año"),
-    pedidos: Optional[str] = Query(None, description="Lista de pedidos separados por coma"),
-    db: Session = Depends(get_db)
-):
-    """Obtiene compras agrupadas por material"""
-    try:
-        db_service = DatabaseService(db)
-
-        # Preparar filtros
-        filtros = {}
-        if mes:
-            filtros['mes'] = mes
-        if año:
-            filtros['año'] = año
-        if pedidos:
-            filtros['pedidos'] = pedidos
-
-        # Usar el servicio de pedidos para obtener los datos
-        pedidos_service = db_service.pedidos_service
-        result = pedidos_service.get_compras_por_material(limite, filtros)
-
-        return result
-
-    except Exception as e:
-        logger.error(f"Error obteniendo compras por material: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/pedidos/evolucion-precios")
-async def get_evolucion_precios(
-    mes: Optional[int] = Query(None, description="Filtrar por mes"),
-    año: Optional[int] = Query(None, description="Filtrar por año"),
-    pedidos: Optional[str] = Query(None, description="Lista de pedidos separados por coma"),
-    db: Session = Depends(get_db)
-):
-    """Obtiene evolución de precios por período"""
-    try:
-        db_service = DatabaseService(db)
-
-        # Preparar filtros
-        filtros = {}
-        if mes:
-            filtros['mes'] = mes
-        if año:
-            filtros['año'] = año
-        if pedidos:
-            filtros['pedidos'] = pedidos
-
-        # Usar el servicio de pedidos para obtener los datos
-        pedidos_service = db_service.pedidos_service
-        result = pedidos_service.get_evolucion_precios(filtros)
-
-        return result
-
-    except Exception as e:
-        logger.error(f"Error obteniendo evolución de precios: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/pedidos/flujo-pagos-semanal")
-async def get_flujo_pagos_semanal(
-    mes: Optional[int] = Query(None, description="Filtrar por mes"),
-    año: Optional[int] = Query(None, description="Filtrar por año"),
-    pedidos: Optional[str] = Query(None, description="Lista de pedidos separados por coma"),
-    db: Session = Depends(get_db)
-):
-    """Obtiene flujo de pagos semanal"""
-    try:
-        db_service = DatabaseService(db)
-
-        # Preparar filtros
-        filtros = {}
-        if mes:
-            filtros['mes'] = mes
-        if año:
-            filtros['año'] = año
-        if pedidos:
-            filtros['pedidos'] = pedidos
-
-        # Usar el servicio de pedidos para obtener los datos
-        pedidos_service = db_service.pedidos_service
-        result = pedidos_service.get_flujo_pagos_semanal(filtros)
-
-        return result
-
-    except Exception as e:
-        logger.error(f"Error obteniendo flujo de pagos semanal: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/pedidos/datos-filtrados")
-async def get_datos_filtrados(
-    mes: Optional[int] = Query(None, description="Filtrar por mes"),
-    año: Optional[int] = Query(None, description="Filtrar por año"),
-    pedidos: Optional[str] = Query(None, description="Lista de pedidos separados por coma"),
-    db: Session = Depends(get_db)
-):
-    """Obtiene datos filtrados para tabla"""
-    try:
-        db_service = DatabaseService(db)
-
-        # Preparar filtros
-        filtros = {}
-        if mes:
-            filtros['mes'] = mes
-        if año:
-            filtros['año'] = año
-        if pedidos:
-            filtros['pedidos'] = pedidos
-
-        # Usar el servicio de pedidos para obtener los datos
-        pedidos_service = db_service.pedidos_service
-        result = pedidos_service.get_datos_filtrados(filtros)
-
-        return result
-
-    except Exception as e:
-        logger.error(f"Error obteniendo datos filtrados: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/upload")
@@ -543,7 +399,7 @@ async def upload_compras_file(
                 "servicio_usado": "ComprasUploadService"
             }
         else:
-            logger.error(f"❌ Upload falló: {result.get('error', 'Error desconocido')}")
+            logger.error(f"ERROR: Upload falló: {result.get('error', 'Error desconocido')}")
             raise HTTPException(status_code=500, detail=f"Error procesando archivo: {result.get('error', 'Error desconocido')}")
         
     except HTTPException:
