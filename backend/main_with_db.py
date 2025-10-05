@@ -179,7 +179,7 @@ async def get_datos_filtrados(
 async def root():
     """Endpoint de salud de la API"""
     return {
-        "message": "Immermex Dashboard API (Con Base de Datos) - SUPABASE POSTGRESQL",
+        "message": "Immermex Dashboard API (Con Base de Datos) - SUPABASE POSTGRESQL - PEDIDOS ENDPOINTS ACTIVE",
         "status": "active",
         "version": "2.0.0",
         "features": ["persistencia_db", "procesamiento_avanzado", "filtros_dinamicos"],
