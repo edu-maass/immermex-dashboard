@@ -23,7 +23,9 @@ from database_service import DatabaseService
 from utils import setup_logging, handle_api_error, FileProcessingError, DatabaseError
 from datetime import datetime
 from data_processor import process_immermex_file_advanced
-# from pedidos_endpoints import add_pedidos_routes  # Temporarily commented out
+from fastapi import HTTPException, Query
+from sqlalchemy.orm import Session
+from typing import Optional
 
 # Configurar logging
 logger = setup_logging()
@@ -35,10 +37,35 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# PEDIDOS ENDPOINTS - Ready for activation
-# To activate these endpoints, uncomment the following code:
+# Pedidos endpoints will be added after middleware setup
 
-"""
+# Configurar CORS dinámicamente según el entorno
+def get_cors_origins():
+    """Obtiene los orígenes CORS según el entorno"""
+    env = os.getenv("ENVIRONMENT", "development")
+    if env == "production":
+        return [
+            "https://edu-maass.github.io"
+        ]
+    else:
+        return [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "https://edu-maass.github.io"
+        ]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_cors_origins(),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Agregar compresión GZIP para optimizar el ancho de banda
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# PEDIDOS ENDPOINTS - Now Active
 @app.get("/api/pedidos/top-proveedores")
 async def get_top_proveedores(
     limite: int = Query(10, description="Número máximo de proveedores a retornar"),
@@ -145,33 +172,6 @@ async def get_datos_filtrados(
     except Exception as e:
         logger.error(f"Error obteniendo datos filtrados: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-"""
-
-# Configurar CORS dinámicamente según el entorno
-def get_cors_origins():
-    """Obtiene los orígenes CORS según el entorno"""
-    env = os.getenv("ENVIRONMENT", "development")
-    if env == "production":
-        return [
-            "https://edu-maass.github.io"
-        ]
-    else:
-        return [
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "https://edu-maass.github.io"
-        ]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=get_cors_origins(),
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Agregar compresión GZIP para optimizar el ancho de banda
-app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Fully commented out startup event
 

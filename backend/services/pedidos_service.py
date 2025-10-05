@@ -235,7 +235,7 @@ class PedidosService:
     def get_flujo_pagos_semanal(self, filtros: dict = None) -> list:
         """Obtiene flujo de pagos semanal"""
         from database import Compras
-        from sqlalchemy import func, extract
+        from sqlalchemy import func, extract, case
 
         # Agrupar por semana
         query = self.db.query(
@@ -243,14 +243,14 @@ class PedidosService:
             func.extract('week', Compras.fecha_compra).label('semana'),
             func.sum(Compras.subtotal).label('total_compras'),
             func.sum(
-                func.case(
-                    [(Compras.estado_pago == 'pagado', Compras.subtotal)],
+                case(
+                    (Compras.estado_pago == 'pagado', Compras.subtotal),
                     else_=0
                 )
             ).label('pagos_realizados'),
             func.sum(
-                func.case(
-                    [(Compras.estado_pago != 'pagado', Compras.subtotal)],
+                case(
+                    (Compras.estado_pago != 'pagado', Compras.subtotal),
                     else_=0
                 )
             ).label('pendiente')
