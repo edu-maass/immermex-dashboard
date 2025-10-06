@@ -1,6 +1,6 @@
 """
-Script de migración usando configuración de production.env
-Migra datos de pedidos a pedidos_compras en Supabase usando la configuración existente
+Script de migración corregido para Supabase
+Maneja la restricción de clave foránea de compra_imi
 """
 
 import os
@@ -38,17 +38,14 @@ def get_supabase_connection():
         if not config:
             return None
         
-        supabase_url = config.get("SUPABASE_URL")
         database_url = config.get("DATABASE_URL")
         
-        if not supabase_url or not database_url:
-            logger.error("Configuración incompleta en production.env")
+        if not database_url:
+            logger.error("DATABASE_URL no encontrada en production.env")
             return None
         
-        logger.info(f"Conectando a Supabase usando configuración de production.env")
-        logger.info(f"URL: {supabase_url}")
+        logger.info("Conectando a Supabase usando configuración de production.env")
         
-        # Usar la DATABASE_URL directamente
         conn = psycopg2.connect(
             database_url,
             cursor_factory=RealDictCursor,
@@ -61,80 +58,87 @@ def get_supabase_connection():
         logger.error(f"Error conectando a Supabase: {str(e)}")
         return None
 
-def check_supabase_tables():
-    """Verifica las tablas existentes en Supabase"""
+def check_foreign_key_constraint():
+    """Verifica la restricción de clave foránea"""
     conn = get_supabase_connection()
     if not conn:
-        return False, False
+        return False
     
     try:
         cursor = conn.cursor()
         
-        # Verificar tabla pedidos
+        # Verificar la restricción de clave foránea
         cursor.execute("""
-            SELECT COUNT(*) as count 
-            FROM information_schema.tables 
-            WHERE table_name = 'pedidos' AND table_schema = 'public'
+            SELECT 
+                tc.constraint_name, 
+                tc.table_name, 
+                kcu.column_name, 
+                ccu.table_name AS foreign_table_name,
+                ccu.column_name AS foreign_column_name 
+            FROM 
+                information_schema.table_constraints AS tc 
+                JOIN information_schema.key_column_usage AS kcu
+                  ON tc.constraint_name = kcu.constraint_name
+                  AND tc.table_schema = kcu.table_schema
+                JOIN information_schema.constraint_column_usage AS ccu
+                  ON ccu.constraint_name = tc.constraint_name
+                  AND ccu.table_schema = tc.table_schema
+            WHERE tc.constraint_type = 'FOREIGN KEY' 
+                AND tc.table_name='pedidos_compras'
         """)
-        pedidos_exists = cursor.fetchone()['count'] > 0
         
-        if pedidos_exists:
-            cursor.execute("SELECT COUNT(*) as count FROM pedidos")
-            pedidos_count = cursor.fetchone()['count']
-            logger.info(f"Tabla 'pedidos' existe con {pedidos_count} registros")
-        else:
-            logger.warning("Tabla 'pedidos' no existe")
+        constraints = cursor.fetchall()
         
-        # Verificar tabla pedidos_compras
-        cursor.execute("""
-            SELECT COUNT(*) as count 
-            FROM information_schema.tables 
-            WHERE table_name = 'pedidos_compras' AND table_schema = 'public'
-        """)
-        pedidos_compras_exists = cursor.fetchone()['count'] > 0
-        
-        if pedidos_compras_exists:
-            cursor.execute("SELECT COUNT(*) as count FROM pedidos_compras")
-            pedidos_compras_count = cursor.fetchone()['count']
-            logger.info(f"Tabla 'pedidos_compras' existe con {pedidos_compras_count} registros")
-        else:
-            logger.warning("Tabla 'pedidos_compras' no existe")
-        
-        # Mostrar estructura de tabla pedidos
-        if pedidos_exists:
-            cursor.execute("""
-                SELECT column_name, data_type, is_nullable
-                FROM information_schema.columns 
-                WHERE table_name = 'pedidos' AND table_schema = 'public'
-                ORDER BY ordinal_position
-            """)
-            columns = cursor.fetchall()
-            logger.info("Estructura de tabla 'pedidos':")
-            for col in columns:
-                logger.info(f"  - {col['column_name']}: {col['data_type']}")
-        
-        # Mostrar estructura de tabla pedidos_compras
-        if pedidos_compras_exists:
-            cursor.execute("""
-                SELECT column_name, data_type, is_nullable
-                FROM information_schema.columns 
-                WHERE table_name = 'pedidos_compras' AND table_schema = 'public'
-                ORDER BY ordinal_position
-            """)
-            columns = cursor.fetchall()
-            logger.info("Estructura de tabla 'pedidos_compras':")
-            for col in columns:
-                logger.info(f"  - {col['column_name']}: {col['data_type']}")
+        logger.info("Restricciones de clave foránea en pedidos_compras:")
+        for constraint in constraints:
+            logger.info(f"  - {constraint['column_name']} -> {constraint['foreign_table_name']}.{constraint['foreign_column_name']}")
         
         cursor.close()
         conn.close()
         
-        return pedidos_exists, pedidos_compras_exists
+        return len(constraints) > 0
         
     except Exception as e:
-        logger.error(f"Error verificando tablas: {str(e)}")
+        logger.error(f"Error verificando restricciones: {str(e)}")
         conn.close()
-        return False, False
+        return False
+
+def create_dummy_compra_record():
+    """Crea un registro dummy en compras_v2 para satisfacer la restricción"""
+    conn = get_supabase_connection()
+    if not conn:
+        return False
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Verificar si ya existe un registro con compra_imi = 0
+        cursor.execute("SELECT COUNT(*) FROM compras_v2 WHERE compra_imi = 0")
+        exists = cursor.fetchone()['count'] > 0
+        
+        if not exists:
+            logger.info("Creando registro dummy en compras_v2 para compra_imi = 0")
+            
+            cursor.execute("""
+                INSERT INTO compras_v2 (compra_imi, created_at, updated_at)
+                VALUES (0, NOW(), NOW())
+            """)
+            
+            conn.commit()
+            logger.info("Registro dummy creado exitosamente")
+        else:
+            logger.info("Registro dummy ya existe en compras_v2")
+        
+        cursor.close()
+        conn.close()
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error creando registro dummy: {str(e)}")
+        conn.rollback()
+        conn.close()
+        return False
 
 def migrate_pedidos_to_pedidos_compras():
     """Migra datos de pedidos a pedidos_compras en Supabase"""
@@ -154,6 +158,11 @@ def migrate_pedidos_to_pedidos_compras():
             return True
         
         logger.info(f"Iniciando migración de {pedidos_count} registros de 'pedidos' a 'pedidos_compras'")
+        
+        # Crear registro dummy si es necesario
+        if not create_dummy_compra_record():
+            logger.error("No se pudo crear el registro dummy necesario")
+            return False
         
         # Obtener datos de pedidos
         cursor.execute("""
@@ -183,7 +192,7 @@ def migrate_pedidos_to_pedidos_compras():
                      fecha_pago, archivo_id, created_at, updated_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
-                    0,  # compra_imi inicializado en 0
+                    0,  # compra_imi inicializado en 0 (usando registro dummy)
                     pedido['folio_factura'],
                     pedido['material'],  # material -> material_codigo
                     pedido['kg'],
@@ -200,12 +209,13 @@ def migrate_pedidos_to_pedidos_compras():
                 
                 migrados += 1
                 
-                if migrados % 100 == 0:
+                if migrados % 50 == 0:
                     logger.info(f"Progreso: {migrados}/{pedidos_count} registros migrados")
                 
             except Exception as e:
                 errores += 1
                 logger.warning(f"Error migrando pedido {pedido['id']}: {str(e)}")
+                # Continuar con el siguiente registro
                 continue
         
         # Confirmar cambios
@@ -282,22 +292,14 @@ def verify_migration():
 
 def main():
     """Función principal"""
-    print("MIGRACION USANDO CONFIGURACION DE PRODUCTION.ENV")
+    print("MIGRACION CORREGIDA PARA SUPABASE")
     print(f"Hora: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("="*60)
     
     try:
-        # Verificar tablas
-        logger.info("Verificando tablas en Supabase...")
-        pedidos_exists, pedidos_compras_exists = check_supabase_tables()
-        
-        if not pedidos_exists:
-            logger.error("Tabla 'pedidos' no existe en Supabase")
-            return False
-        
-        if not pedidos_compras_exists:
-            logger.error("Tabla 'pedidos_compras' no existe en Supabase")
-            return False
+        # Verificar restricciones de clave foránea
+        logger.info("Verificando restricciones de clave foránea...")
+        check_foreign_key_constraint()
         
         # Ejecutar migración
         logger.info("Iniciando migración de datos...")

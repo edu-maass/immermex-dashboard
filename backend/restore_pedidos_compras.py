@@ -1,6 +1,6 @@
 """
-Script de migración usando configuración de production.env
-Migra datos de pedidos a pedidos_compras en Supabase usando la configuración existente
+Script para restaurar datos de pedidos_compras
+Restaura los datos válidos desde la tabla original 'pedidos'
 """
 
 import os
@@ -38,17 +38,12 @@ def get_supabase_connection():
         if not config:
             return None
         
-        supabase_url = config.get("SUPABASE_URL")
         database_url = config.get("DATABASE_URL")
         
-        if not supabase_url or not database_url:
-            logger.error("Configuración incompleta en production.env")
+        if not database_url:
+            logger.error("DATABASE_URL no encontrada en production.env")
             return None
         
-        logger.info(f"Conectando a Supabase usando configuración de production.env")
-        logger.info(f"URL: {supabase_url}")
-        
-        # Usar la DATABASE_URL directamente
         conn = psycopg2.connect(
             database_url,
             cursor_factory=RealDictCursor,
@@ -61,83 +56,8 @@ def get_supabase_connection():
         logger.error(f"Error conectando a Supabase: {str(e)}")
         return None
 
-def check_supabase_tables():
-    """Verifica las tablas existentes en Supabase"""
-    conn = get_supabase_connection()
-    if not conn:
-        return False, False
-    
-    try:
-        cursor = conn.cursor()
-        
-        # Verificar tabla pedidos
-        cursor.execute("""
-            SELECT COUNT(*) as count 
-            FROM information_schema.tables 
-            WHERE table_name = 'pedidos' AND table_schema = 'public'
-        """)
-        pedidos_exists = cursor.fetchone()['count'] > 0
-        
-        if pedidos_exists:
-            cursor.execute("SELECT COUNT(*) as count FROM pedidos")
-            pedidos_count = cursor.fetchone()['count']
-            logger.info(f"Tabla 'pedidos' existe con {pedidos_count} registros")
-        else:
-            logger.warning("Tabla 'pedidos' no existe")
-        
-        # Verificar tabla pedidos_compras
-        cursor.execute("""
-            SELECT COUNT(*) as count 
-            FROM information_schema.tables 
-            WHERE table_name = 'pedidos_compras' AND table_schema = 'public'
-        """)
-        pedidos_compras_exists = cursor.fetchone()['count'] > 0
-        
-        if pedidos_compras_exists:
-            cursor.execute("SELECT COUNT(*) as count FROM pedidos_compras")
-            pedidos_compras_count = cursor.fetchone()['count']
-            logger.info(f"Tabla 'pedidos_compras' existe con {pedidos_compras_count} registros")
-        else:
-            logger.warning("Tabla 'pedidos_compras' no existe")
-        
-        # Mostrar estructura de tabla pedidos
-        if pedidos_exists:
-            cursor.execute("""
-                SELECT column_name, data_type, is_nullable
-                FROM information_schema.columns 
-                WHERE table_name = 'pedidos' AND table_schema = 'public'
-                ORDER BY ordinal_position
-            """)
-            columns = cursor.fetchall()
-            logger.info("Estructura de tabla 'pedidos':")
-            for col in columns:
-                logger.info(f"  - {col['column_name']}: {col['data_type']}")
-        
-        # Mostrar estructura de tabla pedidos_compras
-        if pedidos_compras_exists:
-            cursor.execute("""
-                SELECT column_name, data_type, is_nullable
-                FROM information_schema.columns 
-                WHERE table_name = 'pedidos_compras' AND table_schema = 'public'
-                ORDER BY ordinal_position
-            """)
-            columns = cursor.fetchall()
-            logger.info("Estructura de tabla 'pedidos_compras':")
-            for col in columns:
-                logger.info(f"  - {col['column_name']}: {col['data_type']}")
-        
-        cursor.close()
-        conn.close()
-        
-        return pedidos_exists, pedidos_compras_exists
-        
-    except Exception as e:
-        logger.error(f"Error verificando tablas: {str(e)}")
-        conn.close()
-        return False, False
-
-def migrate_pedidos_to_pedidos_compras():
-    """Migra datos de pedidos a pedidos_compras en Supabase"""
+def restore_pedidos_compras():
+    """Restaura los datos de pedidos_compras desde la tabla original pedidos"""
     conn = get_supabase_connection()
     if not conn:
         return False
@@ -145,15 +65,15 @@ def migrate_pedidos_to_pedidos_compras():
     try:
         cursor = conn.cursor()
         
-        # Verificar que ambas tablas existan
+        # Verificar que la tabla pedidos tenga datos
         cursor.execute("SELECT COUNT(*) FROM pedidos")
         pedidos_count = cursor.fetchone()['count']
         
         if pedidos_count == 0:
-            logger.info("No hay datos en tabla 'pedidos' para migrar")
+            logger.info("No hay datos en la tabla 'pedidos' para restaurar")
             return True
         
-        logger.info(f"Iniciando migración de {pedidos_count} registros de 'pedidos' a 'pedidos_compras'")
+        logger.info(f"Restaurando {pedidos_count} registros desde tabla 'pedidos'")
         
         # Obtener datos de pedidos
         cursor.execute("""
@@ -166,8 +86,8 @@ def migrate_pedidos_to_pedidos_compras():
         
         pedidos_data = cursor.fetchall()
         
-        # Migrar cada pedido
-        migrados = 0
+        # Restaurar cada pedido
+        restaurados = 0
         errores = 0
         
         for pedido in pedidos_data:
@@ -175,15 +95,14 @@ def migrate_pedidos_to_pedidos_compras():
                 # Calcular importe con IVA (16%)
                 importe_con_iva = float(pedido['importe_sin_iva']) * 1.16 if pedido['importe_sin_iva'] else 0.0
                 
-                # Insertar en pedidos_compras
+                # Insertar en pedidos_compras con compra_imi = NULL (sin relación por ahora)
                 cursor.execute("""
                     INSERT INTO pedidos_compras 
-                    (compra_imi, folio_factura, material_codigo, kg, precio_unitario, 
+                    (folio_factura, material_codigo, kg, precio_unitario, 
                      importe_sin_iva, importe_con_iva, dias_credito, fecha_factura, 
                      fecha_pago, archivo_id, created_at, updated_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
-                    0,  # compra_imi inicializado en 0
                     pedido['folio_factura'],
                     pedido['material'],  # material -> material_codigo
                     pedido['kg'],
@@ -198,41 +117,41 @@ def migrate_pedidos_to_pedidos_compras():
                     pedido['updated_at']
                 ))
                 
-                migrados += 1
+                restaurados += 1
                 
-                if migrados % 100 == 0:
-                    logger.info(f"Progreso: {migrados}/{pedidos_count} registros migrados")
+                if restaurados % 50 == 0:
+                    logger.info(f"Progreso: {restaurados}/{pedidos_count} registros restaurados")
                 
             except Exception as e:
                 errores += 1
-                logger.warning(f"Error migrando pedido {pedido['id']}: {str(e)}")
+                logger.warning(f"Error restaurando pedido {pedido['id']}: {str(e)}")
                 continue
         
         # Confirmar cambios
         conn.commit()
         
-        # Verificar migración
+        # Verificar restauración
         cursor.execute("SELECT COUNT(*) FROM pedidos_compras")
         total_pedidos_compras = cursor.fetchone()['count']
         
-        logger.info(f"Migración completada:")
-        logger.info(f"  - Registros migrados exitosamente: {migrados}")
+        logger.info(f"Restauración completada:")
+        logger.info(f"  - Registros restaurados exitosamente: {restaurados}")
         logger.info(f"  - Registros con errores: {errores}")
         logger.info(f"  - Total en pedidos_compras: {total_pedidos_compras}")
         
         cursor.close()
         conn.close()
         
-        return migrados > 0
+        return restaurados > 0
         
     except Exception as e:
-        logger.error(f"Error en migración: {str(e)}")
+        logger.error(f"Error en restauración: {str(e)}")
         conn.rollback()
         conn.close()
         return False
 
-def verify_migration():
-    """Verifica que la migración se completó correctamente"""
+def verify_restoration():
+    """Verifica que la restauración se completó correctamente"""
     conn = get_supabase_connection()
     if not conn:
         return False
@@ -240,16 +159,24 @@ def verify_migration():
     try:
         cursor = conn.cursor()
         
-        # Contar registros en ambas tablas
+        # Contar registros en todas las tablas
         cursor.execute("SELECT COUNT(*) FROM pedidos")
         total_pedidos = cursor.fetchone()['count']
         
         cursor.execute("SELECT COUNT(*) FROM pedidos_compras")
         total_pedidos_compras = cursor.fetchone()['count']
         
-        logger.info(f"Verificación de migración:")
+        cursor.execute("SELECT COUNT(*) FROM compras_v2 WHERE imi > 0")
+        total_compras_v2 = cursor.fetchone()['count']
+        
+        cursor.execute("SELECT COUNT(*) FROM compras_v2_materiales")
+        total_materiales = cursor.fetchone()['count']
+        
+        logger.info(f"Verificación de restauración:")
         logger.info(f"  - Registros en 'pedidos': {total_pedidos}")
         logger.info(f"  - Registros en 'pedidos_compras': {total_pedidos_compras}")
+        logger.info(f"  - Registros en 'compras_v2': {total_compras_v2}")
+        logger.info(f"  - Registros en 'compras_v2_materiales': {total_materiales}")
         
         # Verificar algunos registros específicos
         cursor.execute("""
@@ -271,7 +198,9 @@ def verify_migration():
         return {
             'total_pedidos': total_pedidos,
             'total_pedidos_compras': total_pedidos_compras,
-            'migration_successful': total_pedidos_compras > 0,
+            'total_compras_v2': total_compras_v2,
+            'total_materiales': total_materiales,
+            'restoration_successful': total_pedidos_compras > 0,
             'verification_rate': verificaciones_exitosas / len(verificaciones) if verificaciones else 0
         }
         
@@ -282,48 +211,39 @@ def verify_migration():
 
 def main():
     """Función principal"""
-    print("MIGRACION USANDO CONFIGURACION DE PRODUCTION.ENV")
+    print("RESTAURACION DE DATOS DE PEDIDOS_COMPRAS")
     print(f"Hora: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("="*60)
     
     try:
-        # Verificar tablas
-        logger.info("Verificando tablas en Supabase...")
-        pedidos_exists, pedidos_compras_exists = check_supabase_tables()
+        # Ejecutar restauración
+        logger.info("Iniciando restauración de pedidos_compras...")
+        restoration_success = restore_pedidos_compras()
         
-        if not pedidos_exists:
-            logger.error("Tabla 'pedidos' no existe en Supabase")
-            return False
-        
-        if not pedidos_compras_exists:
-            logger.error("Tabla 'pedidos_compras' no existe en Supabase")
-            return False
-        
-        # Ejecutar migración
-        logger.info("Iniciando migración de datos...")
-        migration_success = migrate_pedidos_to_pedidos_compras()
-        
-        if migration_success:
-            # Verificar migración
-            verification = verify_migration()
+        if restoration_success:
+            # Verificar restauración
+            verification = verify_restoration()
             
             print("\n" + "="*60)
-            print("RESUMEN DE MIGRACION")
+            print("RESUMEN DE RESTAURACION")
             print("="*60)
-            print(f"Migración exitosa: {verification['migration_successful']}")
+            print(f"Restauración exitosa: {verification['restoration_successful']}")
             print(f"Registros en 'pedidos': {verification['total_pedidos']}")
             print(f"Registros en 'pedidos_compras': {verification['total_pedidos_compras']}")
+            print(f"Registros en 'compras_v2': {verification['total_compras_v2']}")
+            print(f"Registros en 'compras_v2_materiales': {verification['total_materiales']}")
             print(f"Tasa de verificación: {verification['verification_rate']:.2%}")
             print("="*60)
             
-            if verification['migration_successful']:
-                logger.info("MIGRACION COMPLETADA EXITOSAMENTE!")
+            if verification['restoration_successful']:
+                logger.info("RESTAURACION COMPLETADA EXITOSAMENTE!")
+                logger.info("Los datos de pedidos_compras han sido restaurados")
                 return True
             else:
-                logger.error("La migración no fue exitosa")
+                logger.error("La restauración no fue exitosa")
                 return False
         else:
-            logger.error("La migración falló")
+            logger.error("La restauración falló")
             return False
             
     except Exception as e:

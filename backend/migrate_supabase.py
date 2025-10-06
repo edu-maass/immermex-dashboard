@@ -1,6 +1,6 @@
 """
-Script de migración usando configuración de production.env
-Migra datos de pedidos a pedidos_compras en Supabase usando la configuración existente
+Script para verificar y migrar datos en Supabase PostgreSQL
+Conecta directamente a la base de datos de Supabase
 """
 
 import os
@@ -13,50 +13,37 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def load_production_config():
-    """Carga la configuración desde production.env"""
-    env_file = "production.env"
-    
-    if not os.path.exists(env_file):
-        logger.error(f"Archivo {env_file} no encontrado")
-        return None
-    
-    config = {}
-    with open(env_file, 'r') as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith('#') and '=' in line:
-                key, value = line.split('=', 1)
-                config[key] = value
-    
-    return config
-
 def get_supabase_connection():
-    """Obtiene conexión a Supabase usando la configuración de production.env"""
+    """Obtiene conexión directa a Supabase PostgreSQL"""
     try:
-        config = load_production_config()
-        if not config:
+        # Variables de entorno de Supabase
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_password = os.getenv("SUPABASE_PASSWORD")
+        
+        if not supabase_url or not supabase_password:
+            logger.error("Variables SUPABASE_URL y SUPABASE_PASSWORD no encontradas")
             return None
         
-        supabase_url = config.get("SUPABASE_URL")
-        database_url = config.get("DATABASE_URL")
-        
-        if not supabase_url or not database_url:
-            logger.error("Configuración incompleta en production.env")
+        # Extraer project ref de la URL
+        if "supabase.co" in supabase_url:
+            project_ref = supabase_url.replace("https://", "").replace(".supabase.co", "")
+            
+            # Usar conexión directa a PostgreSQL
+            conn_string = f"postgresql://postgres:{supabase_password}@db.{project_ref}.supabase.co:5432/postgres"
+            
+            logger.info(f"Conectando a Supabase PostgreSQL: db.{project_ref}.supabase.co")
+            
+            conn = psycopg2.connect(
+                conn_string,
+                cursor_factory=RealDictCursor,
+                sslmode='require'
+            )
+            
+            return conn
+        else:
+            logger.error("Formato de SUPABASE_URL no reconocido")
             return None
-        
-        logger.info(f"Conectando a Supabase usando configuración de production.env")
-        logger.info(f"URL: {supabase_url}")
-        
-        # Usar la DATABASE_URL directamente
-        conn = psycopg2.connect(
-            database_url,
-            cursor_factory=RealDictCursor,
-            sslmode='require'
-        )
-        
-        return conn
-        
+            
     except Exception as e:
         logger.error(f"Error conectando a Supabase: {str(e)}")
         return None
@@ -65,7 +52,7 @@ def check_supabase_tables():
     """Verifica las tablas existentes en Supabase"""
     conn = get_supabase_connection()
     if not conn:
-        return False, False
+        return False
     
     try:
         cursor = conn.cursor()
@@ -111,7 +98,7 @@ def check_supabase_tables():
             columns = cursor.fetchall()
             logger.info("Estructura de tabla 'pedidos':")
             for col in columns:
-                logger.info(f"  - {col['column_name']}: {col['data_type']}")
+                logger.info(f"  - {col['column_name']}: {col['data_type']} ({'NULL' if col['is_nullable'] == 'YES' else 'NOT NULL'})")
         
         # Mostrar estructura de tabla pedidos_compras
         if pedidos_compras_exists:
@@ -124,7 +111,7 @@ def check_supabase_tables():
             columns = cursor.fetchall()
             logger.info("Estructura de tabla 'pedidos_compras':")
             for col in columns:
-                logger.info(f"  - {col['column_name']}: {col['data_type']}")
+                logger.info(f"  - {col['column_name']}: {col['data_type']} ({'NULL' if col['is_nullable'] == 'YES' else 'NOT NULL'})")
         
         cursor.close()
         conn.close()
@@ -282,7 +269,7 @@ def verify_migration():
 
 def main():
     """Función principal"""
-    print("MIGRACION USANDO CONFIGURACION DE PRODUCTION.ENV")
+    print("VERIFICACION Y MIGRACION EN SUPABASE POSTGRESQL")
     print(f"Hora: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("="*60)
     
