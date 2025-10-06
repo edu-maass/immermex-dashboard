@@ -8,7 +8,7 @@ from database import (
     ArchivoProcesado, get_db
 )
 from compras_processor_v2_robust import process_compras_v2
-from compras_v2_service import ComprasV2Service
+from compras_v2_service_optimized import ComprasV2ServiceOptimized
 import logging
 import os
 from datetime import datetime
@@ -20,7 +20,7 @@ class ComprasV2UploadService:
     """Servicio especializado para manejar uploads de compras_v2 con nueva arquitectura"""
     
     def __init__(self):
-        self.compras_service = ComprasV2Service()
+        self.compras_service = ComprasV2ServiceOptimized()
     
     def upload_compras_file(self, file_content: bytes, filename: str, replace_data: bool = False) -> Dict[str, Any]:
         """
