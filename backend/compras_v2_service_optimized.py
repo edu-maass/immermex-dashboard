@@ -22,20 +22,27 @@ class ComprasV2ServiceOptimized:
         self.conn = None
     
     def load_production_config(self):
-        """Carga la configuración desde production.env"""
-        env_file = "production.env"
-        
-        if not os.path.exists(env_file):
-            logger.error(f"Archivo {env_file} no encontrado")
-            return None
-        
+        """Carga la configuración desde variables de entorno"""
         config = {}
-        with open(env_file, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    key, value = line.split('=', 1)
-                    config[key] = value
+        
+        # Intentar cargar desde archivo production.env primero
+        env_file = "production.env"
+        if os.path.exists(env_file):
+            with open(env_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, value = line.split('=', 1)
+                        config[key] = value
+        
+        # Sobrescribir con variables de entorno del sistema
+        supabase_url = os.getenv('SUPABASE_URL')
+        supabase_password = os.getenv('SUPABASE_PASSWORD')
+        
+        if supabase_url:
+            config['SUPABASE_URL'] = supabase_url
+        if supabase_password:
+            config['SUPABASE_PASSWORD'] = supabase_password
         
         return config
     
@@ -348,12 +355,14 @@ class ComprasV2ServiceOptimized:
             
             return {
                 'compras_guardadas': compras_guardadas,
-                'materiales_guardados': materiales_guardados
+                'materiales_guardados': materiales_guardados,
+                'total_procesados': compras_guardadas + materiales_guardados
             }
             
         except Exception as e:
             logger.error(f"Error guardando datos: {str(e)}")
             return {
                 'compras_guardadas': 0,
-                'materiales_guardados': 0
+                'materiales_guardados': 0,
+                'total_procesados': 0
             }
