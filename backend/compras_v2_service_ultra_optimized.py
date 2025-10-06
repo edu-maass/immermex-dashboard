@@ -46,118 +46,19 @@ class ComprasV2ServiceUltraOptimized:
         return config
     
     def get_connection(self):
-        """Obtiene conexión a Supabase"""
+        """Obtiene conexión a Supabase usando la configuración existente del sistema"""
         if self.conn and not self.conn.closed:
             return self.conn
         
-        config = self.load_production_config()
-        
-        if not config or 'SUPABASE_URL' not in config or 'SUPABASE_PASSWORD' not in config:
-            logger.error("Variables SUPABASE_URL y SUPABASE_PASSWORD no encontradas")
-            return None
-        
         try:
-            # Extraer componentes de la URL
-            url = config['SUPABASE_URL']
-            password = config['SUPABASE_PASSWORD']
+            # Usar la configuración existente del sistema que ya maneja IPv4
+            from database import engine
             
-            logger.info(f"URL de Supabase: {url[:50]}...")  # Log parcial para debug
+            # Obtener conexión raw de SQLAlchemy
+            raw_conn = engine.raw_connection()
+            self.conn = raw_conn.connection
             
-            # Parsear URL de Supabase
-            if 'postgresql://' in url:
-                url = url.replace('postgresql://', '')
-            elif 'postgres://' in url:
-                url = url.replace('postgres://', '')
-            elif 'https://' in url and 'supabase.co' in url:
-                # URL de Supabase API REST, convertir a PostgreSQL
-                # Formato: https://project.supabase.co -> postgresql://postgres:[password]@db.project.supabase.co:5432/postgres
-                project_id = url.replace('https://', '').replace('.supabase.co', '')
-                host = f"db.{project_id}.supabase.co"
-                port = "5432"
-                database = "postgres"
-                username = "postgres"
-                password_from_url = password
-                
-                logger.info(f"URL convertida a PostgreSQL: {host}:{port}/{database}")
-                
-                # Crear conexión directamente con configuración IPv4
-                import socket
-                
-                # Forzar IPv4
-                original_getaddrinfo = socket.getaddrinfo
-                def getaddrinfo_ipv4(host, port, family=0, type=0, proto=0, flags=0):
-                    return original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
-                socket.getaddrinfo = getaddrinfo_ipv4
-                
-                try:
-                    self.conn = psycopg2.connect(
-                        host=host,
-                        port=port,
-                        database=database,
-                        user=username,
-                        password=password_from_url,
-                        sslmode='require',
-                        connect_timeout=10,
-                        options='-c default_transaction_isolation=read_committed'
-                    )
-                finally:
-                    # Restaurar función original
-                    socket.getaddrinfo = original_getaddrinfo
-                
-                logger.info("Conexión a Supabase establecida")
-                return self.conn
-            else:
-                logger.error(f"Formato de URL de Supabase no válido: {url}")
-                return None
-            
-            if '@' in url:
-                user_part, host_part = url.split('@', 1)
-                if ':' in user_part:
-                    username, password_from_url = user_part.split(':', 1)
-                else:
-                    username = user_part
-                    password_from_url = password
-                
-                if ':' in host_part:
-                    host, port_db = host_part.split(':', 1)
-                    if '/' in port_db:
-                        port, database = port_db.split('/', 1)
-                    else:
-                        port = port_db
-                        database = 'postgres'
-                else:
-                    host = host_part.split('/')[0]
-                    port = '5432'
-                    database = host_part.split('/')[1] if '/' in host_part else 'postgres'
-            else:
-                logger.error(f"Formato de URL de Supabase no válido: {url}")
-                return None
-            
-            # Crear conexión con configuración IPv4
-            import socket
-            
-            # Forzar IPv4
-            original_getaddrinfo = socket.getaddrinfo
-            def getaddrinfo_ipv4(host, port, family=0, type=0, proto=0, flags=0):
-                return original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
-            socket.getaddrinfo = getaddrinfo_ipv4
-            
-            try:
-                self.conn = psycopg2.connect(
-                    host=host,
-                    port=port,
-                    database=database,
-                    user=username,
-                    password=password_from_url,
-                    sslmode='require',
-                    connect_timeout=10,
-                    options='-c default_transaction_isolation=read_committed'
-                )
-            finally:
-                # Restaurar función original
-                socket.getaddrinfo = original_getaddrinfo
-            
-            logger.info("Conexión a Supabase establecida")
+            logger.info("Conexión a Supabase establecida usando configuración del sistema")
             return self.conn
             
         except Exception as e:
