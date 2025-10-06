@@ -1036,6 +1036,9 @@ async def download_compras_layout():
             'anticipo_monto': [1000.0, 1500.0, 500.0],
             'fecha_anticipo': ['2024-01-10', '2024-01-11', '2024-01-12'],
             'fecha_pago_factura': ['2024-02-15', '2024-03-01', '2024-02-17'],
+            'fecha_salida_real': ['2024-01-20', '2024-01-22', '2024-01-19'],
+            'fecha_arribo_real': ['2024-02-15', '2024-02-20', '2024-02-12'],
+            'fecha_planta_real': ['2024-02-18', '2024-02-23', '2024-02-15'],
             'tipo_cambio_estimado': [20.0, 20.5, 20.2],
             'tipo_cambio_real': [20.1, 20.6, 20.3],
             'gastos_importacion_divisa': [100.0, 150.0, 75.0],
@@ -1074,6 +1077,7 @@ async def download_compras_layout():
                 'Columna': [
                     'IMI', 'Proveedor', 'Fecha Pedido', 'Moneda', 'Dias Credito',
                     'Anticipo %', 'Anticipo Monto', 'Fecha Anticipo', 'Fecha Pago Factura',
+                    'Fecha Salida Real', 'Fecha Arribo Real', 'Fecha Planta Real',
                     'Tipo Cambio Estimado', 'Tipo Cambio Real', 'Gastos Importacion Divisa',
                     'Porcentaje Gastos Importacion', 'IVA Monto Divisa', 'Total Con IVA Divisa',
                     'Material Codigo', 'KG', 'PU Divisa', 'PU MXN', 'Costo Total Divisa',
@@ -1082,6 +1086,7 @@ async def download_compras_layout():
                 'Tipo': [
                     'INTEGER', 'TEXT', 'DATE', 'VARCHAR', 'INTEGER',
                     'NUMERIC', 'NUMERIC', 'DATE', 'DATE',
+                    'DATE', 'DATE', 'DATE',
                     'NUMERIC', 'NUMERIC', 'NUMERIC',
                     'NUMERIC', 'NUMERIC', 'NUMERIC',
                     'VARCHAR', 'NUMERIC', 'NUMERIC', 'NUMERIC', 'NUMERIC',
@@ -1092,12 +1097,14 @@ async def download_compras_layout():
                     'NO', 'NO', 'NO', 'NO',
                     'NO', 'NO', 'NO',
                     'NO', 'NO', 'NO',
+                    'NO', 'NO', 'NO',
                     'SI', 'SI', 'SI', 'SI', 'SI',
                     'SI', 'NO'
                 ],
                 'Descripcion': [
                     'Numero unico de compra', 'Nombre del proveedor', 'Fecha de pedido', 'Moneda de la compra', 'Dias de credito',
                     'Porcentaje de anticipo', 'Monto del anticipo', 'Fecha de pago anticipo', 'Fecha de pago factura',
+                    'Fecha real de salida del puerto', 'Fecha real de arribo al puerto', 'Fecha real de llegada a planta',
                     'Tipo de cambio estimado', 'Tipo de cambio real', 'Gastos en divisa',
                     '% gastos importacion', 'IVA en divisa', 'Total con IVA en divisa',
                     'Codigo del material', 'Cantidad en kilogramos', 'Precio unitario en divisa', 'Precio unitario en MXN', 'Costo total en divisa',
