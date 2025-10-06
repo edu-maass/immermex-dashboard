@@ -134,16 +134,16 @@ class ComprasV2ServiceUltraOptimized:
                 )
                 
                 compra_tuple = (
-                    compra['imi'], compra['proveedor'], compra['fecha_pedido'], compra['puerto_origen'],
-                    compra['fecha_salida_estimada'], compra['fecha_arribo_estimada'], compra['moneda'],
+                    compra['imi'], compra['proveedor'], compra['fecha_pedido'], compra.get('puerto_origen'),
+                    compra.get('fecha_salida_estimada'), compra.get('fecha_arribo_estimada'), compra['moneda'],
                     compra['dias_credito'], self.safe_percentage(compra['anticipo_pct']), 
-                    self.safe_decimal(compra['anticipo_monto']), compra['fecha_anticipo'], 
-                    compra['fecha_pago_factura'], compra['fecha_salida_real'], compra['fecha_arribo_real'], 
-                    compra['fecha_planta_real'], self.safe_decimal(compra['tipo_cambio_estimado']), 
-                    self.safe_decimal(compra['tipo_cambio_real']), self.safe_decimal(compra['gastos_importacion_divisa']), 
-                    self.safe_decimal(compra['gastos_importacion_mxn']), self.safe_percentage(compra['porcentaje_gastos_importacion']), 
-                    self.safe_decimal(compra['total_con_gastos_mxn']), self.safe_decimal(compra['iva_monto_mxn']), 
-                    self.safe_decimal(compra['total_con_iva_mxn']), fecha_vencimiento, archivo_id, datetime.utcnow(), datetime.utcnow()
+                    self.safe_decimal(compra['anticipo_monto']), compra.get('fecha_anticipo'), 
+                    compra.get('fecha_pago_factura'), compra.get('fecha_salida_real'), compra.get('fecha_arribo_real'), 
+                    compra.get('fecha_planta_real'), self.safe_decimal(compra.get('tipo_cambio_estimado')), 
+                    self.safe_decimal(compra.get('tipo_cambio_real')), self.safe_decimal(compra.get('gastos_importacion_divisa')), 
+                    self.safe_decimal(compra.get('gastos_importacion_mxn')), self.safe_percentage(compra.get('porcentaje_gastos_importacion')), 
+                    self.safe_decimal(compra.get('total_con_gastos_mxn')), self.safe_decimal(compra.get('iva_monto_mxn')), 
+                    self.safe_decimal(compra.get('total_con_iva_mxn')), fecha_vencimiento, archivo_id, datetime.utcnow(), datetime.utcnow()
                 )
                 
                 if compra['imi'] in existing_imis:
@@ -237,10 +237,10 @@ class ComprasV2ServiceUltraOptimized:
             for material in materiales:
                 material_tuple = (
                     material['imi'], material['material_codigo'], self.safe_decimal(material['kg']),
-                    self.safe_decimal(material['pu_divisa']), self.safe_decimal(material['tipo_cambio']),
-                    self.safe_decimal(material['pu_mxn']), self.safe_decimal(material['costo_total_divisa']),
-                    self.safe_decimal(material['costo_total_mxn']), self.safe_decimal(material['costo_total_mxn_con_gastos']),
-                    self.safe_decimal(material['iva']), self.safe_decimal(material['costo_total_con_iva']),
+                    self.safe_decimal(material['pu_divisa']), self.safe_decimal(material.get('tipo_cambio')),
+                    self.safe_decimal(material.get('pu_mxn')), self.safe_decimal(material.get('costo_total_divisa')),
+                    self.safe_decimal(material.get('costo_total_mxn')), self.safe_decimal(material.get('costo_total_mxn_con_gastos')),
+                    self.safe_decimal(material.get('iva')), self.safe_decimal(material.get('costo_total_con_iva')),
                     datetime.utcnow(), datetime.utcnow()
                 )
                 
