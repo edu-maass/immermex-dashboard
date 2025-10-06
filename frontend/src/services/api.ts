@@ -236,11 +236,86 @@ class ApiService {
     });
   }
 
-  async uploadComprasFile(file: File): Promise<{ registros_procesados?: number; [key: string]: any }> {
+  async uploadComprasFile(file: File): Promise<{ 
+    compras_guardadas?: number; 
+    materiales_guardados?: number;
+    total_procesados?: number;
+    [key: string]: any 
+  }> {
     const formData = new FormData();
     formData.append('file', file);
 
-    return this.request<{ registros_procesados?: number; [key: string]: any }>('/upload/compras', {
+    return this.request<{ 
+      compras_guardadas?: number; 
+      materiales_guardados?: number;
+      total_procesados?: number;
+      [key: string]: any 
+    }>('/upload/compras', {
+      method: 'POST',
+      headers: {}, // No Content-Type header for FormData
+      body: formData,
+    });
+  }
+
+  // ==================== COMPRAS_V2 ENDPOINTS ====================
+  
+  async getComprasV2KPIs(filtros?: any): Promise<any> {
+    const params = new URLSearchParams();
+    if (filtros?.mes) params.append('mes', filtros.mes.toString());
+    if (filtros?.año) params.append('año', filtros.año.toString());
+    if (filtros?.proveedor) params.append('proveedor', filtros.proveedor);
+    if (filtros?.material) params.append('material', filtros.material);
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/compras-v2/kpis?${queryString}` : '/compras-v2/kpis';
+    
+    return this.request(endpoint);
+  }
+
+  async getComprasV2Data(filtros?: any, limit: number = 100): Promise<any> {
+    const params = new URLSearchParams();
+    if (filtros?.mes) params.append('mes', filtros.mes.toString());
+    if (filtros?.año) params.append('año', filtros.año.toString());
+    if (filtros?.proveedor) params.append('proveedor', filtros.proveedor);
+    if (filtros?.material) params.append('material', filtros.material);
+    if (limit) params.append('limit', limit.toString());
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/compras-v2/data?${queryString}` : '/compras-v2/data';
+    
+    return this.request(endpoint);
+  }
+
+  async getMaterialesByCompra(imi: number): Promise<any> {
+    return this.request(`/compras-v2/materiales/${imi}`);
+  }
+
+  async validateComprasFile(file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.request('/compras-v2/validate-file', {
+      method: 'POST',
+      headers: {}, // No Content-Type header for FormData
+      body: formData,
+    });
+  }
+
+  async uploadComprasV2File(file: File): Promise<{ 
+    compras_guardadas?: number; 
+    materiales_guardados?: number;
+    total_procesados?: number;
+    [key: string]: any 
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.request<{ 
+      compras_guardadas?: number; 
+      materiales_guardados?: number;
+      total_procesados?: number;
+      [key: string]: any 
+    }>('/upload/compras', {
       method: 'POST',
       headers: {}, // No Content-Type header for FormData
       body: formData,

@@ -4,8 +4,9 @@ import { DualUpload } from './DualUpload';
 import { OptimizedDashboard } from './OptimizedDashboard';
 import { DashboardFiltrado } from './DashboardFiltrado';
 import { ComprasDashboard } from './ComprasDashboard';
+import { ComprasV2Dashboard } from './ComprasV2Dashboard';
 import { DataManagement } from './DataManagement';
-import { Upload, BarChart3, Package, Database, ShoppingCart } from 'lucide-react';
+import { Upload, BarChart3, Package, Database, ShoppingCart, ShoppingBag } from 'lucide-react';
 import { apiService } from '../services/api';
 
 export const MainDashboard: FC = () => {
@@ -93,7 +94,7 @@ export const MainDashboard: FC = () => {
       <div className="container mx-auto px-4 py-8">
 
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-5 bg-white shadow-lg border border-gray-200">
+          <TabsList className="grid w-full grid-cols-6 bg-white shadow-lg border border-gray-200">
             <TabsTrigger 
               value="upload" 
               className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-blue-700 data-[state=inactive]:hover:bg-blue-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
@@ -120,7 +121,14 @@ export const MainDashboard: FC = () => {
               className="flex items-center gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-orange-700 data-[state=inactive]:hover:bg-orange-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
             >
               <ShoppingCart className="h-4 w-4" />
-              Compras
+              Compras (Legacy)
+            </TabsTrigger>
+            <TabsTrigger 
+              value="compras-v2" 
+              className="flex items-center gap-2 data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-indigo-700 data-[state=inactive]:hover:bg-indigo-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
+            >
+              <ShoppingBag className="h-4 w-4" />
+              Compras V2
             </TabsTrigger>
             <TabsTrigger 
               value="data" 
@@ -147,6 +155,10 @@ export const MainDashboard: FC = () => {
 
           <TabsContent value="compras" className="mt-6">
             <ComprasDashboard onUploadSuccess={handleUploadSuccess} dataLoaded={dataLoaded} />
+          </TabsContent>
+
+          <TabsContent value="compras-v2" className="mt-6">
+            <ComprasV2Dashboard onUploadSuccess={handleUploadSuccess} />
           </TabsContent>
 
           <TabsContent value="data" className="mt-6">

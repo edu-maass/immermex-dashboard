@@ -6,7 +6,7 @@ Utiliza servicios especializados para operaciones específicas
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 from database import (
-    Facturacion, Cobranza, CFDIRelacionado, Inventario, Pedido, 
+    Facturacion, Cobranza, CFDIRelacionado, Inventario, Pedido, PedidosCompras,
     ArchivoProcesado, KPI, Compras, get_latest_data_summary
 )
 from services import FacturacionService, CobranzaService, PedidosService, KPIAggregator

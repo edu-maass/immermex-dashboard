@@ -524,6 +524,7 @@ class ImmermexDataProcessor:
     def normalize_pedidos(self, df: pd.DataFrame, file_path: str = None, sheet_name: str = None) -> pd.DataFrame:
         """
         Normaliza datos de pedidos con detección automática de encabezados
+        Filtra folios de factura no numéricos y convierte a tipo numérico
         """
         logger.info("Normalizando datos de pedidos...")
         
@@ -593,42 +594,93 @@ class ImmermexDataProcessor:
             # Crear DataFrame con columnas estándar
             clean_df = pd.DataFrame()
             
-            # Folio de factura
-            clean_df['folio_factura'] = self.clean_string_column(
+            # Folio de factura - NUEVA LÓGICA: Filtrar solo folios numéricos
+            folio_series = self.clean_string_column(
                 df_renamed.get('folio_factura', '')
+            )
+            
+            # Filtrar folios no numéricos
+            logger.info("Filtrando folios de factura no numéricos...")
+            
+            # Función para validar si un folio es numérico
+            def is_numeric_folio(folio_str):
+                if pd.isna(folio_str) or folio_str == '':
+                    return False
+                # Convertir a string y limpiar
+                folio_clean = str(folio_str).strip()
+                # Verificar si es completamente numérico
+                return folio_clean.isdigit()
+            
+            # Aplicar filtro
+            numeric_mask = folio_series.apply(is_numeric_folio)
+            folios_numericos = folio_series[numeric_mask]
+            
+            # Contar registros eliminados
+            registros_originales = len(df_renamed)
+            registros_filtrados = len(folios_numericos)
+            registros_eliminados = registros_originales - registros_filtrados
+            
+            logger.info(f"Registros originales: {registros_originales}")
+            logger.info(f"Registros con folios numéricos: {registros_filtrados}")
+            logger.info(f"Registros eliminados (folios no numéricos): {registros_eliminados}")
+            
+            # Crear DataFrame solo con registros válidos
+            df_filtrado = df_renamed[numeric_mask].copy()
+            
+            # Convertir folio_factura a tipo numérico
+            clean_df['folio_factura'] = pd.to_numeric(
+                folios_numericos, errors='coerce'
             )
             
             # Pedido
             clean_df['pedido'] = self.clean_string_column(
-                df_renamed.get('pedido', '')
+                df_filtrado.get('pedido', '')
             )
             
             # Datos numéricos
             for col in ['kg', 'precio_unitario', 'importe_sin_iva']:
                 clean_df[col] = pd.to_numeric(
-                    df_renamed.get(col, 0), errors='coerce'
+                    df_filtrado.get(col, 0), errors='coerce'
                 ).fillna(0)
             
             # Material
             clean_df['material'] = self.clean_string_column(
-                df_renamed.get('material', '')
+                df_filtrado.get('material', '')
             )
             
             # Días de crédito
             clean_df['dias_credito'] = pd.to_numeric(
-                df_renamed.get('dias_credito', 30), errors='coerce'
+                df_filtrado.get('dias_credito', 30), errors='coerce'
             ).fillna(30)
             
             # Fechas
             clean_df['fecha_factura'] = pd.to_datetime(
-                df_renamed.get('fecha_factura', ''), errors='coerce'
+                df_filtrado.get('fecha_factura', ''), errors='coerce'
             )
             clean_df['fecha_pago'] = pd.to_datetime(
-                df_renamed.get('fecha_pago', ''), errors='coerce'
+                df_filtrado.get('fecha_pago', ''), errors='coerce'
             )
             
             # Eliminar filas completamente vacías
             clean_df = clean_df.dropna(how='all')
+            
+            # Verificar tipos de datos finales
+            logger.info("Tipos de datos finales:")
+            logger.info(f"  folio_factura: {clean_df['folio_factura'].dtype}")
+            logger.info(f"  kg: {clean_df['kg'].dtype}")
+            logger.info(f"  precio_unitario: {clean_df['precio_unitario'].dtype}")
+            logger.info(f"  importe_sin_iva: {clean_df['importe_sin_iva'].dtype}")
+            
+            # Mostrar estadísticas de folios
+            if not clean_df.empty:
+                folios_unicos = clean_df['folio_factura'].nunique()
+                folios_min = clean_df['folio_factura'].min()
+                folios_max = clean_df['folio_factura'].max()
+                
+                logger.info(f"Estadísticas de folios numéricos:")
+                logger.info(f"  Folios únicos: {folios_unicos}")
+                logger.info(f"  Folio mínimo: {folios_min}")
+                logger.info(f"  Folio máximo: {folios_max}")
             
             self.pedidos_df = clean_df
             logger.info(f"Pedidos normalizados: {clean_df.shape[0]} registros")
@@ -987,15 +1039,15 @@ class ImmermexDataProcessor:
                     if not processed_df.empty:
                         self.cfdi_clean = processed_df
                 elif any(month in sheet_lower for month in ['sep', 'oct', 'nov', 'dic', 'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago']):
-                    # Hoja de pedidos por mes
+                    # Hoja de pedidos por mes - ahora se guarda en pedidos_compras
                     processed_df = self.normalize_pedidos(df, file_path, sheet_name)
                     if not processed_df.empty:
-                        self.pedidos_clean = processed_df
+                        self.pedidos_df = processed_df  # Cambiar a pedidos_df para consistencia
                 elif any(keyword in sheet_lower for keyword in ['pedido', 'material', 'kg']):
-                    # Otra hoja de pedidos
+                    # Otra hoja de pedidos - ahora se guarda en pedidos_compras
                     processed_df = self.normalize_pedidos(df, file_path, sheet_name)
                     if not processed_df.empty:
-                        self.pedidos_clean = processed_df
+                        self.pedidos_df = processed_df  # Cambiar a pedidos_df para consistencia
                 elif 'inventario' in sheet_lower:
                     # Hoja de inventario
                     self.normalize_inventario(df)
@@ -1032,7 +1084,7 @@ class ImmermexDataProcessor:
                 "facturacion_clean": self.facturacion_df,
                 "cobranza_clean": self.cobranza_df,
                 "cfdi_clean": self.cfdi_relacionados_df,
-                "pedidos_clean": self.pedidos_df,
+                "pedidos_compras_clean": self.pedidos_df,  # Datos para tabla pedidos_compras
                 "inventario_clean": self.inventario_df
             }
             
@@ -1099,7 +1151,7 @@ def process_excel_from_bytes(file_bytes: bytes, filename: str) -> Tuple[Dict[str
             "facturacion_clean": pd.DataFrame(),
             "cobranza_clean": pd.DataFrame(), 
             "cfdi_clean": pd.DataFrame(),
-            "pedidos_clean": pd.DataFrame()
+            "pedidos_compras_clean": pd.DataFrame()  # Cambiado a pedidos_compras_clean
         }
         
             # Procesar cada hoja de forma básica (sin normalización compleja)
@@ -1145,7 +1197,7 @@ def process_excel_from_bytes(file_bytes: bytes, filename: str) -> Tuple[Dict[str
                 processed_data["cfdi_clean"] = pd.concat([processed_data["cfdi_clean"], df_clean], ignore_index=True)
             else:
                 # Asumir que es una hoja de pedidos por mes
-                processed_data["pedidos_clean"] = pd.concat([processed_data["pedidos_clean"], df_clean], ignore_index=True)
+                processed_data["pedidos_compras_clean"] = pd.concat([processed_data["pedidos_compras_clean"], df_clean], ignore_index=True)
         
         # Convertir DataFrames a listas de diccionarios para la base de datos
         processed_data_dict = {}
@@ -1162,7 +1214,7 @@ def process_excel_from_bytes(file_bytes: bytes, filename: str) -> Tuple[Dict[str
             "total_facturas": len(processed_data_dict["facturacion_clean"]),
             "total_cobranzas": len(processed_data_dict["cobranza_clean"]),
             "total_cfdi": len(processed_data_dict["cfdi_clean"]),
-            "total_pedidos": len(processed_data_dict["pedidos_clean"]),
+            "total_pedidos": len(processed_data_dict["pedidos_compras_clean"]),  # Cambiado a pedidos_compras_clean
             "fecha_procesamiento": datetime.now().isoformat(),
             "archivo": filename,
             "hojas_procesadas": list(excel_data.keys())

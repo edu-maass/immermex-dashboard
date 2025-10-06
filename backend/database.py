@@ -228,6 +228,33 @@ class Pedido(Base):
         Index('idx_pedido_material_fecha', 'material', 'fecha_factura'),
     )
 
+class PedidosCompras(Base):
+    __tablename__ = "pedidos_compras"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    compra_imi = Column(Integer, index=True)
+    folio_factura = Column(String, index=True)
+    material_codigo = Column(String, index=True)
+    kg = Column(Float, default=0.0)
+    precio_unitario = Column(Float, default=0.0)
+    importe_sin_iva = Column(Float, default=0.0)
+    importe_con_iva = Column(Float, default=0.0)
+    dias_credito = Column(Integer, default=30)
+    fecha_factura = Column(DateTime, index=True)
+    fecha_pago = Column(DateTime)
+    archivo_id = Column(Integer, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Índices optimizados para consultas frecuentes
+    __table_args__ = (
+        Index('idx_pedidos_compras_fecha', 'fecha_factura'),
+        Index('idx_pedidos_compras_material', 'material_codigo'),
+        Index('idx_pedidos_compras_folio', 'folio_factura'),
+        Index('idx_pedidos_compras_archivo', 'archivo_id'),
+        Index('idx_pedidos_compras_compra_imi', 'compra_imi'),
+    )
+
 class Compras(Base):
     __tablename__ = "compras"
     
@@ -299,6 +326,28 @@ class Compras(Base):
         Index('idx_compras_mes_año', 'mes', 'año'),
         Index('idx_compras_estado_pago', 'estado_pago'),
         Index('idx_compras_numero_factura', 'numero_factura'),
+    )
+
+class Proveedores(Base):
+    __tablename__ = "proveedores"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String, unique=True, index=True, nullable=False)
+    promedio_dias_produccion = Column(Float, default=0.0)
+    promedio_dias_transporte_maritimo = Column(Float, default=0.0)
+    pais_origen = Column(String)
+    contacto = Column(String)
+    email = Column(String)
+    telefono = Column(String)
+    direccion = Column(Text)
+    notas = Column(Text)
+    activo = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        Index('idx_proveedor_nombre', 'nombre'),
+        Index('idx_proveedor_activo', 'activo'),
     )
 
 class ArchivoProcesado(Base):
@@ -414,6 +463,68 @@ def get_latest_data_summary(db):
             "has_data": False,
             "message": f"Error: {str(e)}"
         }
+
+def get_or_create_proveedor(db, nombre_proveedor: str):
+    """Obtiene o crea un proveedor"""
+    proveedor = db.query(Proveedores).filter(Proveedores.nombre == nombre_proveedor).first()
+    if not proveedor:
+        proveedor = Proveedores(
+            nombre=nombre_proveedor,
+            activo=True
+        )
+        db.add(proveedor)
+        db.commit()
+        db.refresh(proveedor)
+    return proveedor
+
+def update_proveedor_averages(db, nombre_proveedor: str, dias_produccion: float = None, dias_transporte: float = None):
+    """Actualiza los promedios de días de producción y transporte marítimo de un proveedor"""
+    try:
+        proveedor = db.query(Proveedores).filter(Proveedores.nombre == nombre_proveedor).first()
+        if proveedor:
+            if dias_produccion is not None:
+                proveedor.promedio_dias_produccion = dias_produccion
+            if dias_transporte is not None:
+                proveedor.promedio_dias_transporte_maritimo = dias_transporte
+            proveedor.updated_at = datetime.utcnow()
+            db.commit()
+            return True
+        return False
+    except Exception as e:
+        logger.error(f"Error actualizando promedios del proveedor {nombre_proveedor}: {str(e)}")
+        db.rollback()
+        return False
+
+def get_proveedor_stats(db, nombre_proveedor: str):
+    """Obtiene estadísticas de un proveedor específico"""
+    try:
+        proveedor = db.query(Proveedores).filter(Proveedores.nombre == nombre_proveedor).first()
+        if not proveedor:
+            return None
+        
+        # Obtener estadísticas de compras
+        compras_stats = db.query(Compras).filter(Compras.proveedor == nombre_proveedor).all()
+        
+        return {
+            "proveedor": {
+                "id": proveedor.id,
+                "nombre": proveedor.nombre,
+                "promedio_dias_produccion": proveedor.promedio_dias_produccion,
+                "promedio_dias_transporte_maritimo": proveedor.promedio_dias_transporte_maritimo,
+                "pais_origen": proveedor.pais_origen,
+                "activo": proveedor.activo,
+                "created_at": proveedor.created_at,
+                "updated_at": proveedor.updated_at
+            },
+            "estadisticas": {
+                "total_compras": len(compras_stats),
+                "total_monto": sum(compra.total for compra in compras_stats if compra.total),
+                "ultima_compra": max((compra.fecha_compra for compra in compras_stats if compra.fecha_compra), default=None)
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error obteniendo estadísticas del proveedor {nombre_proveedor}: {str(e)}")
+        return None
 
 # Inicializar base de datos
 def init_db():

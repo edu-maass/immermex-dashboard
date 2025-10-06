@@ -442,9 +442,9 @@ async def upload_compras_file(
     file: UploadFile = File(...),
     reemplazar_datos: bool = Query(True, description="Si true, reemplaza todos los datos existentes")
 ):
-    """Endpoint específico para subir archivos Excel de compras - NUEVO SERVICIO"""
+    """Endpoint específico para subir archivos Excel de compras - SISTEMA COMPRAS_V2"""
     try:
-        logger.info("🚀🚀🚀 NUEVO SERVICIO DE COMPRAS ACTIVADO 🚀🚀🚀")
+        logger.info("🚀🚀🚀 SISTEMA COMPRAS_V2 ACTIVADO 🚀🚀🚀")
         logger.info(f"Procesando archivo: {file.filename}")
         
         # Validación básica del archivo
@@ -458,23 +458,25 @@ async def upload_compras_file(
         
         logger.info(f"Archivo leído: {len(content)} bytes")
         
-        # Usar el nuevo servicio especializado
-        from compras_upload_service import ComprasUploadService
+        # Usar el nuevo servicio especializado de compras_v2
+        from compras_v2_upload_service import ComprasV2UploadService
         
-        service = ComprasUploadService()
+        service = ComprasV2UploadService()
         result = service.upload_compras_file(content, file.filename, reemplazar_datos)
         
         if result.get("success"):
-            logger.info(f"✅ Upload exitoso: {result['registros_procesados']} compras guardadas")
+            logger.info(f"✅ Upload exitoso: {result['compras_guardadas']} compras, {result['materiales_guardados']} materiales")
             return {
-                "mensaje": "Archivo de compras procesado y guardado exitosamente",
+                "mensaje": "Archivo de compras procesado y guardado exitosamente con sistema compras_v2",
                 "nombre_archivo": file.filename,
                 "archivo_id": result["archivo_id"],
-                "total_registros": result["registros_procesados"],
-                "registros_procesados": result["registros_procesados"],
-                "kpis_compras": result.get("kpis_compras", {}),
+                "compras_guardadas": result["compras_guardadas"],
+                "materiales_guardados": result["materiales_guardados"],
+                "total_procesados": result["total_procesados"],
+                "kpis": result.get("kpis", {}),
                 "estado": "procesado",
-                "servicio_usado": "ComprasUploadService"
+                "servicio_usado": "ComprasV2UploadService",
+                "sistema": "compras_v2"
             }
         else:
             logger.error(f"ERROR: Upload falló: {result.get('error', 'Error desconocido')}")
@@ -483,7 +485,7 @@ async def upload_compras_file(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error en endpoint de compras: {str(e)}")
+        logger.error(f"Error en endpoint de compras_v2: {str(e)}")
         import traceback
         logger.error(f"Traceback completo: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -888,7 +890,132 @@ async def get_paginated_data(
         logger.error(f"Error obteniendo datos paginados: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# ==================== ENDPOINTS DE COMPRAS ====================
+# ==================== ENDPOINTS DE COMPRAS_V2 ====================
+
+@app.get("/api/compras-v2/kpis")
+async def get_compras_v2_kpis(
+    mes: Optional[int] = Query(None, description="Filtrar por mes"),
+    año: Optional[int] = Query(None, description="Filtrar por año"),
+    proveedor: Optional[str] = Query(None, description="Filtrar por proveedor"),
+    material: Optional[str] = Query(None, description="Filtrar por material")
+):
+    """Obtiene KPIs principales de compras_v2 con filtros opcionales"""
+    try:
+        import time
+        start_time = time.time()
+        
+        logger.info(f"Iniciando cálculo de KPIs de compras_v2 - filtros: {mes}, {año}, {proveedor}, {material}")
+        
+        from compras_v2_service import ComprasV2Service
+        
+        service = ComprasV2Service()
+        
+        # Preparar filtros
+        filtros = {}
+        if mes:
+            filtros['mes'] = mes
+        if año:
+            filtros['año'] = año
+        if proveedor:
+            filtros['proveedor'] = proveedor
+        if material:
+            filtros['material'] = material
+        
+        kpis = service.calculate_kpis(filtros)
+        
+        end_time = time.time()
+        execution_time = end_time - start_time
+        
+        logger.info(f"KPIs de compras_v2 calculados exitosamente en {execution_time:.2f} segundos")
+        
+        return kpis
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo KPIs de compras_v2: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/compras-v2/data")
+async def get_compras_v2_data(
+    mes: Optional[int] = Query(None, description="Filtrar por mes"),
+    año: Optional[int] = Query(None, description="Filtrar por año"),
+    proveedor: Optional[str] = Query(None, description="Filtrar por proveedor"),
+    material: Optional[str] = Query(None, description="Filtrar por material"),
+    limit: int = Query(100, ge=1, le=1000, description="Límite de registros")
+):
+    """Obtiene datos de compras_v2 con filtros opcionales"""
+    try:
+        from compras_v2_service import ComprasV2Service
+        
+        service = ComprasV2Service()
+        
+        # Preparar filtros
+        filtros = {}
+        if mes:
+            filtros['mes'] = mes
+        if año:
+            filtros['año'] = año
+        if proveedor:
+            filtros['proveedor'] = proveedor
+        if material:
+            filtros['material'] = material
+        if limit:
+            filtros['limit'] = limit
+        
+        compras = service.get_compras_by_filtros(filtros)
+        
+        return {
+            "success": True,
+            "compras": compras,
+            "total_compras": len(compras),
+            "filtros_aplicados": filtros
+        }
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo datos de compras_v2: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/compras-v2/materiales/{imi}")
+async def get_materiales_by_compra(imi: int):
+    """Obtiene materiales de una compra específica por IMI"""
+    try:
+        from compras_v2_service import ComprasV2Service
+        
+        service = ComprasV2Service()
+        materiales = service.get_materiales_by_compra(imi)
+        
+        return {
+            "success": True,
+            "compra_imi": imi,
+            "materiales": materiales,
+            "total_materiales": len(materiales)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo materiales para compra {imi}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/compras-v2/validate-file")
+async def validate_compras_file(file: UploadFile = File(...)):
+    """Valida la estructura de un archivo de compras antes del procesamiento"""
+    try:
+        from compras_v2_upload_service import ComprasV2UploadService
+        
+        content = await file.read()
+        upload_service = ComprasV2UploadService()
+        
+        validation = upload_service.validate_file_structure(content, file.filename)
+        
+        return {
+            "filename": file.filename,
+            "file_size": len(content),
+            "validation": validation
+        }
+        
+    except Exception as e:
+        logger.error(f"Error validando archivo de compras: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== ENDPOINTS DE COMPRAS (LEGACY) ====================
 
 @app.get("/api/compras/kpis")
 async def get_compras_kpis(
@@ -898,12 +1025,12 @@ async def get_compras_kpis(
     material: Optional[str] = Query(None, description="Filtrar por material"),
     db: Session = Depends(get_db)
 ):
-    """Obtiene KPIs principales de compras con filtros opcionales"""
+    """Obtiene KPIs principales de compras (LEGACY) con filtros opcionales"""
     try:
         import time
         start_time = time.time()
         
-        logger.info(f"Iniciando cálculo de KPIs de compras - filtros: {mes}, {año}, {proveedor}, {material}")
+        logger.info(f"Iniciando cálculo de KPIs de compras (LEGACY) - filtros: {mes}, {año}, {proveedor}, {material}")
         
         db_service = DatabaseService(db)
         
@@ -923,12 +1050,12 @@ async def get_compras_kpis(
         end_time = time.time()
         execution_time = end_time - start_time
         
-        logger.info(f"KPIs de compras calculados exitosamente en {execution_time:.2f} segundos")
+        logger.info(f"KPIs de compras (LEGACY) calculados exitosamente en {execution_time:.2f} segundos")
         
         return kpis
         
     except Exception as e:
-        logger.error(f"Error obteniendo KPIs de compras: {str(e)}")
+        logger.error(f"Error obteniendo KPIs de compras (LEGACY): {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/compras/evolucion-precios")

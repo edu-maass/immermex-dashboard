@@ -4,8 +4,9 @@ Servicio especializado para operaciones de pedidos
 
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from database import Pedido, Facturacion
+from database import Pedido, PedidosCompras, Facturacion
 from utils.validators import DataValidator
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
@@ -63,19 +64,21 @@ class PedidosService:
                         dias_credito_pedido = dias_credito_por_folio[folio_limpio]
                         dias_credito_asignados += 1
                 
-                pedido = Pedido(
+                # Crear registro en pedidos_compras (tabla optimizada de Supabase)
+                pedido_compras = PedidosCompras(
+                    compra_imi=0,  # Campo específico de compras, inicializar en 0
                     folio_factura=DataValidator.safe_string(pedido_data.get('folio_factura', '')),
-                    pedido=DataValidator.safe_string(pedido_data.get('pedido', '')),
+                    material_codigo=DataValidator.safe_string(pedido_data.get('material', '')),  # Mapear material a material_codigo
                     kg=DataValidator.safe_float(pedido_data.get('kg', 0)),
                     precio_unitario=DataValidator.safe_float(pedido_data.get('precio_unitario', 0)),
                     importe_sin_iva=DataValidator.safe_float(pedido_data.get('importe_sin_iva', 0)),
-                    material=DataValidator.safe_string(pedido_data.get('material', '')),
+                    importe_con_iva=DataValidator.safe_float(pedido_data.get('importe_sin_iva', 0)) * 1.16,  # Calcular IVA 16%
                     dias_credito=dias_credito_pedido,
                     fecha_factura=fecha_factura,
                     fecha_pago=fecha_pago,
                     archivo_id=archivo_id
                 )
-                self.db.add(pedido)
+                self.db.add(pedido_compras)
                 count += 1
             except Exception as e:
                 logger.warning(f"Error guardando pedido: {str(e)}")
@@ -84,43 +87,93 @@ class PedidosService:
         # No hacer commit aquí - dejar que el método principal maneje la transacción
         
         if fechas_asignadas > 0:
-            logger.info(f"Se asignaron automáticamente {fechas_asignadas} fechas de factura a pedidos")
+            logger.info(f"Se asignaron automáticamente {fechas_asignadas} fechas de factura a pedidos_compras")
         if dias_credito_asignados > 0:
-            logger.info(f"Se asignaron automáticamente {dias_credito_asignados} días de crédito a pedidos")
+            logger.info(f"Se asignaron automáticamente {dias_credito_asignados} días de crédito a pedidos_compras")
         
         return count
     
+    def _categorize_material(self, material: str) -> str:
+        """Categoriza el material basado en su código o nombre"""
+        if not material:
+            return 'Sin categoría'
+        
+        material_upper = material.upper()
+        
+        # Lógica de categorización basada en códigos comunes
+        if any(code in material_upper for code in ['ACERO', 'STEEL', 'IRON']):
+            return 'Acero'
+        elif any(code in material_upper for code in ['ALUMINIO', 'ALUMINIUM', 'AL']):
+            return 'Aluminio'
+        elif any(code in material_upper for code in ['COBRE', 'COPPER', 'CU']):
+            return 'Cobre'
+        elif any(code in material_upper for code in ['ZINC', 'ZN']):
+            return 'Zinc'
+        elif any(code in material_upper for code in ['PLOMO', 'LEAD', 'PB']):
+            return 'Plomo'
+        elif any(code in material_upper for code in ['NICKEL', 'NI']):
+            return 'Níquel'
+        else:
+            return 'Otros Metales'
+
+    def _subcategorize_material(self, material: str) -> str:
+        """Subcategoriza el material con más detalle"""
+        if not material:
+            return 'Sin subcategoría'
+        
+        material_upper = material.upper()
+        
+        # Lógica de subcategorización
+        if any(code in material_upper for code in ['LAMINA', 'SHEET', 'PLATE']):
+            return 'Lámina'
+        elif any(code in material_upper for code in ['VARILLA', 'ROD', 'BAR']):
+            return 'Varilla'
+        elif any(code in material_upper for code in ['TUBO', 'TUBE', 'PIPE']):
+            return 'Tubo'
+        elif any(code in material_upper for code in ['ALAMBRE', 'WIRE']):
+            return 'Alambre'
+        elif any(code in material_upper for code in ['PERFIL', 'PROFILE']):
+            return 'Perfil'
+        else:
+            return 'General'
+
+    def _calculate_trimestre(self, fecha: datetime) -> int:
+        """Calcula el trimestre basado en la fecha"""
+        if not fecha:
+            return None
+        return (fecha.month - 1) // 3 + 1
+
     def get_pedidos_by_filtros(self, filtros: dict = None):
-        """Obtiene pedidos aplicando filtros"""
-        query = self.db.query(Pedido)
+        """Obtiene pedidos aplicando filtros - ahora usa pedidos_compras de Supabase"""
+        query = self.db.query(PedidosCompras)
         
         if filtros:
             # Solo aplicar filtro de mes si también hay año seleccionado
             if filtros.get('mes') and filtros.get('año'):
-                query = query.filter(func.extract('month', Pedido.fecha_factura) == filtros['mes'])
+                query = query.filter(func.extract('month', PedidosCompras.fecha_factura) == filtros['mes'])
             elif filtros.get('mes') and not filtros.get('año'):
                 # Si hay mes pero no año, ignorar el filtro de mes
                 logger.warning("Filtro de mes ignorado porque no hay año seleccionado")
             
             if filtros.get('año'):
-                query = query.filter(func.extract('year', Pedido.fecha_factura) == filtros['año'])
+                query = query.filter(func.extract('year', PedidosCompras.fecha_factura) == filtros['año'])
             if filtros.get('pedidos'):
                 pedidos_list = filtros['pedidos']
-                query = query.filter(Pedido.pedido.in_(pedidos_list))
+                query = query.filter(PedidosCompras.material_codigo.in_(pedidos_list))
         
         return query.all()
     
     def calculate_consumo_material(self, pedidos: list) -> dict:
-        """Calcula consumo por material"""
+        """Calcula consumo por material - ahora usa pedidos_compras"""
         materiales_consumo = {}
         pedidos_omitidos = 0
         
         for pedido in pedidos:
-            if not pedido.material or pedido.material.strip() == "":
+            if not pedido.material_codigo or pedido.material_codigo.strip() == "":
                 pedidos_omitidos += 1
                 continue
             
-            material = pedido.material.strip()
+            material = pedido.material_codigo.strip()
             # Truncar código de material a primeros 7 dígitos para agrupación útil
             if len(material) > 7:
                 material = material[:7]
@@ -134,7 +187,7 @@ class PedidosService:
         return dict(sorted_materiales[:10])
     
     def get_folios_pedidos(self, pedidos: list) -> list:
-        """Obtiene folios únicos de pedidos"""
+        """Obtiene folios únicos de pedidos - ahora usa pedidos_compras"""
         return list(set(p.folio_factura for p in pedidos if p.folio_factura))
 
     def get_top_proveedores(self, limite: int = 10, filtros: dict = None) -> dict:
