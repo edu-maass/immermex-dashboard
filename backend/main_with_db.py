@@ -1015,6 +1015,122 @@ async def validate_compras_file(file: UploadFile = File(...)):
         logger.error(f"Error validando archivo de compras: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/compras-v2/download-layout")
+async def download_compras_layout():
+    """Descarga el layout de Excel para compras_v2"""
+    try:
+        import pandas as pd
+        import io
+        from fastapi.responses import StreamingResponse
+        
+        logger.info("Generando layout de Excel para compras_v2")
+        
+        # Crear datos de ejemplo para el layout
+        compras_ejemplo = {
+            'imi': [1001, 1002, 1003],
+            'proveedor': ['HONGKONG', 'PEREZ TRADING', 'COSMO'],
+            'fecha_pedido': ['2024-01-15', '2024-01-16', '2024-01-17'],
+            'moneda': ['USD', 'USD', 'USD'],
+            'dias_credito': [30, 45, 30],
+            'anticipo_pct': [10.0, 15.0, 5.0],
+            'anticipo_monto': [1000.0, 1500.0, 500.0],
+            'fecha_anticipo': ['2024-01-10', '2024-01-11', '2024-01-12'],
+            'fecha_pago_factura': ['2024-02-15', '2024-03-01', '2024-02-17'],
+            'tipo_cambio_estimado': [20.0, 20.5, 20.2],
+            'tipo_cambio_real': [20.1, 20.6, 20.3],
+            'gastos_importacion_divisa': [100.0, 150.0, 75.0],
+            'porcentaje_gastos_importacion': [5.0, 7.5, 3.0],
+            'iva_monto_divisa': [200.0, 300.0, 150.0],
+            'total_con_iva_divisa': [2200.0, 3300.0, 1650.0]
+        }
+        
+        materiales_ejemplo = {
+            'imi': [1001, 1001, 1002, 1002, 1003],
+            'material_codigo': ['MAT001', 'MAT002', 'MAT003', 'MAT004', 'MAT005'],
+            'kg': [100.0, 150.0, 200.0, 100.0, 250.0],
+            'pu_divisa': [10.0, 12.0, 15.0, 8.0, 6.0],
+            'pu_mxn': [200.0, 240.0, 300.0, 160.0, 120.0],
+            'costo_total_divisa': [1000.0, 1800.0, 3000.0, 800.0, 1500.0],
+            'costo_total_mxn': [20000.0, 36000.0, 60000.0, 16000.0, 30000.0],
+            'iva': [160.0, 288.0, 480.0, 128.0, 240.0]
+        }
+        
+        # Crear DataFrames
+        compras_df = pd.DataFrame(compras_ejemplo)
+        materiales_df = pd.DataFrame(materiales_ejemplo)
+        
+        # Crear archivo Excel en memoria
+        excel_buffer = io.BytesIO()
+        
+        with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+            # Hoja de Compras Generales
+            compras_df.to_excel(writer, sheet_name='Compras Generales', index=False)
+            
+            # Hoja de Materiales Detalle
+            materiales_df.to_excel(writer, sheet_name='Materiales Detalle', index=False)
+            
+            # Hoja de Instrucciones
+            instrucciones_data = {
+                'Columna': [
+                    'IMI', 'Proveedor', 'Fecha Pedido', 'Moneda', 'Dias Credito',
+                    'Anticipo %', 'Anticipo Monto', 'Fecha Anticipo', 'Fecha Pago Factura',
+                    'Tipo Cambio Estimado', 'Tipo Cambio Real', 'Gastos Importacion Divisa',
+                    'Porcentaje Gastos Importacion', 'IVA Monto Divisa', 'Total Con IVA Divisa',
+                    'Material Codigo', 'KG', 'PU Divisa', 'PU MXN', 'Costo Total Divisa',
+                    'Costo Total MXN', 'IVA'
+                ],
+                'Tipo': [
+                    'INTEGER', 'TEXT', 'DATE', 'VARCHAR', 'INTEGER',
+                    'NUMERIC', 'NUMERIC', 'DATE', 'DATE',
+                    'NUMERIC', 'NUMERIC', 'NUMERIC',
+                    'NUMERIC', 'NUMERIC', 'NUMERIC',
+                    'VARCHAR', 'NUMERIC', 'NUMERIC', 'NUMERIC', 'NUMERIC',
+                    'NUMERIC', 'NUMERIC'
+                ],
+                'Obligatorio': [
+                    'SI', 'SI', 'SI', 'SI', 'NO',
+                    'NO', 'NO', 'NO', 'NO',
+                    'NO', 'NO', 'NO',
+                    'NO', 'NO', 'NO',
+                    'SI', 'SI', 'SI', 'SI', 'SI',
+                    'SI', 'NO'
+                ],
+                'Descripcion': [
+                    'Numero unico de compra', 'Nombre del proveedor', 'Fecha de pedido', 'Moneda de la compra', 'Dias de credito',
+                    'Porcentaje de anticipo', 'Monto del anticipo', 'Fecha de pago anticipo', 'Fecha de pago factura',
+                    'Tipo de cambio estimado', 'Tipo de cambio real', 'Gastos en divisa',
+                    '% gastos importacion', 'IVA en divisa', 'Total con IVA en divisa',
+                    'Codigo del material', 'Cantidad en kilogramos', 'Precio unitario en divisa', 'Precio unitario en MXN', 'Costo total en divisa',
+                    'Costo total en MXN', 'IVA del material'
+                ]
+            }
+            
+            instrucciones_df = pd.DataFrame(instrucciones_data)
+            instrucciones_df.to_excel(writer, sheet_name='Instrucciones', index=False)
+        
+        excel_buffer.seek(0)
+        
+        # Crear respuesta de streaming
+        def iter_file():
+            yield from excel_buffer
+        
+        headers = {
+            'Content-Disposition': 'attachment; filename="Layout_Compras_V2.xlsx"',
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+        
+        logger.info("Layout de Excel generado exitosamente")
+        
+        return StreamingResponse(
+            iter_file(),
+            media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            headers=headers
+        )
+        
+    except Exception as e:
+        logger.error(f"Error generando layout de Excel: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ==================== ENDPOINTS DE COMPRAS (LEGACY) ====================
 
 @app.get("/api/compras/kpis")

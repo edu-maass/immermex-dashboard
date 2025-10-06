@@ -12,7 +12,9 @@ import {
   Calendar,
   AlertCircle,
   CheckCircle,
-  Clock
+  Clock,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface ComprasV2DashboardProps {
@@ -133,6 +135,36 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
 
   const hasActiveFilters = Object.values(filtros).some(value => value !== undefined);
 
+  const handleDownloadLayout = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const blob = await apiService.downloadComprasV2Layout();
+      
+      // Crear URL para descarga
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'Layout_Compras_V2.xlsx';
+      
+      // Trigger descarga
+      document.body.appendChild(link);
+      link.click();
+      
+      // Limpiar
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error descargando layout';
+      setError(errorMessage);
+      console.error('Error downloading layout:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading && !comprasData) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -228,7 +260,35 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
 
       {/* Upload de archivos */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-4">Cargar Archivo de Compras</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Cargar Archivo de Compras</h2>
+          <Button 
+            onClick={handleDownloadLayout}
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={loading}
+          >
+            <Download className="h-4 w-4" />
+            Descargar Layout Excel
+          </Button>
+        </div>
+        
+        <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-start gap-3">
+            <FileSpreadsheet className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <h3 className="font-medium text-blue-900 mb-1">Instrucciones para el archivo Excel:</h3>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• Use el botón "Descargar Layout Excel" para obtener la plantilla correcta</li>
+                <li>• El archivo debe tener 3 hojas: "Compras Generales", "Materiales Detalle" e "Instrucciones"</li>
+                <li>• Complete los datos en las hojas correspondientes siguiendo el formato de ejemplo</li>
+                <li>• Los campos obligatorios están marcados en la hoja "Instrucciones"</li>
+                <li>• Las fechas deben estar en formato YYYY-MM-DD</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
         <FileUpload
           onFileUpload={handleFileUpload}
           acceptedTypes=".xlsx,.xls"

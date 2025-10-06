@@ -322,6 +322,14 @@ class ApiService {
     });
   }
 
+  async downloadComprasV2Layout(): Promise<Blob> {
+    const response = await fetch(`${this.baseUrl}/api/compras-v2/download-layout`);
+    if (!response.ok) {
+      throw new Error('Error descargando layout de compras');
+    }
+    return response.blob();
+  }
+
   async getArchivosProcesados(skip: number = 0, limit: number = 100) {
     return this.request(`/archivos?skip=${skip}&limit=${limit}`);
   }
