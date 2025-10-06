@@ -259,6 +259,9 @@ class ComprasV2ServiceUltraOptimized:
             update_data = []
             
             for material in materiales:
+                # Debug: Log del material antes de validación
+                logger.info(f"Procesando material: compra_id={material.get('compra_id')}, material_codigo={material.get('material_codigo')}, kg={material.get('kg')}")
+                
                 # Validar que tenga compra_id válido
                 compra_id = material.get('compra_id')
                 if not compra_id or compra_id <= 0 or compra_id is None:
@@ -271,6 +274,9 @@ class ComprasV2ServiceUltraOptimized:
                     logger.warning(f"Saltando material con datos incompletos: Material={material.get('material_codigo', 'N/A')}, KG={material.get('kg', 'N/A')}")
                     materiales_omitidos += 1
                     continue
+                
+                # Debug: Log del material después de validación
+                logger.info(f"Material válido: compra_id={compra_id}, material_codigo={material['material_codigo']}")
                 
                 material_tuple = (
                     compra_id, material['material_codigo'], self.safe_decimal(material['kg']),
