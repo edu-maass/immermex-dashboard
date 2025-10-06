@@ -994,25 +994,133 @@ async def get_materiales_by_compra(imi: int):
         logger.error(f"Error obteniendo materiales para compra {imi}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/compras-v2/validate-file")
-async def validate_compras_file(file: UploadFile = File(...)):
-    """Valida la estructura de un archivo de compras antes del procesamiento"""
+@app.get("/api/compras-v2/evolucion-precios")
+async def get_compras_v2_evolucion_precios(
+    material: Optional[str] = Query(None, description="Filtrar por material"),
+    moneda: str = Query("USD", description="Moneda para mostrar precios (USD/MXN)")
+):
+    """Obtiene evolución mensual de precios por kg para compras_v2"""
     try:
-        from compras_v2_upload_service import ComprasV2UploadService
+        from compras_v2_service import ComprasV2Service
         
-        content = await file.read()
-        upload_service = ComprasV2UploadService()
+        service = ComprasV2Service()
         
-        validation = upload_service.validate_file_structure(content, file.filename)
+        filtros = {}
+        if material:
+            filtros['material'] = material
         
-        return {
-            "filename": file.filename,
-            "file_size": len(content),
-            "validation": validation
-        }
+        evolucion = service.get_evolucion_precios(filtros, moneda)
+        return evolucion
         
     except Exception as e:
-        logger.error(f"Error validando archivo de compras: {str(e)}")
+        logger.error(f"Error obteniendo evolución de precios de compras_v2: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/compras-v2/flujo-pagos")
+async def get_compras_v2_flujo_pagos(
+    mes: Optional[int] = Query(None, description="Filtrar por mes"),
+    año: Optional[int] = Query(None, description="Filtrar por año"),
+    proveedor: Optional[str] = Query(None, description="Filtrar por proveedor"),
+    material: Optional[str] = Query(None, description="Filtrar por material"),
+    moneda: str = Query("USD", description="Moneda para mostrar (USD o MXN)")
+):
+    """Obtiene flujo de pagos de compras_v2 por semana"""
+    try:
+        from compras_v2_service import ComprasV2Service
+        
+        service = ComprasV2Service()
+        
+        filtros = {}
+        if mes:
+            filtros['mes'] = mes
+        if año:
+            filtros['año'] = año
+        if proveedor:
+            filtros['proveedor'] = proveedor
+        if material:
+            filtros['material'] = material
+        
+        # Validar moneda
+        if moneda not in ['USD', 'MXN']:
+            moneda = 'USD'
+        
+        flujo = service.get_flujo_pagos(filtros, moneda)
+        return flujo
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo flujo de pagos de compras_v2: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/compras-v2/aging-cuentas-pagar")
+async def get_compras_v2_aging_cuentas_pagar(
+    mes: Optional[int] = Query(None, description="Filtrar por mes"),
+    año: Optional[int] = Query(None, description="Filtrar por año"),
+    proveedor: Optional[str] = Query(None, description="Filtrar por proveedor"),
+    material: Optional[str] = Query(None, description="Filtrar por material")
+):
+    """Obtiene aging de cuentas por pagar para compras_v2"""
+    try:
+        from compras_v2_service import ComprasV2Service
+        
+        service = ComprasV2Service()
+        
+        filtros = {}
+        if mes:
+            filtros['mes'] = mes
+        if año:
+            filtros['año'] = año
+        if proveedor:
+            filtros['proveedor'] = proveedor
+        if material:
+            filtros['material'] = material
+        
+        aging = service.get_aging_cuentas_pagar(filtros)
+        return aging
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo aging de cuentas por pagar de compras_v2: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/compras-v2/materiales")
+async def get_compras_v2_materiales():
+    """Obtiene lista de materiales disponibles en compras_v2"""
+    try:
+        from compras_v2_service import ComprasV2Service
+        
+        service = ComprasV2Service()
+        materiales = service.get_materiales()
+        return materiales
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo materiales de compras_v2: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/compras-v2/proveedores")
+async def get_compras_v2_proveedores():
+    """Obtiene lista de proveedores únicos de compras_v2"""
+    try:
+        from compras_v2_service import ComprasV2Service
+        
+        service = ComprasV2Service()
+        proveedores = service.get_proveedores()
+        return proveedores
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo proveedores de compras_v2: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/compras-v2/años-disponibles")
+async def get_compras_v2_años_disponibles():
+    """Obtiene lista de años disponibles en compras_v2"""
+    try:
+        from compras_v2_service import ComprasV2Service
+        
+        service = ComprasV2Service()
+        años = service.get_años_disponibles()
+        return años
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo años disponibles de compras_v2: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/compras-v2/download-layout")

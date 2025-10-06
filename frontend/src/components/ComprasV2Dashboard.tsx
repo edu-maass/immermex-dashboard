@@ -1,21 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { KPICard } from './KPICard';
-import { FileUpload } from './FileUpload';
 import { LoadingSpinner } from './LoadingSpinner';
 import { Tooltip } from './ui/tooltip';
+import { ComprasV2EvolucionPreciosChart } from './Charts/ComprasV2EvolucionPreciosChart';
+import { ComprasV2FlujoPagosChart } from './Charts/ComprasV2FlujoPagosChart';
+import { ComprasV2AgingCuentasPagarChart } from './Charts/ComprasV2AgingCuentasPagarChart';
 import { apiService } from '../services/api';
 import { 
   DollarSign, 
   TrendingUp, 
   Package, 
   Truck,
-  Calendar,
   AlertCircle,
   CheckCircle,
-  Clock,
   Upload,
-  FileSpreadsheet
+  RefreshCw,
+  Clock,
+  Building,
+  Calendar,
+  Percent
 } from 'lucide-react';
 
 interface ComprasV2DashboardProps {
@@ -31,6 +35,16 @@ interface ComprasV2KPIs {
   compras_con_anticipo?: number;
   compras_pagadas?: number;
   tipo_cambio_promedio?: number;
+  // KPIs adicionales del dashboard legacy
+  dias_credito_promedio?: number;
+  compras_pendientes?: number;
+  compras_pendientes_count?: number;
+  promedio_por_proveedor?: number;
+  proveedores_unicos?: number;
+  margen_bruto_promedio?: number;
+  rotacion_inventario?: number;
+  ciclo_compras?: number;
+  materiales_unicos?: number;
 }
 
 interface ComprasV2Data {
@@ -40,7 +54,7 @@ interface ComprasV2Data {
   filtros_aplicados: any;
 }
 
-export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUploadSuccess }) => {
+export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUploadSuccess: _onUploadSuccess }) => {
   const [kpis, setKpis] = useState<ComprasV2KPIs>({});
   const [comprasData, setComprasData] = useState<ComprasV2Data | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,20 +65,42 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
     proveedor: undefined as string | undefined,
     material: undefined as string | undefined
   });
+  
+  // Estados para gráficos
+  const [evolucionPrecios, setEvolucionPrecios] = useState<any>(null);
+  const [flujoPagos, setFlujoPagos] = useState<any>(null);
+  const [agingCuentasPagar, setAgingCuentasPagar] = useState<any>(null);
+  const [materiales, setMateriales] = useState<string[]>([]);
+  const [proveedores, setProveedores] = useState<string[]>([]);
+  const [añosDisponibles, setAñosDisponibles] = useState<number[]>([]);
+  const [monedaPrecios, setMonedaPrecios] = useState<'USD' | 'MXN'>('USD');
+  const [monedaFlujoPagos, setMonedaFlujoPagos] = useState<'USD' | 'MXN'>('USD');
 
   const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Cargar KPIs y datos en paralelo
-      const [kpisResponse, dataResponse] = await Promise.all([
+      // Cargar KPIs, datos y gráficos en paralelo
+      const [kpisResponse, dataResponse, evolucionResponse, flujoResponse, agingResponse, materialesResponse, proveedoresResponse, añosResponse] = await Promise.all([
         apiService.getComprasV2KPIs(filtros),
-        apiService.getComprasV2Data(filtros, 50)
+        apiService.getComprasV2Data(filtros, 50),
+        apiService.getComprasV2EvolucionPrecios(filtros.material, monedaPrecios),
+        apiService.getComprasV2FlujoPagos(filtros, monedaFlujoPagos),
+        apiService.getComprasV2AgingCuentasPagar(filtros),
+        apiService.getComprasV2MaterialesList(),
+        apiService.getComprasV2Proveedores(),
+        apiService.getComprasV2AñosDisponibles()
       ]);
 
       setKpis(kpisResponse);
       setComprasData(dataResponse);
+      setEvolucionPrecios(evolucionResponse);
+      setFlujoPagos(flujoResponse);
+      setAgingCuentasPagar(agingResponse);
+      setMateriales(materialesResponse);
+      setProveedores(proveedoresResponse);
+      setAñosDisponibles(añosResponse);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error cargando datos');
@@ -76,7 +112,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
 
   useEffect(() => {
     loadData();
-  }, [filtros]);
+  }, [filtros, monedaPrecios, monedaFlujoPagos]);
 
 
   const handleFilterChange = (key: string, value: any) => {
@@ -95,7 +131,53 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
     });
   };
 
+  const handleMonedaPreciosChange = async (nuevaMoneda: 'USD' | 'MXN') => {
+    setMonedaPrecios(nuevaMoneda);
+    // Recargar datos de evolución de precios con la nueva moneda
+    try {
+      const evolucionData = await apiService.getComprasV2EvolucionPrecios(filtros.material, nuevaMoneda);
+      setEvolucionPrecios(evolucionData);
+    } catch (err) {
+      console.error('Error recargando evolución de precios:', err);
+    }
+  };
+
+  const handleMonedaFlujoPagosChange = async (nuevaMoneda: 'USD' | 'MXN') => {
+    setMonedaFlujoPagos(nuevaMoneda);
+    // Recargar datos del flujo de pagos con la nueva moneda
+    try {
+      const flujoData = await apiService.getComprasV2FlujoPagos(filtros, nuevaMoneda);
+      setFlujoPagos(flujoData);
+    } catch (err) {
+      console.error('Error recargando flujo de pagos:', err);
+    }
+  };
+
   const hasActiveFilters = Object.values(filtros).some(value => value !== undefined);
+
+  const formatCurrency = (value: number) => {
+    if (value === null || value === undefined || isNaN(value)) {
+      return '$0';
+    }
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const formatCurrencyUSD = (value: number) => {
+    if (value === null || value === undefined || isNaN(value)) {
+      return '$0 USD';
+    }
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
 
 
   if (loading && !comprasData) {
@@ -149,9 +231,11 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Todos</option>
-                <option value="2024">2024</option>
-                <option value="2023">2023</option>
-                <option value="2022">2022</option>
+                {añosDisponibles.map((año) => (
+                  <option key={año} value={año}>
+                    {año}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -159,30 +243,51 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Proveedor
               </label>
-              <input
-                type="text"
+              <select
                 value={filtros.proveedor || ''}
                 onChange={(e) => handleFilterChange('proveedor', e.target.value)}
-                placeholder="Filtrar por proveedor..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              >
+                <option value="">Todos los proveedores</option>
+                {proveedores.length > 0 ? proveedores.map((proveedor, index) => (
+                  <option key={index} value={proveedor}>{proveedor}</option>
+                )) : (
+                  <option value="" disabled>Sube un archivo de compras para ver proveedores</option>
+                )}
+              </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Material
               </label>
-              <input
-                type="text"
+              <select
                 value={filtros.material || ''}
                 onChange={(e) => handleFilterChange('material', e.target.value)}
-                placeholder="Filtrar por material..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              >
+                <option value="">Todos los materiales</option>
+                {materiales.map((material, index) => (
+                  <option key={index} value={material}>
+                    {material}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
           <div className="flex items-center gap-2 ml-4">
+            <Button 
+              onClick={loadData} 
+              disabled={loading}
+              variant="outline" 
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Actualizar
+            </Button>
+
             <Tooltip 
               content="Para cargar archivos de Compras V2:\n• Ve a la pestaña 'Carga de Archivos'\n• Busca la sección 'Compras V2'\n• Descarga el layout Excel\n• Completa y sube el archivo"
               position="left"
@@ -223,67 +328,120 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
         </div>
       )}
 
-      {/* KPIs */}
+      {/* KPIs Principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <KPICard
           title="Total Compras"
-          value={kpis.total_compras || 0}
+          value={formatCurrency(kpis.total_costo_mxn || 0)}
+          description={kpis.total_costo_divisa ? formatCurrencyUSD(kpis.total_costo_divisa) : ''}
           icon={Package}
-          color="blue"
-          loading={loading}
+          raw={true}
         />
+        <KPICard
+          title="Compras Pendientes"
+          value={formatCurrency(kpis.compras_pendientes || 0)}
+          description={`${kpis.compras_pendientes_count || 0} facturas pendientes`}
+          icon={Clock}
+          raw={true}
+        />
+        <KPICard
+          title="Promedio por Proveedor"
+          value={formatCurrency(kpis.promedio_por_proveedor || 0)}
+          description={`${kpis.proveedores_unicos || 0} proveedores activos`}
+          icon={Building}
+          raw={true}
+        />
+        <KPICard
+          title="Días Promedio Crédito"
+          value={kpis.dias_credito_promedio ? kpis.dias_credito_promedio.toFixed(0) : '0'}
+          description="días promedio"
+          icon={Calendar}
+          raw={true}
+        />
+      </div>
+
+      {/* KPIs Adicionales */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <KPICard
+          title="Margen Bruto Promedio"
+          value={`${(kpis.margen_bruto_promedio || 0).toFixed(1)}%`}
+          description="Precio venta vs costo compra"
+          icon={Percent}
+          raw={true}
+        />
+        <KPICard
+          title="Rotación Inventario"
+          value={`${(kpis.rotacion_inventario || 0).toFixed(1)}`}
+          description="veces por año"
+          icon={Package}
+          raw={true}
+        />
+        <KPICard
+          title="Ciclo de Compras"
+          value={`${(kpis.ciclo_compras || 0).toFixed(0)}`}
+          description="días promedio"
+          icon={TrendingUp}
+          raw={true}
+        />
+      </div>
+
+      {/* KPIs de Resumen */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <KPICard
           title="Total Proveedores"
           value={kpis.total_proveedores || 0}
           icon={Truck}
-          color="green"
-          loading={loading}
         />
         <KPICard
           title="Total KG"
           value={kpis.total_kilogramos ? kpis.total_kilogramos.toLocaleString() : '0'}
           icon={TrendingUp}
-          color="purple"
-          loading={loading}
+          raw={true}
         />
-        <KPICard
-          title="Costo Total MXN"
-          value={kpis.total_costo_mxn ? `$${kpis.total_costo_mxn.toLocaleString()}` : '$0'}
-          icon={DollarSign}
-          color="orange"
-          loading={loading}
-        />
-      </div>
-
-      {/* KPIs adicionales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <KPICard
           title="Compras con Anticipo"
           value={kpis.compras_con_anticipo || 0}
           icon={CheckCircle}
-          color="green"
-          loading={loading}
-        />
-        <KPICard
-          title="Compras Pagadas"
-          value={kpis.compras_pagadas || 0}
-          icon={CheckCircle}
-          color="blue"
-          loading={loading}
         />
         <KPICard
           title="Tipo Cambio Promedio"
           value={kpis.tipo_cambio_promedio ? kpis.tipo_cambio_promedio.toFixed(2) : '0.00'}
-          icon={TrendingUp}
-          color="purple"
-          loading={loading}
-        />
-        <KPICard
-          title="Costo Total USD"
-          value={kpis.total_costo_divisa ? `$${kpis.total_costo_divisa.toLocaleString()}` : '$0'}
           icon={DollarSign}
-          color="orange"
-          loading={loading}
+          raw={true}
+        />
+      </div>
+
+      {/* Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Evolución de Precios */}
+        <ComprasV2EvolucionPreciosChart
+          data={evolucionPrecios ? evolucionPrecios.data : []}
+          moneda={monedaPrecios}
+          onMonedaChange={handleMonedaPreciosChange}
+          titulo={evolucionPrecios?.titulo}
+        />
+
+        {/* Flujo de Pagos */}
+        <ComprasV2FlujoPagosChart
+          data={flujoPagos ? flujoPagos.datasets?.[0]?.data?.map((pagos: number, index: number) => ({
+            semana: flujoPagos.labels[index] || `Semana ${index + 1}`,
+            pagos: pagos,
+            pendiente: flujoPagos.datasets?.[1]?.data?.[index] || 0
+          })) : []}
+          moneda={monedaFlujoPagos}
+          onMonedaChange={handleMonedaFlujoPagosChange}
+          titulo={flujoPagos?.titulo}
+        />
+      </div>
+
+      {/* Aging de Cuentas por Pagar */}
+      <div className="mb-8">
+        <ComprasV2AgingCuentasPagarChart
+          data={agingCuentasPagar ? agingCuentasPagar.labels.map((label: string, index: number) => ({
+            name: label,
+            value: agingCuentasPagar.data[index] || 0
+          })) : []}
+          titulo={agingCuentasPagar?.titulo}
         />
       </div>
 

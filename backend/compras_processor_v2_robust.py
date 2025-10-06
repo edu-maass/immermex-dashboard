@@ -152,6 +152,32 @@ class ComprasV2Processor:
             return value.date()
         
         try:
+            # Manejar números de Excel (días desde 1900-01-01)
+            if isinstance(value, (int, float)):
+                try:
+                    # Excel cuenta días desde 1900-01-01, pero tiene un bug con el año 1900
+                    # Para fechas después de 1900, restar 2 días
+                    if value > 0:
+                        excel_epoch = datetime(1900, 1, 1)
+                        # Ajustar por el bug de Excel (considera 1900 como año bisiesto)
+                        if value > 59:  # Después del 29 de febrero de 1900
+                            value = value - 2
+                        else:
+                            value = value - 1
+                        
+                        parsed_date = excel_epoch + timedelta(days=value)
+                        parsed_date = parsed_date.date()
+                        
+                        # Validar que la fecha sea razonable (después de 2000)
+                        if parsed_date.year >= 2000:
+                            logger.info(f"Fecha convertida desde número Excel: {value} -> {parsed_date}")
+                            return parsed_date
+                        else:
+                            logger.warning(f"Fecha Excel fuera del rango esperado: {parsed_date} (año {parsed_date.year})")
+                            return None
+                except Exception as e:
+                    logger.warning(f"Error convirtiendo número Excel a fecha: {value}, error: {str(e)}")
+            
             # Intentar diferentes formatos de fecha
             if isinstance(value, str):
                 # Limpiar string
@@ -159,26 +185,66 @@ class ComprasV2Processor:
                 if cleaned:
                     # Intentar formato YYYY-MM-DD
                     try:
-                        return datetime.strptime(cleaned, '%Y-%m-%d').date()
+                        parsed_date = datetime.strptime(cleaned, '%Y-%m-%d').date()
+                        # Validar que la fecha sea razonable (después de 2000)
+                        if parsed_date.year >= 2000:
+                            return parsed_date
                     except:
                         pass
                     
                     # Intentar formato DD/MM/YYYY
                     try:
-                        return datetime.strptime(cleaned, '%d/%m/%Y').date()
+                        parsed_date = datetime.strptime(cleaned, '%d/%m/%Y').date()
+                        if parsed_date.year >= 2000:
+                            return parsed_date
                     except:
                         pass
                     
                     # Intentar formato MM/DD/YYYY
                     try:
-                        return datetime.strptime(cleaned, '%m/%d/%Y').date()
+                        parsed_date = datetime.strptime(cleaned, '%m/%d/%Y').date()
+                        if parsed_date.year >= 2000:
+                            return parsed_date
+                    except:
+                        pass
+                    
+                    # Intentar formato DD-MM-YYYY
+                    try:
+                        parsed_date = datetime.strptime(cleaned, '%d-%m-%Y').date()
+                        if parsed_date.year >= 2000:
+                            return parsed_date
+                    except:
+                        pass
+                    
+                    # Intentar formato YYYY/MM/DD
+                    try:
+                        parsed_date = datetime.strptime(cleaned, '%Y/%m/%d').date()
+                        if parsed_date.year >= 2000:
+                            return parsed_date
                     except:
                         pass
             
-            # Usar pandas para conversión automática
-            return pd.to_datetime(value, errors='coerce').date()
+            # Usar pandas para conversión automática con validación
+            try:
+                parsed_date = pd.to_datetime(value, errors='coerce')
+                if pd.isna(parsed_date):
+                    logger.warning(f"No se pudo parsear fecha: {value}")
+                    return None
+                
+                parsed_date = parsed_date.date()
+                # Validar que la fecha sea razonable (después de 2000)
+                if parsed_date.year >= 2000:
+                    return parsed_date
+                else:
+                    logger.warning(f"Fecha parseada fuera del rango esperado: {parsed_date} (año {parsed_date.year})")
+                    return None
+                    
+            except Exception as e:
+                logger.warning(f"Error parseando fecha con pandas: {value}, error: {str(e)}")
+                return None
             
-        except:
+        except Exception as e:
+            logger.warning(f"Error general parseando fecha: {value}, error: {str(e)}")
             return None
     
     def safe_string(self, value, default=''):

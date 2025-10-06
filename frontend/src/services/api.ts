@@ -290,6 +290,56 @@ class ApiService {
     return this.request(`/compras-v2/materiales/${imi}`);
   }
 
+  async getComprasV2EvolucionPrecios(material?: string, moneda: string = 'USD'): Promise<any> {
+    const params = new URLSearchParams();
+    if (material) params.append('material', material);
+    params.append('moneda', moneda);
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/compras-v2/evolucion-precios?${queryString}` : '/compras-v2/evolucion-precios';
+    
+    return this.request(endpoint);
+  }
+
+  async getComprasV2FlujoPagos(filtros?: any, moneda: string = 'USD'): Promise<any> {
+    const params = new URLSearchParams();
+    if (filtros?.mes) params.append('mes', filtros.mes.toString());
+    if (filtros?.año) params.append('año', filtros.año.toString());
+    if (filtros?.proveedor) params.append('proveedor', filtros.proveedor);
+    if (filtros?.material) params.append('material', filtros.material);
+    params.append('moneda', moneda);
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/compras-v2/flujo-pagos?${queryString}` : '/compras-v2/flujo-pagos';
+    
+    return this.request(endpoint);
+  }
+
+  async getComprasV2AgingCuentasPagar(filtros?: any): Promise<any> {
+    const params = new URLSearchParams();
+    if (filtros?.mes) params.append('mes', filtros.mes.toString());
+    if (filtros?.año) params.append('año', filtros.año.toString());
+    if (filtros?.proveedor) params.append('proveedor', filtros.proveedor);
+    if (filtros?.material) params.append('material', filtros.material);
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/compras-v2/aging-cuentas-pagar?${queryString}` : '/compras-v2/aging-cuentas-pagar';
+    
+    return this.request(endpoint);
+  }
+
+  async getComprasV2MaterialesList(): Promise<string[]> {
+    return this.request('/compras-v2/materiales');
+  }
+
+  async getComprasV2Proveedores(): Promise<string[]> {
+    return this.request('/compras-v2/proveedores');
+  }
+
+  async getComprasV2AñosDisponibles(): Promise<number[]> {
+    return this.request('/compras-v2/años-disponibles');
+  }
+
   async validateComprasFile(file: File): Promise<any> {
     const formData = new FormData();
     formData.append('file', file);

@@ -118,9 +118,31 @@ class ComprasV2Service:
             logger.warning(f"Error convirtiendo porcentaje '{value}' a decimal, usando 0.0000")
             return Decimal('0.0000')
     
+    def _is_valid_update_value(self, value):
+        """Determina si un valor es válido para actualización"""
+        if value is None:
+            return False
+        
+        if isinstance(value, str):
+            # String vacío o valores que indican "no hay dato"
+            if value.strip() == '' or value.strip().lower() in ['nan', 'none', 'null', 'n/a', '-']:
+                return False
+            return True
+        
+        # Para números, 0 puede ser un valor válido
+        if isinstance(value, (int, float)):
+            return True
+        
+        # Para fechas, cualquier fecha válida es aceptable
+        if hasattr(value, 'year'):  # datetime.date o datetime.datetime
+            return True
+        
+        # Para otros tipos, verificar si no es None
+        return value is not None
+    
     
     def save_compras_v2(self, compras: List[Dict[str, Any]], archivo_id: int) -> int:
-        """Guarda compras en la tabla compras_v2"""
+        """Guarda compras en la tabla compras_v2 con actualización parcial"""
         conn = self.get_connection()
         if not conn:
             return 0
@@ -137,80 +159,69 @@ class ComprasV2Service:
                     existing = cursor.fetchone()
                     
                     if existing:
-                        logger.info(f"Compra con IMI {compra['imi']} ya existe, verificando si necesita actualización...")
+                        logger.info(f"Compra con IMI {compra['imi']} ya existe, verificando actualización parcial...")
                         
-                        # Verificar si hay cambios significativos antes de actualizar
-                        cursor.execute("""
-                            SELECT proveedor, fecha_pedido, puerto_origen, fecha_salida_estimada, 
-                                   fecha_arribo_estimada, moneda, dias_credito, anticipo_pct, anticipo_monto,
-                                   fecha_anticipo, fecha_pago_factura, tipo_cambio_estimado, tipo_cambio_real,
-                                   gastos_importacion_divisa, gastos_importacion_mxn, porcentaje_gastos_importacion,
-                                   iva_monto_mxn, total_con_iva_mxn
-                            FROM compras_v2 WHERE imi = %s
-                        """, (compra['imi'],))
-                        existing_data = cursor.fetchone()
+                        # Construir query de actualización dinámica solo con campos no vacíos
+                        update_fields = []
+                        update_values = []
                         
-                        # Comparar datos clave para determinar si necesita actualización
-                        needs_update = False
-                        if existing_data:
-                            key_fields = ['proveedor', 'fecha_pedido', 'moneda', 'dias_credito', 'anticipo_pct', 'anticipo_monto']
-                            for field in key_fields:
-                                if existing_data[field] != compra.get(field):
-                                    needs_update = True
-                                    break
+                        # Lista de campos que pueden ser actualizados
+                        updatable_fields = {
+                            'proveedor': compra.get('proveedor'),
+                            'fecha_pedido': compra.get('fecha_pedido'),
+                            'puerto_origen': compra.get('puerto_origen'),
+                            'fecha_salida_estimada': compra.get('fecha_salida_estimada'),
+                            'fecha_arribo_estimada': compra.get('fecha_arribo_estimada'),
+                            'moneda': compra.get('moneda'),
+                            'dias_credito': compra.get('dias_credito'),
+                            'anticipo_pct': compra.get('anticipo_pct'),
+                            'anticipo_monto': compra.get('anticipo_monto'),
+                            'fecha_anticipo': compra.get('fecha_anticipo'),
+                            'fecha_pago_factura': compra.get('fecha_pago_factura'),
+                            'tipo_cambio_estimado': compra.get('tipo_cambio_estimado'),
+                            'tipo_cambio_real': compra.get('tipo_cambio_real'),
+                            'gastos_importacion_divisa': compra.get('gastos_importacion_divisa'),
+                            'gastos_importacion_mxn': compra.get('gastos_importacion_mxn'),
+                            'porcentaje_gastos_importacion': compra.get('porcentaje_gastos_importacion'),
+                            'iva_monto_mxn': compra.get('iva_monto_mxn'),
+                            'total_con_iva_mxn': compra.get('total_con_iva_mxn')
+                        }
                         
-                        if needs_update:
-                            logger.info(f"Actualizando compra IMI {compra['imi']} con datos modificados...")
+                        # Solo agregar campos que tienen valores no vacíos
+                        for field, value in updatable_fields.items():
+                            # Verificar si el valor es válido para actualización
+                            if self._is_valid_update_value(value):
+                                if field in ['anticipo_pct', 'porcentaje_gastos_importacion']:
+                                    update_fields.append(f"{field} = %s")
+                                    update_values.append(self.safe_percentage(value))
+                                elif field in ['anticipo_monto', 'tipo_cambio_estimado', 'tipo_cambio_real', 
+                                             'gastos_importacion_divisa', 'gastos_importacion_mxn', 
+                                             'iva_monto_mxn', 'total_con_iva_mxn']:
+                                    update_fields.append(f"{field} = %s")
+                                    update_values.append(self.safe_decimal(value))
+                                else:
+                                    update_fields.append(f"{field} = %s")
+                                    update_values.append(value)
+                        
+                        # Siempre actualizar el timestamp
+                        update_fields.append("updated_at = %s")
+                        update_values.append(datetime.utcnow())
+                        
+                        # Agregar el IMI para la condición WHERE
+                        update_values.append(compra['imi'])
+                        
+                        if update_fields:
+                            # Construir query dinámico
+                            update_query = f"""
+                                UPDATE compras_v2 SET
+                                    {', '.join(update_fields)}
+                                WHERE imi = %s
+                            """
+                            
+                            cursor.execute(update_query, update_values)
+                            logger.info(f"Actualizando compra IMI {compra['imi']} con {len(update_fields)-1} campos")
                         else:
-                            logger.info(f"Compra IMI {compra['imi']} sin cambios, omitiendo actualización...")
-                            compras_guardadas += 1
-                            continue
-                        
-                        # Actualizar registro existente
-                        cursor.execute("""
-                            UPDATE compras_v2 SET
-                                proveedor = %s,
-                                fecha_pedido = %s,
-                                puerto_origen = %s,
-                                fecha_salida_estimada = %s,
-                                fecha_arribo_estimada = %s,
-                                moneda = %s,
-                                dias_credito = %s,
-                                anticipo_pct = %s,
-                                anticipo_monto = %s,
-                                fecha_anticipo = %s,
-                                fecha_pago_factura = %s,
-                                tipo_cambio_estimado = %s,
-                                tipo_cambio_real = %s,
-                                gastos_importacion_divisa = %s,
-                                gastos_importacion_mxn = %s,
-                                porcentaje_gastos_importacion = %s,
-                                iva_monto_mxn = %s,
-                                total_con_iva_mxn = %s,
-                                updated_at = %s
-                            WHERE imi = %s
-                        """, (
-                            compra['proveedor'],
-                            compra['fecha_pedido'],
-                            compra['puerto_origen'],
-                            compra['fecha_salida_estimada'],
-                            compra['fecha_arribo_estimada'],
-                            compra['moneda'],
-                            compra['dias_credito'],
-                            self.safe_percentage(compra['anticipo_pct']),
-                            self.safe_decimal(compra['anticipo_monto']),
-                            compra['fecha_anticipo'],
-                            compra['fecha_pago_factura'],
-                            self.safe_decimal(compra['tipo_cambio_estimado']),
-                            self.safe_decimal(compra['tipo_cambio_real']),
-                            self.safe_decimal(compra['gastos_importacion_divisa']),
-                            self.safe_decimal(compra['gastos_importacion_mxn']),
-                            self.safe_percentage(compra['porcentaje_gastos_importacion']),
-                            self.safe_decimal(compra['iva_monto_mxn']),
-                            self.safe_decimal(compra['total_con_iva_mxn']),
-                            datetime.utcnow(),
-                            compra['imi']
-                        ))
+                            logger.info(f"No hay campos para actualizar en compra IMI {compra['imi']}")
                     else:
                         # Insertar nuevo registro
                         logger.info(f"Insertando nueva compra IMI {compra['imi']}...")
@@ -504,7 +515,7 @@ class ComprasV2Service:
         try:
             cursor = conn.cursor()
             
-            # Query base para KPIs
+            # Query base para KPIs principales
             base_query = """
                 SELECT 
                     COUNT(DISTINCT c2.imi) as total_compras,
@@ -514,7 +525,12 @@ class ComprasV2Service:
                     SUM(c2.total_con_iva_mxn) as total_costo_mxn,
                     SUM(CASE WHEN c2.anticipo_monto > 0 THEN 1 ELSE 0 END) as compras_con_anticipo,
                     SUM(CASE WHEN c2.fecha_pago_factura IS NOT NULL THEN 1 ELSE 0 END) as compras_pagadas,
-                    AVG(c2.tipo_cambio_estimado) as tipo_cambio_promedio
+                    AVG(c2.tipo_cambio_estimado) as tipo_cambio_promedio,
+                    AVG(c2.dias_credito) as dias_credito_promedio,
+                    SUM(CASE WHEN c2.fecha_pago_factura IS NULL THEN c2.total_con_iva_mxn ELSE 0 END) as compras_pendientes,
+                    SUM(CASE WHEN c2.fecha_pago_factura IS NULL THEN 1 ELSE 0 END) as compras_pendientes_count,
+                    SUM(c2.total_con_iva_mxn) / NULLIF(COUNT(DISTINCT c2.proveedor), 0) as promedio_por_proveedor,
+                    COUNT(DISTINCT c2.proveedor) as proveedores_unicos
                 FROM compras_v2 c2
                 LEFT JOIN compras_v2_materiales c2m ON c2.imi = c2m.compra_id
                 WHERE 1=1
@@ -524,23 +540,404 @@ class ComprasV2Service:
             
             # Aplicar filtros si existen
             if filtros:
-                if filtros.get('fecha_desde'):
-                    base_query += " AND c2.fecha_pedido >= %s"
-                    params.append(filtros['fecha_desde'])
+                if filtros.get('mes'):
+                    base_query += " AND EXTRACT(MONTH FROM c2.fecha_pedido) = %s"
+                    params.append(filtros['mes'])
                 
-                if filtros.get('fecha_hasta'):
-                    base_query += " AND c2.fecha_pedido <= %s"
-                    params.append(filtros['fecha_hasta'])
+                if filtros.get('año'):
+                    base_query += " AND EXTRACT(YEAR FROM c2.fecha_pedido) = %s"
+                    params.append(filtros['año'])
+                
+                if filtros.get('proveedor'):
+                    base_query += " AND c2.proveedor ILIKE %s"
+                    params.append(f"%{filtros['proveedor']}%")
+                
+                if filtros.get('material'):
+                    base_query += " AND c2m.material_codigo ILIKE %s"
+                    params.append(f"%{filtros['material']}%")
             
             cursor.execute(base_query, params)
-            kpis = cursor.fetchone()
+            kpis_basicos = cursor.fetchone()
+            
+            # Query adicional para KPIs avanzados
+            kpis_avanzados_query = """
+                SELECT 
+                    AVG(CASE 
+                        WHEN c2.fecha_salida_estimada IS NOT NULL AND c2.fecha_arribo_estimada IS NOT NULL 
+                        THEN EXTRACT(DAYS FROM (c2.fecha_arribo_estimada - c2.fecha_salida_estimada))
+                        ELSE NULL 
+                    END) as ciclo_compras_promedio,
+                    AVG(c2m.pu_divisa) as precio_unitario_promedio_usd,
+                    AVG(c2m.pu_mxn) as precio_unitario_promedio_mxn,
+                    COUNT(DISTINCT c2m.material_codigo) as materiales_unicos
+                FROM compras_v2 c2
+                LEFT JOIN compras_v2_materiales c2m ON c2.imi = c2m.compra_id
+                WHERE 1=1
+            """
+            
+            # Aplicar los mismos filtros
+            if filtros:
+                if filtros.get('mes'):
+                    kpis_avanzados_query += " AND EXTRACT(MONTH FROM c2.fecha_pedido) = %s"
+                if filtros.get('año'):
+                    kpis_avanzados_query += " AND EXTRACT(YEAR FROM c2.fecha_pedido) = %s"
+                if filtros.get('proveedor'):
+                    kpis_avanzados_query += " AND c2.proveedor ILIKE %s"
+                if filtros.get('material'):
+                    kpis_avanzados_query += " AND c2m.material_codigo ILIKE %s"
+            
+            cursor.execute(kpis_avanzados_query, params)
+            kpis_avanzados = cursor.fetchone()
             
             cursor.close()
-            return dict(kpis) if kpis else {}
+            
+            # Combinar resultados
+            resultado = {}
+            if kpis_basicos:
+                resultado.update(dict(kpis_basicos))
+            if kpis_avanzados:
+                resultado.update(dict(kpis_avanzados))
+            
+            # Calcular KPIs derivados
+            if resultado.get('total_compras', 0) > 0:
+                # Rotación de inventario (simplificada - basada en frecuencia de compras)
+                resultado['rotacion_inventario'] = resultado.get('total_compras', 0) / 12.0  # Aproximación mensual
+                
+                # Margen bruto promedio (simplificado - diferencia entre precio unitario promedio)
+                precio_usd = resultado.get('precio_unitario_promedio_usd', 0) or 0
+                precio_mxn = resultado.get('precio_unitario_promedio_mxn', 0) or 0
+                if precio_usd > 0 and precio_mxn > 0:
+                    # Estimación de margen basada en diferencia de precios
+                    resultado['margen_bruto_promedio'] = ((precio_mxn - precio_usd * 20) / precio_mxn) * 100
+                else:
+                    resultado['margen_bruto_promedio'] = 0
+            else:
+                resultado['rotacion_inventario'] = 0
+                resultado['margen_bruto_promedio'] = 0
+            
+            # Ciclo de compras
+            resultado['ciclo_compras'] = resultado.get('ciclo_compras_promedio', 0) or 0
+            
+            return resultado
             
         except Exception as e:
             logger.error(f"Error calculando KPIs: {str(e)}")
             return {}
+    
+    def get_evolucion_precios(self, filtros: Dict[str, Any] = None, moneda: str = 'USD') -> Dict[str, Any]:
+        """Obtiene evolución mensual de precios por kg"""
+        conn = self.get_connection()
+        if not conn:
+            return {'labels': [], 'data': [], 'titulo': 'Sin datos'}
+        
+        try:
+            cursor = conn.cursor()
+            
+            # Determinar campo de precio según moneda
+            precio_field = 'pu_divisa' if moneda == 'USD' else 'pu_mxn'
+            
+            query = f"""
+                SELECT 
+                    DATE_TRUNC('month', c2.fecha_pedido) as mes,
+                    AVG(c2m.{precio_field}) as precio_promedio,
+                    MIN(c2m.{precio_field}) as precio_min,
+                    MAX(c2m.{precio_field}) as precio_max
+                FROM compras_v2 c2
+                JOIN compras_v2_materiales c2m ON c2.imi = c2m.compra_id
+                WHERE c2.fecha_pedido IS NOT NULL
+            """
+            
+            params = []
+            
+            # Aplicar filtros
+            if filtros and filtros.get('material'):
+                query += " AND c2m.material_codigo ILIKE %s"
+                params.append(f"%{filtros['material']}%")
+            
+            query += """
+                GROUP BY DATE_TRUNC('month', c2.fecha_pedido)
+                ORDER BY mes ASC
+            """
+            
+            cursor.execute(query, params)
+            resultados = cursor.fetchall()
+            cursor.close()
+            
+            if not resultados:
+                return {'labels': [], 'data': [], 'titulo': 'Sin datos'}
+            
+            labels = []
+            data = []
+            
+            for row in resultados:
+                mes = row[0]
+                precio_promedio = float(row[1]) if row[1] else 0
+                precio_min = float(row[2]) if row[2] else 0
+                precio_max = float(row[3]) if row[3] else 0
+                
+                labels.append(mes.strftime('%Y-%m'))
+                data.append({
+                    'fecha': mes.strftime('%Y-%m'),
+                    'precio_promedio': precio_promedio,
+                    'precio_min': precio_min,
+                    'precio_max': precio_max
+                })
+            
+            titulo = f"Evolución de Precios por kg ({moneda})"
+            if filtros and filtros.get('material'):
+                titulo += f" - {filtros['material']}"
+            
+            return {
+                'labels': labels,
+                'data': data,
+                'titulo': titulo
+            }
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo evolución de precios: {str(e)}")
+            return {'labels': [], 'data': [], 'titulo': 'Error'}
+    
+    def get_flujo_pagos(self, filtros: Dict[str, Any] = None, moneda: str = 'USD') -> Dict[str, Any]:
+        """Obtiene flujo de pagos por semana"""
+        conn = self.get_connection()
+        if not conn:
+            return {'labels': [], 'datasets': [], 'titulo': 'Sin datos'}
+        
+        try:
+            cursor = conn.cursor()
+            
+            # Determinar campo de monto según moneda
+            monto_field = 'total_con_iva_divisa' if moneda == 'USD' else 'total_con_iva_mxn'
+            
+            query = f"""
+                SELECT 
+                    DATE_TRUNC('week', c2.fecha_pago_factura) as semana,
+                    SUM(CASE WHEN c2.fecha_pago_factura IS NOT NULL THEN c2.{monto_field} ELSE 0 END) as pagos,
+                    SUM(CASE WHEN c2.fecha_pago_factura IS NULL THEN c2.{monto_field} ELSE 0 END) as pendiente
+                FROM compras_v2 c2
+                WHERE c2.fecha_pedido IS NOT NULL
+            """
+            
+            params = []
+            
+            # Aplicar filtros
+            if filtros:
+                if filtros.get('mes'):
+                    query += " AND EXTRACT(MONTH FROM c2.fecha_pedido) = %s"
+                    params.append(filtros['mes'])
+                
+                if filtros.get('año'):
+                    query += " AND EXTRACT(YEAR FROM c2.fecha_pedido) = %s"
+                    params.append(filtros['año'])
+                
+                if filtros.get('proveedor'):
+                    query += " AND c2.proveedor ILIKE %s"
+                    params.append(f"%{filtros['proveedor']}%")
+            
+            query += """
+                GROUP BY DATE_TRUNC('week', c2.fecha_pago_factura)
+                ORDER BY semana ASC
+            """
+            
+            cursor.execute(query, params)
+            resultados = cursor.fetchall()
+            cursor.close()
+            
+            if not resultados:
+                return {'labels': [], 'datasets': [], 'titulo': 'Sin datos'}
+            
+            labels = []
+            pagos_data = []
+            pendiente_data = []
+            
+            for row in resultados:
+                semana = row[0]
+                pagos = float(row[1]) if row[1] else 0
+                pendiente = float(row[2]) if row[2] else 0
+                
+                labels.append(f"Semana {semana.isocalendar()[1]}")
+                pagos_data.append(pagos)
+                pendiente_data.append(pendiente)
+            
+            titulo = f"Flujo de Pagos Semanal ({moneda})"
+            
+            return {
+                'labels': labels,
+                'datasets': [
+                    {
+                        'label': 'Pagos Realizados',
+                        'data': pagos_data,
+                        'backgroundColor': '#10b981'
+                    },
+                    {
+                        'label': 'Pendiente',
+                        'data': pendiente_data,
+                        'backgroundColor': '#f59e0b'
+                    }
+                ],
+                'titulo': titulo
+            }
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo flujo de pagos: {str(e)}")
+            return {'labels': [], 'datasets': [], 'titulo': 'Error'}
+    
+    def get_aging_cuentas_pagar(self, filtros: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Obtiene aging de cuentas por pagar"""
+        conn = self.get_connection()
+        if not conn:
+            return {'labels': [], 'data': [], 'titulo': 'Sin datos'}
+        
+        try:
+            cursor = conn.cursor()
+            
+            query = """
+                SELECT 
+                    CASE 
+                        WHEN c2.fecha_vencimiento IS NULL THEN 'Sin fecha'
+                        WHEN c2.fecha_vencimiento < CURRENT_DATE THEN 'Vencido'
+                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '30 days' THEN '0-30 días'
+                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '60 days' THEN '31-60 días'
+                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '90 days' THEN '61-90 días'
+                        ELSE '90+ días'
+                    END as periodo,
+                    SUM(c2.total_con_iva_mxn) as monto
+                FROM compras_v2 c2
+                WHERE c2.fecha_pago_factura IS NULL
+            """
+            
+            params = []
+            
+            # Aplicar filtros
+            if filtros:
+                if filtros.get('mes'):
+                    query += " AND EXTRACT(MONTH FROM c2.fecha_pedido) = %s"
+                    params.append(filtros['mes'])
+                
+                if filtros.get('año'):
+                    query += " AND EXTRACT(YEAR FROM c2.fecha_pedido) = %s"
+                    params.append(filtros['año'])
+                
+                if filtros.get('proveedor'):
+                    query += " AND c2.proveedor ILIKE %s"
+                    params.append(f"%{filtros['proveedor']}%")
+            
+            query += """
+                GROUP BY periodo
+                ORDER BY 
+                    CASE periodo
+                        WHEN 'Vencido' THEN 1
+                        WHEN '0-30 días' THEN 2
+                        WHEN '31-60 días' THEN 3
+                        WHEN '61-90 días' THEN 4
+                        WHEN '90+ días' THEN 5
+                        ELSE 6
+                    END
+            """
+            
+            cursor.execute(query, params)
+            resultados = cursor.fetchall()
+            cursor.close()
+            
+            if not resultados:
+                return {'labels': [], 'data': [], 'titulo': 'Sin datos'}
+            
+            labels = []
+            data = []
+            
+            for row in resultados:
+                periodo = row[0]
+                monto = float(row[1]) if row[1] else 0
+                
+                labels.append(periodo)
+                data.append(monto)
+            
+            titulo = "Aging de Cuentas por Pagar"
+            
+            return {
+                'labels': labels,
+                'data': data,
+                'titulo': titulo
+            }
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo aging de cuentas por pagar: {str(e)}")
+            return {'labels': [], 'data': [], 'titulo': 'Error'}
+    
+    def get_materiales(self) -> List[str]:
+        """Obtiene lista de materiales únicos"""
+        conn = self.get_connection()
+        if not conn:
+            return []
+        
+        try:
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT DISTINCT material_codigo
+                FROM compras_v2_materiales
+                WHERE material_codigo IS NOT NULL
+                ORDER BY material_codigo
+            """)
+            
+            materiales = [row[0] for row in cursor.fetchall()]
+            cursor.close()
+            
+            return materiales
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo materiales: {str(e)}")
+            return []
+    
+    def get_proveedores(self) -> List[str]:
+        """Obtiene lista de proveedores únicos"""
+        conn = self.get_connection()
+        if not conn:
+            return []
+        
+        try:
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT DISTINCT proveedor
+                FROM compras_v2
+                WHERE proveedor IS NOT NULL
+                ORDER BY proveedor
+            """)
+            
+            proveedores = [row[0] for row in cursor.fetchall()]
+            cursor.close()
+            
+            return proveedores
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo proveedores: {str(e)}")
+            return []
+    
+    def get_años_disponibles(self) -> List[int]:
+        """Obtiene lista de años disponibles en compras_v2"""
+        conn = self.get_connection()
+        if not conn:
+            return []
+        
+        try:
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT DISTINCT EXTRACT(YEAR FROM fecha_pedido) as año
+                FROM compras_v2
+                WHERE fecha_pedido IS NOT NULL
+                ORDER BY año DESC
+            """)
+            
+            años = [int(row[0]) for row in cursor.fetchall() if row[0] is not None]
+            cursor.close()
+            
+            return años
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo años disponibles: {str(e)}")
+            return []
     
     def __del__(self):
         """Destructor para cerrar conexión"""
