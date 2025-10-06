@@ -56,37 +56,41 @@ class ComprasV2ServiceUltraOptimized:
             logger.error("Variables SUPABASE_URL y SUPABASE_PASSWORD no encontradas")
             return None
         
-        try:
-            # Extraer componentes de la URL
-            url = config['SUPABASE_URL']
-            password = config['SUPABASE_PASSWORD']
-            
-            # Parsear URL de Supabase
-            if 'postgresql://' in url:
-                url = url.replace('postgresql://', '')
-            
-            if '@' in url:
-                user_part, host_part = url.split('@', 1)
-                if ':' in user_part:
-                    username, password_from_url = user_part.split(':', 1)
-                else:
-                    username = user_part
-                    password_from_url = password
-                
-                if ':' in host_part:
-                    host, port_db = host_part.split(':', 1)
-                    if '/' in port_db:
-                        port, database = port_db.split('/', 1)
-                    else:
-                        port = port_db
-                        database = 'postgres'
-                else:
-                    host = host_part.split('/')[0]
-                    port = '5432'
-                    database = host_part.split('/')[1] if '/' in host_part else 'postgres'
-            else:
-                logger.error("Formato de URL de Supabase no válido")
-                return None
+         try:
+             # Extraer componentes de la URL
+             url = config['SUPABASE_URL']
+             password = config['SUPABASE_PASSWORD']
+             
+             logger.info(f"URL de Supabase: {url[:50]}...")  # Log parcial para debug
+             
+             # Parsear URL de Supabase
+             if 'postgresql://' in url:
+                 url = url.replace('postgresql://', '')
+             elif 'postgres://' in url:
+                 url = url.replace('postgres://', '')
+             
+             if '@' in url:
+                 user_part, host_part = url.split('@', 1)
+                 if ':' in user_part:
+                     username, password_from_url = user_part.split(':', 1)
+                 else:
+                     username = user_part
+                     password_from_url = password
+                 
+                 if ':' in host_part:
+                     host, port_db = host_part.split(':', 1)
+                     if '/' in port_db:
+                         port, database = port_db.split('/', 1)
+                     else:
+                         port = port_db
+                         database = 'postgres'
+                 else:
+                     host = host_part.split('/')[0]
+                     port = '5432'
+                     database = host_part.split('/')[1] if '/' in host_part else 'postgres'
+             else:
+                 logger.error(f"Formato de URL de Supabase no válido: {url}")
+                 return None
             
             # Crear conexión
             self.conn = psycopg2.connect(
@@ -166,6 +170,13 @@ class ComprasV2ServiceUltraOptimized:
             update_data = []
             
             for compra in compras:
+                # Calcular fecha_vencimiento automáticamente
+                fecha_vencimiento = self.calculate_fecha_vencimiento(
+                    compra.get('fecha_salida_real'),
+                    compra.get('fecha_salida_estimada'),
+                    compra.get('dias_credito')
+                )
+                
                 compra_tuple = (
                     compra['imi'], compra['proveedor'], compra['fecha_pedido'], compra['puerto_origen'],
                     compra['fecha_salida_estimada'], compra['fecha_arribo_estimada'], compra['moneda'],
@@ -176,7 +187,7 @@ class ComprasV2ServiceUltraOptimized:
                     self.safe_decimal(compra['tipo_cambio_real']), self.safe_decimal(compra['gastos_importacion_divisa']), 
                     self.safe_decimal(compra['gastos_importacion_mxn']), self.safe_percentage(compra['porcentaje_gastos_importacion']), 
                     self.safe_decimal(compra['total_con_gastos_mxn']), self.safe_decimal(compra['iva_monto_mxn']), 
-                    self.safe_decimal(compra['total_con_iva_mxn']), archivo_id, datetime.utcnow(), datetime.utcnow()
+                    self.safe_decimal(compra['total_con_iva_mxn']), fecha_vencimiento, archivo_id, datetime.utcnow(), datetime.utcnow()
                 )
                 
                 if compra['imi'] in existing_imis:
@@ -196,9 +207,9 @@ class ComprasV2ServiceUltraOptimized:
                         fecha_planta_real, tipo_cambio_estimado, tipo_cambio_real,
                         gastos_importacion_divisa, gastos_importacion_mxn,
                         porcentaje_gastos_importacion, total_con_gastos_mxn,
-                        iva_monto_mxn, total_con_iva_mxn, archivo_id, created_at, updated_at
+                        iva_monto_mxn, total_con_iva_mxn, fecha_vencimiento, archivo_id, created_at, updated_at
                     ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                     )
                 """
                 execute_batch(cursor, insert_sql, insert_data, page_size=100)
@@ -217,7 +228,7 @@ class ComprasV2ServiceUltraOptimized:
                         tipo_cambio_real = %s, gastos_importacion_divisa = %s,
                         gastos_importacion_mxn = %s, porcentaje_gastos_importacion = %s,
                         total_con_gastos_mxn = %s, iva_monto_mxn = %s, total_con_iva_mxn = %s,
-                        archivo_id = %s, updated_at = %s
+                        fecha_vencimiento = %s, archivo_id = %s, updated_at = %s
                     WHERE imi = %s
                 """
                 execute_batch(cursor, update_sql, update_data, page_size=100)
@@ -352,3 +363,50 @@ class ComprasV2ServiceUltraOptimized:
                 'materiales_guardados': 0,
                 'total_procesados': 0
             }
+    
+    def calculate_fecha_vencimiento(self, fecha_salida_real, fecha_salida_estimada, dias_credito):
+        """
+        Calcula la fecha de vencimiento basada en la fecha de salida y días de crédito
+        
+        Args:
+            fecha_salida_real: Fecha real de salida (prioridad alta)
+            fecha_salida_estimada: Fecha estimada de salida (prioridad baja)
+            dias_credito: Número de días de crédito
+        
+        Returns:
+            datetime: Fecha de vencimiento calculada o None si no se puede calcular
+        """
+        try:
+            from datetime import timedelta
+            
+            # Validar días de crédito
+            if not dias_credito or dias_credito <= 0:
+                return None
+            
+            # Determinar qué fecha usar (prioridad: fecha_salida_real > fecha_salida_estimada)
+            fecha_base = None
+            
+            if fecha_salida_real:
+                fecha_base = fecha_salida_real
+            elif fecha_salida_estimada:
+                fecha_base = fecha_salida_estimada
+            
+            if not fecha_base:
+                return None
+            
+            # Calcular fecha de vencimiento
+            fecha_vencimiento = fecha_base + timedelta(days=dias_credito)
+            
+            logger.debug(f"Fecha vencimiento calculada: {fecha_base} + {dias_credito} días = {fecha_vencimiento}")
+            
+            return fecha_vencimiento
+            
+        except Exception as e:
+             logger.error(f"Error calculando fecha_vencimiento: {str(e)}")
+             return None
+    
+    def close_connection(self):
+        """Cierra la conexión a la base de datos"""
+        if self.conn and not self.conn.closed:
+            self.conn.close()
+            logger.info("Conexión a Supabase cerrada")
