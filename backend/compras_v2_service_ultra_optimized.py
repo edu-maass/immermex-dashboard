@@ -68,6 +68,33 @@ class ComprasV2ServiceUltraOptimized:
                 url = url.replace('postgresql://', '')
             elif 'postgres://' in url:
                 url = url.replace('postgres://', '')
+            elif 'https://' in url and 'supabase.co' in url:
+                # URL de Supabase API REST, convertir a PostgreSQL
+                # Formato: https://project.supabase.co -> postgresql://postgres:[password]@db.project.supabase.co:5432/postgres
+                project_id = url.replace('https://', '').replace('.supabase.co', '')
+                host = f"db.{project_id}.supabase.co"
+                port = "5432"
+                database = "postgres"
+                username = "postgres"
+                password_from_url = password
+                
+                logger.info(f"URL convertida a PostgreSQL: {host}:{port}/{database}")
+                
+                # Crear conexión directamente
+                self.conn = psycopg2.connect(
+                    host=host,
+                    port=port,
+                    database=database,
+                    user=username,
+                    password=password_from_url,
+                    sslmode='require'
+                )
+                
+                logger.info("Conexión a Supabase establecida")
+                return self.conn
+            else:
+                logger.error(f"Formato de URL de Supabase no válido: {url}")
+                return None
             
             if '@' in url:
                 user_part, host_part = url.split('@', 1)
