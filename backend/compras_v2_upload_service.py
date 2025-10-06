@@ -22,7 +22,7 @@ class ComprasV2UploadService:
     def __init__(self):
         self.compras_service = ComprasV2Service()
     
-    def upload_compras_file(self, file_content: bytes, filename: str, replace_data: bool = True) -> Dict[str, Any]:
+    def upload_compras_file(self, file_content: bytes, filename: str, replace_data: bool = False) -> Dict[str, Any]:
         """
         Procesa y guarda archivo de compras usando el nuevo sistema compras_v2
         """
@@ -82,8 +82,10 @@ class ComprasV2UploadService:
         try:
             # Si se debe reemplazar datos, limpiar existentes
             if replace_data:
-                logger.info("[COMPRAS_V2_SERVICE] Limpiando datos existentes...")
+                logger.info("[COMPRAS_V2_SERVICE] Modo reemplazo: Limpiando datos existentes...")
                 self._clear_existing_data(db)
+            else:
+                logger.info("[COMPRAS_V2_SERVICE] Modo incremental: Conservando datos existentes, actualizando/insertando según corresponda...")
             
             # Crear nuevo registro
             archivo = ArchivoProcesado(

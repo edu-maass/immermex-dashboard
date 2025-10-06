@@ -117,7 +117,34 @@ class ComprasV2Service:
                     existing = cursor.fetchone()
                     
                     if existing:
-                        logger.warning(f"Compra con IMI {compra['imi']} ya existe, actualizando...")
+                        logger.info(f"Compra con IMI {compra['imi']} ya existe, verificando si necesita actualización...")
+                        
+                        # Verificar si hay cambios significativos antes de actualizar
+                        cursor.execute("""
+                            SELECT proveedor, fecha_pedido, puerto_origen, fecha_salida_estimada, 
+                                   fecha_arribo_estimada, moneda, dias_credito, anticipo_pct, anticipo_monto,
+                                   fecha_anticipo, fecha_pago_factura, tipo_cambio_estimado, tipo_cambio_real,
+                                   gastos_importacion_divisa, gastos_importacion_mxn, porcentaje_gastos_importacion,
+                                   iva_monto_mxn, total_con_iva_mxn
+                            FROM compras_v2 WHERE imi = %s
+                        """, (compra['imi'],))
+                        existing_data = cursor.fetchone()
+                        
+                        # Comparar datos clave para determinar si necesita actualización
+                        needs_update = False
+                        if existing_data:
+                            key_fields = ['proveedor', 'fecha_pedido', 'moneda', 'dias_credito', 'anticipo_pct', 'anticipo_monto']
+                            for field in key_fields:
+                                if existing_data[field] != compra.get(field):
+                                    needs_update = True
+                                    break
+                        
+                        if needs_update:
+                            logger.info(f"Actualizando compra IMI {compra['imi']} con datos modificados...")
+                        else:
+                            logger.info(f"Compra IMI {compra['imi']} sin cambios, omitiendo actualización...")
+                            compras_guardadas += 1
+                            continue
                         
                         # Actualizar registro existente
                         cursor.execute("""
@@ -138,9 +165,7 @@ class ComprasV2Service:
                                 gastos_importacion_divisa = %s,
                                 gastos_importacion_mxn = %s,
                                 porcentaje_gastos_importacion = %s,
-                                iva_monto_divisa = %s,
                                 iva_monto_mxn = %s,
-                                total_con_iva_divisa = %s,
                                 total_con_iva_mxn = %s,
                                 updated_at = %s
                             WHERE imi = %s
@@ -161,15 +186,14 @@ class ComprasV2Service:
                             self.safe_decimal(compra['gastos_importacion_divisa']),
                             self.safe_decimal(compra['gastos_importacion_mxn']),
                             self.safe_decimal(compra['porcentaje_gastos_importacion']),
-                            self.safe_decimal(compra['iva_monto_divisa']),
                             self.safe_decimal(compra['iva_monto_mxn']),
-                            self.safe_decimal(compra['total_con_iva_divisa']),
                             self.safe_decimal(compra['total_con_iva_mxn']),
                             datetime.utcnow(),
                             compra['imi']
                         ))
                     else:
                         # Insertar nuevo registro
+                        logger.info(f"Insertando nueva compra IMI {compra['imi']}...")
                         cursor.execute("""
                             INSERT INTO compras_v2 (
                                 imi, proveedor, fecha_pedido, puerto_origen,
@@ -178,13 +202,13 @@ class ComprasV2Service:
                                 fecha_anticipo, fecha_pago_factura,
                                 tipo_cambio_estimado, tipo_cambio_real,
                                 gastos_importacion_divisa, gastos_importacion_mxn,
-                                porcentaje_gastos_importacion, iva_monto_divisa,
-                                iva_monto_mxn, total_con_iva_divisa, total_con_iva_mxn,
+                                porcentaje_gastos_importacion,
+                                iva_monto_mxn, total_con_iva_mxn,
                                 created_at, updated_at
                             )
                             VALUES (
                                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                             )
                         """, (
                             compra['imi'],
@@ -204,9 +228,7 @@ class ComprasV2Service:
                             self.safe_decimal(compra['gastos_importacion_divisa']),
                             self.safe_decimal(compra['gastos_importacion_mxn']),
                             self.safe_decimal(compra['porcentaje_gastos_importacion']),
-                            self.safe_decimal(compra['iva_monto_divisa']),
                             self.safe_decimal(compra['iva_monto_mxn']),
-                            self.safe_decimal(compra['total_con_iva_divisa']),
                             self.safe_decimal(compra['total_con_iva_mxn']),
                             datetime.utcnow(),
                             datetime.utcnow()
