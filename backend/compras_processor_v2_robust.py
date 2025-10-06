@@ -226,8 +226,6 @@ class ComprasV2Processor:
             'tipo_cambio_estimado': ['tipo_cambio_estimado', 'Tipo Cambio Estimado', 'TC ESTIMADO', 'estimated_rate', 'Estimated Rate', 'tipo cambio estimado'],
             'tipo_cambio_real': ['tipo_cambio_real', 'Tipo Cambio Real', 'TC REAL', 'actual_rate', 'Actual Rate', 'tipo cambio real'],
             'gastos_importacion_divisa': ['gastos_importacion_divisa', 'Gastos Importacion Divisa', 'GASTOS IMP DIVISA', 'import_costs', 'Import Costs', 'gastos importacion divisa'],
-            'iva_monto_divisa': ['iva_monto_divisa', 'IVA Monto Divisa', 'IVA DIVISA', 'tax_amount', 'Tax Amount', 'iva monto divisa'],
-            'total_con_iva_divisa': ['total_con_iva_divisa', 'Total Con IVA Divisa', 'TOTAL IVA DIVISA', 'total_with_tax', 'Total With Tax', 'total con iva divisa'],
             
             # Compras_v2_materiales
             'material_codigo': ['material_codigo', 'Material Codigo', 'MATERIAL CODIGO', 'material_code', 'Material Code', 'concepto', 'Concepto', 'material codigo'],
@@ -294,23 +292,25 @@ class ComprasV2Processor:
                     'fecha_pago_factura': self.safe_date(row.get('fecha_pago_factura')),
                     'tipo_cambio_estimado': self.safe_float(row.get('tipo_cambio_estimado', 1.0)),
                     'tipo_cambio_real': self.safe_float(row.get('tipo_cambio_real', 0.0)),
-                    'gastos_importacion_divisa': self.safe_float(row.get('gastos_importacion_divisa', 0.0)),
-                    'iva_monto_divisa': self.safe_float(row.get('iva_monto_divisa', 0.0)),
-                    'total_con_iva_divisa': self.safe_float(row.get('total_con_iva_divisa', 0.0))
+                    'gastos_importacion_divisa': self.safe_float(row.get('gastos_importacion_divisa', 0.0))
                 }
                 
                 # Calcular campos derivados
                 tipo_cambio = compra['tipo_cambio_estimado']
                 compra['gastos_importacion_mxn'] = compra['gastos_importacion_divisa'] * tipo_cambio
-                compra['iva_monto_mxn'] = compra['iva_monto_divisa'] * tipo_cambio
-                compra['total_con_iva_mxn'] = compra['total_con_iva_divisa'] * tipo_cambio
                 
-                # Calcular porcentaje de gastos de importación automáticamente
-                # % = (gastos_importacion_divisa / total_con_iva_divisa) * 100
-                if compra['total_con_iva_divisa'] > 0:
-                    compra['porcentaje_gastos_importacion'] = (compra['gastos_importacion_divisa'] / compra['total_con_iva_divisa']) * 100
+                # Calcular fecha de planta automáticamente (15 días después de fecha arribo para proveedores no MX)
+                fecha_arribo_real = self.safe_date(row.get('fecha_arribo_real'))
+                if fecha_arribo_real and proveedor_data['puerto'] != 'MX':
+                    compra['fecha_planta_real'] = fecha_arribo_real + timedelta(days=15)
                 else:
-                    compra['porcentaje_gastos_importacion'] = 0.0
+                    compra['fecha_planta_real'] = self.safe_date(row.get('fecha_planta_real'))
+                
+                # Calcular total con gastos de importación en MXN
+                # Esto se calculará después de procesar los materiales
+                compra['total_con_gastos_mxn'] = 0.0  # Se calculará después
+                compra['iva_monto_mxn'] = 0.0  # Se calculará después
+                compra['total_con_iva_mxn'] = 0.0  # Se calculará después
                 
                 compras.append(compra)
                 
@@ -346,11 +346,19 @@ class ComprasV2Processor:
                     continue
                 
                 # Calcular campos derivados
-                porcentaje_gastos = compra['porcentaje_gastos_importacion']
-                pu_mxn_importacion = pu_mxn * (1 + porcentaje_gastos)
-                costo_total_mxn_importacion = costo_total_mxn * (1 + porcentaje_gastos)
-                iva = self.safe_float(row.get('iva', 0))
-                costo_total_con_iva = costo_total_mxn_importacion + iva
+                # Total con gastos de importación en MXN
+                costo_total_mxn_con_gastos = costo_total_mxn + compra['gastos_importacion_mxn']
+                
+                # Calcular IVA automáticamente (16% del total con gastos)
+                iva = costo_total_mxn_con_gastos * 0.16
+                
+                # Total con IVA
+                costo_total_con_iva = costo_total_mxn_con_gastos + iva
+                
+                # Actualizar totales de la compra
+                compra['total_con_gastos_mxn'] += costo_total_mxn_con_gastos
+                compra['iva_monto_mxn'] += iva
+                compra['total_con_iva_mxn'] += costo_total_con_iva
                 
                 # Crear registro de material
                 material = {
@@ -361,8 +369,7 @@ class ComprasV2Processor:
                     'pu_mxn': pu_mxn,
                     'costo_total_divisa': costo_total_divisa,
                     'costo_total_mxn': costo_total_mxn,
-                    'pu_mxn_importacion': pu_mxn_importacion,
-                    'costo_total_mxn_imporacion': costo_total_mxn_importacion,
+                    'costo_total_mxn_con_gastos': costo_total_mxn_con_gastos,
                     'iva': iva,
                     'costo_total_con_iva': costo_total_con_iva,
                     'compra_imi': imi
@@ -439,6 +446,13 @@ class ComprasV2Processor:
             
             # Procesar materiales
             materiales = self.process_materiales_detalle(materiales_df, compras_dict)
+            
+            # Calcular porcentaje de gastos de importación después de procesar materiales
+            for compra in compras:
+                if compra['total_con_gastos_mxn'] > 0:
+                    compra['porcentaje_gastos_importacion'] = (compra['gastos_importacion_mxn'] / compra['total_con_gastos_mxn']) * 100
+                else:
+                    compra['porcentaje_gastos_importacion'] = 0.0
             
             logger.info(f"Procesados: {len(compras)} compras, {len(materiales)} materiales")
             
