@@ -172,6 +172,7 @@ class ComprasV2Service:
                             'puerto_origen': compra.get('puerto_origen'),
                             'fecha_salida_estimada': compra.get('fecha_salida_estimada'),
                             'fecha_arribo_estimada': compra.get('fecha_arribo_estimada'),
+                            'fecha_planta_estimada': compra.get('fecha_planta_estimada'),
                             'moneda': compra.get('moneda'),
                             'dias_credito': compra.get('dias_credito'),
                             'anticipo_pct': compra.get('anticipo_pct'),
@@ -228,7 +229,7 @@ class ComprasV2Service:
                         cursor.execute("""
                             INSERT INTO compras_v2 (
                                 imi, proveedor, fecha_pedido, puerto_origen,
-                                fecha_salida_estimada, fecha_arribo_estimada,
+                                fecha_salida_estimada, fecha_arribo_estimada, fecha_planta_estimada,
                                 moneda, dias_credito, anticipo_pct, anticipo_monto,
                                 fecha_anticipo, fecha_pago_factura,
                                 tipo_cambio_estimado, tipo_cambio_real,
@@ -238,7 +239,7 @@ class ComprasV2Service:
                                 created_at, updated_at
                             )
                             VALUES (
-                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                             )
                         """, (
@@ -248,6 +249,7 @@ class ComprasV2Service:
                             compra['puerto_origen'],
                             compra['fecha_salida_estimada'],
                             compra['fecha_arribo_estimada'],
+                            compra['fecha_planta_estimada'],
                             compra['moneda'],
                             compra['dias_credito'],
                             self.safe_percentage(compra['anticipo_pct']),

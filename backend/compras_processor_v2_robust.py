@@ -340,6 +340,7 @@ class ComprasV2Processor:
                 # Calcular fechas estimadas
                 fecha_salida_estimada = fecha_pedido + timedelta(days=proveedor_data['promedio_dias_produccion'])
                 fecha_arribo_estimada = fecha_salida_estimada + timedelta(days=proveedor_data['promedio_dias_transporte_maritimo'])
+                fecha_planta_estimada = fecha_arribo_estimada + timedelta(days=15)
                 
                 # Crear registro de compra
                 compra = {
@@ -349,6 +350,7 @@ class ComprasV2Processor:
                     'puerto_origen': proveedor_data['puerto'],
                     'fecha_salida_estimada': fecha_salida_estimada,
                     'fecha_arribo_estimada': fecha_arribo_estimada,
+                    'fecha_planta_estimada': fecha_planta_estimada,
                     'moneda': self.safe_string(row.get('moneda', 'USD')),
                     'dias_credito': int(self.safe_float(row.get('dias_credito', 30))),
                     'anticipo_pct': self.safe_float(row.get('anticipo_pct', 0.0)),
