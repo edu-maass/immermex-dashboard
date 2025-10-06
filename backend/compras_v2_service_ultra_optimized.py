@@ -82,21 +82,21 @@ class ComprasV2ServiceUltraOptimized:
             return default
         return str(value).strip()
     
-    def safe_percentage(self, value, max_value=9.9999):
+    def safe_percentage(self, value, max_value=None):
         """Convierte un valor a decimal de forma segura para campos NUMERIC(5,4)"""
         if value is None:
             return Decimal('0.0000')
         
         try:
             decimal_value = Decimal(str(value))
-            # Limitar a la precisión máxima permitida por NUMERIC(5,4)
-            if decimal_value > max_value:
-                logger.warning(f"Valor de porcentaje {decimal_value} excede el máximo permitido ({max_value}), limitando a {max_value}")
-                return Decimal(str(max_value))
-            elif decimal_value < -max_value:
-                logger.warning(f"Valor de porcentaje {decimal_value} excede el mínimo permitido (-{max_value}), limitando a -{max_value}")
-                return Decimal(str(-max_value))
+            
+            # Solo validar que sea mayor a 0, sin límite superior artificial
+            if decimal_value < 0:
+                logger.warning(f"Valor de porcentaje {decimal_value} es negativo, estableciendo a 0")
+                return Decimal('0.0000')
+            
             return decimal_value
+            
         except (ValueError, TypeError):
             logger.warning(f"Error convirtiendo porcentaje '{value}' a decimal, usando 0.0000")
             return Decimal('0.0000')
