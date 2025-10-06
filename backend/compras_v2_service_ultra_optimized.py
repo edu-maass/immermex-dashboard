@@ -273,7 +273,7 @@ class ComprasV2ServiceUltraOptimized:
                     continue
                 
                 material_tuple = (
-                    material['compra_id'], material['material_codigo'], self.safe_decimal(material['kg']),
+                    compra_id, material['material_codigo'], self.safe_decimal(material['kg']),
                     self.safe_decimal(material['pu_divisa']), self.safe_decimal(material.get('pu_mxn')),
                     self.safe_decimal(material.get('costo_total_divisa')), self.safe_decimal(material.get('costo_total_mxn')),
                     self.safe_decimal(material.get('pu_mxn_importacion')), self.safe_decimal(material.get('costo_total_mxn_imporacion')),
@@ -281,9 +281,9 @@ class ComprasV2ServiceUltraOptimized:
                     datetime.utcnow(), datetime.utcnow()
                 )
                 
-                if (material['compra_id'], material['material_codigo']) in existing_materials:
+                if (compra_id, material['material_codigo']) in existing_materials:
                     # Para UPDATE, agregar compra_id y material_codigo al final
-                    update_data.append(material_tuple + (material['compra_id'], material['material_codigo']))
+                    update_data.append(material_tuple + (compra_id, material['material_codigo']))
                 else:
                     insert_data.append(material_tuple)
             
