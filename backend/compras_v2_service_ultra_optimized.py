@@ -259,9 +259,6 @@ class ComprasV2ServiceUltraOptimized:
             update_data = []
             
             for material in materiales:
-                # Debug: Log del material antes de validación
-                logger.info(f"Procesando material: compra_id={material.get('compra_id')}, material_codigo={material.get('material_codigo')}, kg={material.get('kg')}")
-                
                 # Validar que tenga compra_id válido
                 compra_id = material.get('compra_id')
                 if not compra_id or compra_id <= 0 or compra_id is None:
@@ -274,9 +271,6 @@ class ComprasV2ServiceUltraOptimized:
                     logger.warning(f"Saltando material con datos incompletos: Material={material.get('material_codigo', 'N/A')}, KG={material.get('kg', 'N/A')}")
                     materiales_omitidos += 1
                     continue
-                
-                # Debug: Log del material después de validación
-                logger.info(f"Material válido: compra_id={compra_id}, material_codigo={material['material_codigo']}")
                 
                 material_tuple = (
                     compra_id, material['material_codigo'], self.safe_decimal(material['kg']),
@@ -297,7 +291,7 @@ class ComprasV2ServiceUltraOptimized:
             if insert_data:
                 insert_sql = """
                     INSERT INTO compras_v2_materiales (
-                        compra_imi, material_codigo, kg, pu_divisa,
+                        compra_id, material_codigo, kg, pu_divisa,
                         pu_mxn, costo_total_divisa, costo_total_mxn,
                         pu_mxn_importacion, costo_total_mxn_imporacion, iva, costo_total_con_iva,
                         created_at, updated_at
@@ -317,7 +311,7 @@ class ComprasV2ServiceUltraOptimized:
                         costo_total_divisa = %s, costo_total_mxn = %s,
                         pu_mxn_importacion = %s, costo_total_mxn_imporacion = %s,
                         iva = %s, costo_total_con_iva = %s, updated_at = %s
-                    WHERE compra_imi = %s AND material_codigo = %s
+                    WHERE compra_id = %s AND material_codigo = %s
                 """
                 execute_batch(cursor, update_sql, update_data, page_size=200)
                 materiales_guardados += len(update_data)
