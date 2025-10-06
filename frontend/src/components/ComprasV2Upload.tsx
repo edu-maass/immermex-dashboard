@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from './ui/button';
-import { FileUpload } from './FileUpload';
 import { LoadingSpinner } from './LoadingSpinner';
 import { apiService } from '../services/api';
 import { 
@@ -8,8 +7,10 @@ import {
   FileSpreadsheet,
   ShoppingBag,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Upload
 } from 'lucide-react';
+import { useDropzone } from 'react-dropzone';
 
 interface ComprasV2UploadProps {
   onUploadSuccess?: (data: any) => void;
@@ -59,11 +60,14 @@ export const ComprasV2Upload: React.FC<ComprasV2UploadProps> = ({
     }
   };
 
-  const handleFileUpload = async (file: File) => {
+  const handleFileUpload = useCallback(async (file: File) => {
     try {
       setLoading(true);
       setError(null);
       setSuccess(null);
+
+      console.log('🚀 COMPRAS_V2: Enviando archivo a endpoint /upload/compras-v2');
+      console.log('📁 Archivo:', file.name, 'Tamaño:', file.size);
 
       const response = await apiService.uploadComprasV2File(file);
       
@@ -84,7 +88,21 @@ export const ComprasV2Upload: React.FC<ComprasV2UploadProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [onUploadSuccess, onUploadError]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: (acceptedFiles) => {
+      if (acceptedFiles.length > 0) {
+        handleFileUpload(acceptedFiles[0]);
+      }
+    },
+    accept: {
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/vnd.ms-excel': ['.xls']
+    },
+    multiple: false,
+    maxSize: 10 * 1024 * 1024 // 10MB
+  });
 
   return (
     <div className="space-y-6">
@@ -125,12 +143,49 @@ export const ComprasV2Upload: React.FC<ComprasV2UploadProps> = ({
       <div className="bg-white rounded-lg shadow-md p-6">
         <h3 className="text-lg font-semibold mb-4">Cargar Archivo de Compras</h3>
         
-        <FileUpload
-          onFileUpload={handleFileUpload}
-          acceptedTypes=".xlsx,.xls"
-          maxSize={10 * 1024 * 1024} // 10MB
-          uploadText="Arrastra tu archivo Excel de compras aquí o haz clic para seleccionar"
-        />
+        <div
+          {...getRootProps()}
+          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+            isDragActive
+              ? 'border-blue-500 bg-blue-50'
+              : error
+              ? 'border-red-500 bg-red-50'
+              : success
+              ? 'border-green-500 bg-green-50'
+              : 'border-gray-300 hover:border-gray-400'
+          }`}
+        >
+          <input {...getInputProps()} />
+          
+          <div className="flex flex-col items-center">
+            {error ? (
+              <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+            ) : success ? (
+              <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
+            ) : (
+              <Upload className="h-12 w-12 text-gray-400 mb-4" />
+            )}
+            
+            <p className="text-lg font-medium text-gray-900 mb-2">
+              {isDragActive
+                ? 'Suelta el archivo aquí...'
+                : 'Arrastra tu archivo Excel de compras aquí o haz clic para seleccionar'}
+            </p>
+            
+            <p className="text-sm text-gray-500 mb-4">
+              Solo archivos .xlsx y .xls son aceptados
+            </p>
+            
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-2"
+              disabled={loading}
+            >
+              Seleccionar archivo
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Loading */}
