@@ -80,16 +80,29 @@ class ComprasV2ServiceUltraOptimized:
                 
                 logger.info(f"URL convertida a PostgreSQL: {host}:{port}/{database}")
                 
-                # Crear conexión directamente
-                self.conn = psycopg2.connect(
-                    host=host,
-                    port=port,
-                    database=database,
-                    user=username,
-                    password=password_from_url,
-                    sslmode='require',
-                    options='-c default_transaction_isolation=read_committed'
-                )
+                # Crear conexión directamente con configuración IPv4
+                import socket
+                
+                # Forzar IPv4
+                original_getaddrinfo = socket.getaddrinfo
+                def getaddrinfo_ipv4(host, port, family=0, type=0, proto=0, flags=0):
+                    return original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+                socket.getaddrinfo = getaddrinfo_ipv4
+                
+                try:
+                    self.conn = psycopg2.connect(
+                        host=host,
+                        port=port,
+                        database=database,
+                        user=username,
+                        password=password_from_url,
+                        sslmode='require',
+                        connect_timeout=10,
+                        options='-c default_transaction_isolation=read_committed'
+                    )
+                finally:
+                    # Restaurar función original
+                    socket.getaddrinfo = original_getaddrinfo
                 
                 logger.info("Conexión a Supabase establecida")
                 return self.conn
@@ -120,16 +133,29 @@ class ComprasV2ServiceUltraOptimized:
                 logger.error(f"Formato de URL de Supabase no válido: {url}")
                 return None
             
-            # Crear conexión
-            self.conn = psycopg2.connect(
-                host=host,
-                port=port,
-                database=database,
-                user=username,
-                password=password_from_url,
-                sslmode='require',
-                options='-c default_transaction_isolation=read_committed'
-            )
+            # Crear conexión con configuración IPv4
+            import socket
+            
+            # Forzar IPv4
+            original_getaddrinfo = socket.getaddrinfo
+            def getaddrinfo_ipv4(host, port, family=0, type=0, proto=0, flags=0):
+                return original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+            socket.getaddrinfo = getaddrinfo_ipv4
+            
+            try:
+                self.conn = psycopg2.connect(
+                    host=host,
+                    port=port,
+                    database=database,
+                    user=username,
+                    password=password_from_url,
+                    sslmode='require',
+                    connect_timeout=10,
+                    options='-c default_transaction_isolation=read_committed'
+                )
+            finally:
+                # Restaurar función original
+                socket.getaddrinfo = original_getaddrinfo
             
             logger.info("Conexión a Supabase establecida")
             return self.conn
