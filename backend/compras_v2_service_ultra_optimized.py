@@ -57,40 +57,40 @@ class ComprasV2ServiceUltraOptimized:
             return None
         
         try:
-             # Extraer componentes de la URL
-             url = config['SUPABASE_URL']
-             password = config['SUPABASE_PASSWORD']
-             
-             logger.info(f"URL de Supabase: {url[:50]}...")  # Log parcial para debug
-             
-             # Parsear URL de Supabase
-             if 'postgresql://' in url:
-                 url = url.replace('postgresql://', '')
-             elif 'postgres://' in url:
-                 url = url.replace('postgres://', '')
-             
-             if '@' in url:
-                 user_part, host_part = url.split('@', 1)
-                 if ':' in user_part:
-                     username, password_from_url = user_part.split(':', 1)
-                 else:
-                     username = user_part
-                     password_from_url = password
-                 
-                 if ':' in host_part:
-                     host, port_db = host_part.split(':', 1)
-                     if '/' in port_db:
-                         port, database = port_db.split('/', 1)
-                     else:
-                         port = port_db
-                         database = 'postgres'
-                 else:
-                     host = host_part.split('/')[0]
-                     port = '5432'
-                     database = host_part.split('/')[1] if '/' in host_part else 'postgres'
-             else:
-                 logger.error(f"Formato de URL de Supabase no válido: {url}")
-                 return None
+            # Extraer componentes de la URL
+            url = config['SUPABASE_URL']
+            password = config['SUPABASE_PASSWORD']
+            
+            logger.info(f"URL de Supabase: {url[:50]}...")  # Log parcial para debug
+            
+            # Parsear URL de Supabase
+            if 'postgresql://' in url:
+                url = url.replace('postgresql://', '')
+            elif 'postgres://' in url:
+                url = url.replace('postgres://', '')
+            
+            if '@' in url:
+                user_part, host_part = url.split('@', 1)
+                if ':' in user_part:
+                    username, password_from_url = user_part.split(':', 1)
+                else:
+                    username = user_part
+                    password_from_url = password
+                
+                if ':' in host_part:
+                    host, port_db = host_part.split(':', 1)
+                    if '/' in port_db:
+                        port, database = port_db.split('/', 1)
+                    else:
+                        port = port_db
+                        database = 'postgres'
+                else:
+                    host = host_part.split('/')[0]
+                    port = '5432'
+                    database = host_part.split('/')[1] if '/' in host_part else 'postgres'
+            else:
+                logger.error(f"Formato de URL de Supabase no válido: {url}")
+                return None
             
             # Crear conexión
             self.conn = psycopg2.connect(
