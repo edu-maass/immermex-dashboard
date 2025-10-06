@@ -295,8 +295,8 @@ class ComprasV2ServiceUltraOptimized:
     def save_compras_data(self, processed_data_dict: Dict[str, Any], archivo_id: int) -> Dict[str, int]:
         """Método principal que guarda todos los datos usando procesamiento ultra optimizado"""
         try:
-            compras = processed_data_dict.get('compras', [])
-            materiales = processed_data_dict.get('materiales', [])
+            compras = processed_data_dict.get('compras_v2', [])
+            materiales = processed_data_dict.get('compras_v2_materiales', [])
             
             logger.info(f"Iniciando guardado ultra optimizado de {len(compras)} compras y {len(materiales)} materiales")
             
