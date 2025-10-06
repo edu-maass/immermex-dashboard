@@ -1103,7 +1103,7 @@ async def download_compras_layout():
                 ],
                 'Descripcion': [
                     'Numero unico de compra', 'Nombre del proveedor', 'Fecha de pedido', 'Moneda de la compra', 'Dias de credito',
-                    'Porcentaje de anticipo', 'Monto del anticipo', 'Fecha de pago anticipo', 'Fecha de pago factura',
+                    'Porcentaje de anticipo', 'Monto del anticipo en moneda original', 'Fecha de pago anticipo', 'Fecha de pago factura',
                     'Fecha real de salida del puerto', 'Fecha real de arribo al puerto', 'Fecha real de llegada a planta',
                     'Tipo de cambio estimado', 'Tipo de cambio real', 'Gastos en divisa',
                     '% gastos importacion', 'IVA en divisa', 'Total con IVA en divisa',
@@ -1114,6 +1114,43 @@ async def download_compras_layout():
             
             instrucciones_df = pd.DataFrame(instrucciones_data)
             instrucciones_df.to_excel(writer, sheet_name='Instrucciones', index=False)
+            
+            # Agregar notas importantes sobre monedas
+            notas_data = {
+                'Concepto': [
+                    'Anticipo Monto',
+                    'Gastos Importacion Divisa',
+                    'IVA Monto Divisa',
+                    'Total Con IVA Divisa',
+                    'PU Divisa',
+                    'Costo Total Divisa',
+                    'PU MXN',
+                    'Costo Total MXN'
+                ],
+                'Moneda': [
+                    'Moneda Original (USD/EUR/etc)',
+                    'Moneda Original (USD/EUR/etc)',
+                    'Moneda Original (USD/EUR/etc)',
+                    'Moneda Original (USD/EUR/etc)',
+                    'Moneda Original (USD/EUR/etc)',
+                    'Moneda Original (USD/EUR/etc)',
+                    'Pesos Mexicanos (MXN)',
+                    'Pesos Mexicanos (MXN)'
+                ],
+                'Nota': [
+                    'Debe coincidir con la moneda de la compra',
+                    'Gastos adicionales en moneda original',
+                    'IVA calculado en moneda original',
+                    'Total final en moneda original',
+                    'Precio unitario en moneda original',
+                    'Costo total en moneda original',
+                    'Precio unitario convertido a MXN',
+                    'Costo total convertido a MXN'
+                ]
+            }
+            
+            notas_df = pd.DataFrame(notas_data)
+            notas_df.to_excel(writer, sheet_name='Notas Monedas', index=False)
         
         excel_buffer.seek(0)
         
