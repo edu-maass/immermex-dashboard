@@ -468,10 +468,10 @@ class ComprasV2Processor:
                 'total_materiales': len(materiales),
                 'total_proveedores': len(set(c['proveedor'] for c in compras)),
                 'total_kilogramos': sum(m['kg'] for m in materiales),
-                'total_costo_divisa': sum(c['total_con_iva_divisa'] for c in compras),
-                'total_costo_mxn': sum(c['total_con_iva_mxn'] for c in compras),
-                'compras_con_anticipo': sum(1 for c in compras if c['anticipo_monto'] > 0),
-                'compras_pagadas': sum(1 for c in compras if c['fecha_pago_factura']),
+                'total_costo_divisa': sum(c.get('total_con_gastos_mxn', 0) for c in compras),  # Usando MXN como aproximación
+                'total_costo_mxn': sum(c.get('total_con_iva_mxn', 0) for c in compras),
+                'compras_con_anticipo': sum(1 for c in compras if c.get('anticipo_monto', 0) > 0),
+                'compras_pagadas': sum(1 for c in compras if c.get('fecha_pago_factura')),
                 'proveedores_no_encontrados': len(set(c['proveedor'] for c in compras if c['proveedor'] not in self.proveedores_data))
             }
             
