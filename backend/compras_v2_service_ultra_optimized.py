@@ -165,7 +165,7 @@ class ComprasV2ServiceUltraOptimized:
                         porcentaje_gastos_importacion, iva_monto_mxn, total_con_iva_mxn,
                         fecha_vencimiento, archivo_id, created_at, updated_at
                     ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                     )
                 """
                 execute_batch(cursor, insert_sql, insert_data, page_size=100)
@@ -217,7 +217,7 @@ class ComprasV2ServiceUltraOptimized:
         
         try:
             # Obtener todos los IDs existentes de una vez
-            material_ids = [(mat['imi'], mat['material_codigo']) for mat in materiales]
+            material_ids = [(mat['compra_id'], mat['material_codigo']) for mat in materiales]
             
             # Verificar existencias usando una consulta más eficiente
             existing_materials = set()
@@ -236,7 +236,7 @@ class ComprasV2ServiceUltraOptimized:
             
             for material in materiales:
                 material_tuple = (
-                    material['imi'], material['material_codigo'], self.safe_decimal(material['kg']),
+                    material['compra_id'], material['material_codigo'], self.safe_decimal(material['kg']),
                     self.safe_decimal(material['pu_divisa']), self.safe_decimal(material.get('pu_mxn')),
                     self.safe_decimal(material.get('costo_total_divisa')), self.safe_decimal(material.get('costo_total_mxn')),
                     self.safe_decimal(material.get('pu_mxn_importacion')), self.safe_decimal(material.get('costo_total_mxn_imporacion')),
@@ -244,9 +244,9 @@ class ComprasV2ServiceUltraOptimized:
                     datetime.utcnow(), datetime.utcnow()
                 )
                 
-                if (material['imi'], material['material_codigo']) in existing_materials:
-                    # Para UPDATE, agregar IMI y material_codigo al final
-                    update_data.append(material_tuple + (material['imi'], material['material_codigo']))
+                if (material['compra_id'], material['material_codigo']) in existing_materials:
+                    # Para UPDATE, agregar compra_id y material_codigo al final
+                    update_data.append(material_tuple + (material['compra_id'], material['material_codigo']))
                 else:
                     insert_data.append(material_tuple)
             
