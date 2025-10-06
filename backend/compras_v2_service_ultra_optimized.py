@@ -142,8 +142,8 @@ class ComprasV2ServiceUltraOptimized:
                     compra.get('fecha_planta_real'), self.safe_decimal(compra.get('tipo_cambio_estimado')), 
                     self.safe_decimal(compra.get('tipo_cambio_real')), self.safe_decimal(compra.get('gastos_importacion_divisa')), 
                     self.safe_decimal(compra.get('gastos_importacion_mxn')), self.safe_percentage(compra.get('porcentaje_gastos_importacion')), 
-                    self.safe_decimal(compra.get('total_con_gastos_mxn')), self.safe_decimal(compra.get('iva_monto_mxn')), 
-                    self.safe_decimal(compra.get('total_con_iva_mxn')), fecha_vencimiento, archivo_id, datetime.utcnow(), datetime.utcnow()
+                    self.safe_decimal(compra.get('iva_monto_mxn')), self.safe_decimal(compra.get('total_con_iva_mxn')), 
+                    fecha_vencimiento, archivo_id, datetime.utcnow(), datetime.utcnow()
                 )
                 
                 if compra['imi'] in existing_imis:
@@ -162,10 +162,10 @@ class ComprasV2ServiceUltraOptimized:
                         fecha_pago_factura, fecha_salida_real, fecha_arribo_real,
                         fecha_planta_real, tipo_cambio_estimado, tipo_cambio_real,
                         gastos_importacion_divisa, gastos_importacion_mxn,
-                        porcentaje_gastos_importacion, total_con_gastos_mxn,
-                        iva_monto_mxn, total_con_iva_mxn, fecha_vencimiento, archivo_id, created_at, updated_at
+                        porcentaje_gastos_importacion, iva_monto_mxn, total_con_iva_mxn,
+                        fecha_vencimiento, archivo_id, created_at, updated_at
                     ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                     )
                 """
                 execute_batch(cursor, insert_sql, insert_data, page_size=100)
@@ -183,7 +183,7 @@ class ComprasV2ServiceUltraOptimized:
                         fecha_arribo_real = %s, fecha_planta_real = %s, tipo_cambio_estimado = %s,
                         tipo_cambio_real = %s, gastos_importacion_divisa = %s,
                         gastos_importacion_mxn = %s, porcentaje_gastos_importacion = %s,
-                        total_con_gastos_mxn = %s, iva_monto_mxn = %s, total_con_iva_mxn = %s,
+                        iva_monto_mxn = %s, total_con_iva_mxn = %s,
                         fecha_vencimiento = %s, archivo_id = %s, updated_at = %s
                     WHERE imi = %s
                 """
@@ -225,8 +225,8 @@ class ComprasV2ServiceUltraOptimized:
                 placeholders = ','.join(['(%s,%s)'] * len(material_ids))
                 values = [item for sublist in material_ids for item in sublist]
                 cursor.execute(f"""
-                    SELECT imi, material_codigo FROM compras_v2_materiales 
-                    WHERE (imi, material_codigo) IN ({placeholders})
+                    SELECT compra_imi, material_codigo FROM compras_v2_materiales 
+                    WHERE (compra_imi, material_codigo) IN ({placeholders})
                 """, values)
                 existing_materials = {(row[0], row[1]) for row in cursor.fetchall()}
             
@@ -237,9 +237,9 @@ class ComprasV2ServiceUltraOptimized:
             for material in materiales:
                 material_tuple = (
                     material['imi'], material['material_codigo'], self.safe_decimal(material['kg']),
-                    self.safe_decimal(material['pu_divisa']), self.safe_decimal(material.get('tipo_cambio')),
-                    self.safe_decimal(material.get('pu_mxn')), self.safe_decimal(material.get('costo_total_divisa')),
-                    self.safe_decimal(material.get('costo_total_mxn')), self.safe_decimal(material.get('costo_total_mxn_con_gastos')),
+                    self.safe_decimal(material['pu_divisa']), self.safe_decimal(material.get('pu_mxn')),
+                    self.safe_decimal(material.get('costo_total_divisa')), self.safe_decimal(material.get('costo_total_mxn')),
+                    self.safe_decimal(material.get('pu_mxn_importacion')), self.safe_decimal(material.get('costo_total_mxn_imporacion')),
                     self.safe_decimal(material.get('iva')), self.safe_decimal(material.get('costo_total_con_iva')),
                     datetime.utcnow(), datetime.utcnow()
                 )
@@ -254,9 +254,9 @@ class ComprasV2ServiceUltraOptimized:
             if insert_data:
                 insert_sql = """
                     INSERT INTO compras_v2_materiales (
-                        imi, material_codigo, kg, pu_divisa, tipo_cambio,
+                        compra_imi, material_codigo, kg, pu_divisa,
                         pu_mxn, costo_total_divisa, costo_total_mxn,
-                        costo_total_mxn_con_gastos, iva, costo_total_con_iva,
+                        pu_mxn_importacion, costo_total_mxn_imporacion, iva, costo_total_con_iva,
                         created_at, updated_at
                     ) VALUES (
                         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
@@ -270,11 +270,11 @@ class ComprasV2ServiceUltraOptimized:
             if update_data:
                 update_sql = """
                     UPDATE compras_v2_materiales SET
-                        kg = %s, pu_divisa = %s, tipo_cambio = %s,
-                        pu_mxn = %s, costo_total_divisa = %s, costo_total_mxn = %s,
-                        costo_total_mxn_con_gastos = %s, iva = %s, costo_total_con_iva = %s,
-                        updated_at = %s
-                    WHERE imi = %s AND material_codigo = %s
+                        kg = %s, pu_divisa = %s, pu_mxn = %s,
+                        costo_total_divisa = %s, costo_total_mxn = %s,
+                        pu_mxn_importacion = %s, costo_total_mxn_imporacion = %s,
+                        iva = %s, costo_total_con_iva = %s, updated_at = %s
+                    WHERE compra_imi = %s AND material_codigo = %s
                 """
                 execute_batch(cursor, update_sql, update_data, page_size=200)
                 materiales_guardados += len(update_data)
