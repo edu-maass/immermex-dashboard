@@ -310,6 +310,9 @@ class ApiService {
     const formData = new FormData();
     formData.append('file', file);
 
+    console.log('🚀 COMPRAS_V2: Enviando archivo a endpoint /upload/compras-v2');
+    console.log('📁 Archivo:', file.name, 'Tamaño:', file.size);
+
     return this.request<{ 
       compras_guardadas?: number; 
       materiales_guardados?: number;
