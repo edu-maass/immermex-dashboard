@@ -226,7 +226,6 @@ class ComprasV2Processor:
             'tipo_cambio_estimado': ['tipo_cambio_estimado', 'Tipo Cambio Estimado', 'TC ESTIMADO', 'estimated_rate', 'Estimated Rate', 'tipo cambio estimado'],
             'tipo_cambio_real': ['tipo_cambio_real', 'Tipo Cambio Real', 'TC REAL', 'actual_rate', 'Actual Rate', 'tipo cambio real'],
             'gastos_importacion_divisa': ['gastos_importacion_divisa', 'Gastos Importacion Divisa', 'GASTOS IMP DIVISA', 'import_costs', 'Import Costs', 'gastos importacion divisa'],
-            'porcentaje_gastos_importacion': ['porcentaje_gastos_importacion', 'Porcentaje Gastos Importacion', '% GASTOS IMP', 'import_percentage', 'Import %', 'porcentaje gastos importacion'],
             'iva_monto_divisa': ['iva_monto_divisa', 'IVA Monto Divisa', 'IVA DIVISA', 'tax_amount', 'Tax Amount', 'iva monto divisa'],
             'total_con_iva_divisa': ['total_con_iva_divisa', 'Total Con IVA Divisa', 'TOTAL IVA DIVISA', 'total_with_tax', 'Total With Tax', 'total con iva divisa'],
             
@@ -296,7 +295,6 @@ class ComprasV2Processor:
                     'tipo_cambio_estimado': self.safe_float(row.get('tipo_cambio_estimado', 1.0)),
                     'tipo_cambio_real': self.safe_float(row.get('tipo_cambio_real', 0.0)),
                     'gastos_importacion_divisa': self.safe_float(row.get('gastos_importacion_divisa', 0.0)),
-                    'porcentaje_gastos_importacion': self.safe_float(row.get('porcentaje_gastos_importacion', 0.0)),
                     'iva_monto_divisa': self.safe_float(row.get('iva_monto_divisa', 0.0)),
                     'total_con_iva_divisa': self.safe_float(row.get('total_con_iva_divisa', 0.0))
                 }
@@ -306,6 +304,13 @@ class ComprasV2Processor:
                 compra['gastos_importacion_mxn'] = compra['gastos_importacion_divisa'] * tipo_cambio
                 compra['iva_monto_mxn'] = compra['iva_monto_divisa'] * tipo_cambio
                 compra['total_con_iva_mxn'] = compra['total_con_iva_divisa'] * tipo_cambio
+                
+                # Calcular porcentaje de gastos de importación automáticamente
+                # % = (gastos_importacion_divisa / total_con_iva_divisa) * 100
+                if compra['total_con_iva_divisa'] > 0:
+                    compra['porcentaje_gastos_importacion'] = (compra['gastos_importacion_divisa'] / compra['total_con_iva_divisa']) * 100
+                else:
+                    compra['porcentaje_gastos_importacion'] = 0.0
                 
                 compras.append(compra)
                 
