@@ -84,16 +84,27 @@ class ComprasV2ServiceUltraOptimized:
     
     def safe_percentage(self, value, max_value=None):
         """Convierte un valor a decimal de forma segura para campos NUMERIC(5,4)"""
-        if value is None:
+        if value is None or value == '':
             return Decimal('0.0000')
         
         try:
-            decimal_value = Decimal(str(value))
+            # Convertir a float primero
+            float_val = float(value)
             
-            # Solo validar que sea mayor a 0, sin límite superior artificial
+            # Si el valor es mayor a 1, asumir que es un porcentaje (ej: 15.5 -> 0.155)
+            if float_val > 1:
+                float_val = float_val / 100
+            
+            # Convertir a Decimal con 4 decimales
+            decimal_value = Decimal(str(float_val)).quantize(Decimal('0.0001'))
+            
+            # Validar que esté en rango válido (0 a 1)
             if decimal_value < 0:
-                logger.warning(f"Valor de porcentaje {decimal_value} es negativo, estableciendo a 0")
+                logger.warning(f"Porcentaje negativo '{value}', usando 0.0000")
                 return Decimal('0.0000')
+            elif decimal_value > 1:
+                logger.warning(f"Porcentaje mayor a 100% '{value}', usando 1.0000")
+                return Decimal('1.0000')
             
             return decimal_value
             
@@ -249,8 +260,15 @@ class ComprasV2ServiceUltraOptimized:
             
             for material in materiales:
                 # Validar que tenga compra_id válido
-                if not material.get('compra_id') or material['compra_id'] <= 0:
-                    logger.warning(f"Saltando material sin compra_id válido: {material.get('material_codigo', 'N/A')}")
+                compra_id = material.get('compra_id')
+                if not compra_id or compra_id <= 0 or compra_id is None:
+                    logger.warning(f"Saltando material sin compra_id válido: Material={material.get('material_codigo', 'N/A')}, compra_id={compra_id}")
+                    materiales_omitidos += 1
+                    continue
+                
+                # Validar que el material tenga datos básicos
+                if not material.get('material_codigo') or not material.get('kg') or material['kg'] <= 0:
+                    logger.warning(f"Saltando material con datos incompletos: Material={material.get('material_codigo', 'N/A')}, KG={material.get('kg', 'N/A')}")
                     materiales_omitidos += 1
                     continue
                 
