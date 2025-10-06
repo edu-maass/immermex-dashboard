@@ -99,6 +99,26 @@ class ComprasV2Service:
             return default
         return str(value).strip()
     
+    def safe_percentage(self, value, max_value=9.9999):
+        """Convierte un valor a decimal de forma segura para campos NUMERIC(5,4)"""
+        if value is None:
+            return Decimal('0.0000')
+        
+        try:
+            decimal_value = Decimal(str(value))
+            # Limitar a la precisión máxima permitida por NUMERIC(5,4)
+            if decimal_value > max_value:
+                logger.warning(f"Valor de porcentaje {decimal_value} excede el máximo permitido ({max_value}), limitando a {max_value}")
+                return Decimal(str(max_value))
+            elif decimal_value < -max_value:
+                logger.warning(f"Valor de porcentaje {decimal_value} excede el mínimo permitido (-{max_value}), limitando a -{max_value}")
+                return Decimal(str(-max_value))
+            return decimal_value
+        except (ValueError, TypeError):
+            logger.warning(f"Error convirtiendo porcentaje '{value}' a decimal, usando 0.0000")
+            return Decimal('0.0000')
+    
+    
     def save_compras_v2(self, compras: List[Dict[str, Any]], archivo_id: int) -> int:
         """Guarda compras en la tabla compras_v2"""
         conn = self.get_connection()
@@ -106,12 +126,12 @@ class ComprasV2Service:
             return 0
         
         try:
-            cursor = conn.cursor()
-            
             compras_guardadas = 0
             
             for compra in compras:
+                # Usar transacción individual para cada compra
                 try:
+                    cursor = conn.cursor()
                     # Verificar si ya existe
                     cursor.execute("SELECT id FROM compras_v2 WHERE imi = %s", (compra['imi'],))
                     existing = cursor.fetchone()
@@ -177,7 +197,7 @@ class ComprasV2Service:
                             compra['fecha_arribo_estimada'],
                             compra['moneda'],
                             compra['dias_credito'],
-                            self.safe_decimal(compra['anticipo_pct']),
+                            self.safe_percentage(compra['anticipo_pct']),
                             self.safe_decimal(compra['anticipo_monto']),
                             compra['fecha_anticipo'],
                             compra['fecha_pago_factura'],
@@ -185,7 +205,7 @@ class ComprasV2Service:
                             self.safe_decimal(compra['tipo_cambio_real']),
                             self.safe_decimal(compra['gastos_importacion_divisa']),
                             self.safe_decimal(compra['gastos_importacion_mxn']),
-                            self.safe_decimal(compra['porcentaje_gastos_importacion']),
+                            self.safe_percentage(compra['porcentaje_gastos_importacion']),
                             self.safe_decimal(compra['iva_monto_mxn']),
                             self.safe_decimal(compra['total_con_iva_mxn']),
                             datetime.utcnow(),
@@ -219,7 +239,7 @@ class ComprasV2Service:
                             compra['fecha_arribo_estimada'],
                             compra['moneda'],
                             compra['dias_credito'],
-                            self.safe_decimal(compra['anticipo_pct']),
+                            self.safe_percentage(compra['anticipo_pct']),
                             self.safe_decimal(compra['anticipo_monto']),
                             compra['fecha_anticipo'],
                             compra['fecha_pago_factura'],
@@ -227,20 +247,28 @@ class ComprasV2Service:
                             self.safe_decimal(compra['tipo_cambio_real']),
                             self.safe_decimal(compra['gastos_importacion_divisa']),
                             self.safe_decimal(compra['gastos_importacion_mxn']),
-                            self.safe_decimal(compra['porcentaje_gastos_importacion']),
+                            self.safe_percentage(compra['porcentaje_gastos_importacion']),
                             self.safe_decimal(compra['iva_monto_mxn']),
                             self.safe_decimal(compra['total_con_iva_mxn']),
                             datetime.utcnow(),
                             datetime.utcnow()
                         ))
                     
+                    # Commit individual para esta compra
+                    conn.commit()
                     compras_guardadas += 1
+                    logger.info(f"Compra IMI {compra['imi']} guardada exitosamente")
                     
                 except Exception as e:
                     logger.error(f"Error guardando compra IMI {compra['imi']}: {str(e)}")
+                    # Rollback individual para esta compra
+                    conn.rollback()
                     continue
+                finally:
+                    # Cerrar cursor individual
+                    if 'cursor' in locals():
+                        cursor.close()
             
-            conn.commit()
             logger.info(f"Guardadas {compras_guardadas} compras en compras_v2")
             
             cursor.close()
