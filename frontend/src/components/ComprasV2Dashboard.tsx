@@ -13,7 +13,7 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  Download,
+  Upload,
   FileSpreadsheet
 } from 'lucide-react';
 
@@ -77,45 +77,6 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
     loadData();
   }, [filtros]);
 
-  const handleFileUpload = async (file: File) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Validar archivo primero
-      const validation = await apiService.validateComprasFile(file);
-      if (!validation.validation.valid) {
-        throw new Error(`Archivo inválido: ${validation.validation.error || 'Estructura incorrecta'}`);
-      }
-
-      // Subir archivo
-      const result = await apiService.uploadComprasV2File(file);
-      
-      if (result.compras_guardadas || result.materiales_guardados) {
-        // Recargar datos después del upload exitoso
-        await loadData();
-        
-        if (onUploadSuccess) {
-          onUploadSuccess();
-        }
-        
-        return {
-          success: true,
-          message: `Archivo procesado exitosamente: ${result.compras_guardadas || 0} compras, ${result.materiales_guardados || 0} materiales`,
-          detalles: result
-        };
-      } else {
-        throw new Error('No se procesaron registros');
-      }
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error procesando archivo';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleFilterChange = (key: string, value: any) => {
     setFiltros(prev => ({
@@ -135,35 +96,6 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
 
   const hasActiveFilters = Object.values(filtros).some(value => value !== undefined);
 
-  const handleDownloadLayout = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const blob = await apiService.downloadComprasV2Layout();
-      
-      // Crear URL para descarga
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'Layout_Compras_V2.xlsx';
-      
-      // Trigger descarga
-      document.body.appendChild(link);
-      link.click();
-      
-      // Limpiar
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error descargando layout';
-      setError(errorMessage);
-      console.error('Error downloading layout:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading && !comprasData) {
     return (
@@ -258,43 +190,28 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
         )}
       </div>
 
-      {/* Upload de archivos */}
+      {/* Información sobre carga de archivos */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Cargar Archivo de Compras</h2>
-          <Button 
-            onClick={handleDownloadLayout}
-            variant="outline"
-            className="flex items-center gap-2"
-            disabled={loading}
-          >
-            <Download className="h-4 w-4" />
-            Descargar Layout Excel
-          </Button>
+        <div className="flex items-center gap-3 mb-4">
+          <Upload className="h-6 w-6 text-indigo-600" />
+          <h2 className="text-xl font-semibold">Carga de Archivos</h2>
         </div>
         
-        <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
           <div className="flex items-start gap-3">
-            <FileSpreadsheet className="h-5 w-5 text-blue-600 mt-0.5" />
+            <FileSpreadsheet className="h-5 w-5 text-indigo-600 mt-0.5" />
             <div>
-              <h3 className="font-medium text-blue-900 mb-1">Instrucciones para el archivo Excel:</h3>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li>• Use el botón "Descargar Layout Excel" para obtener la plantilla correcta</li>
-                <li>• El archivo debe tener 3 hojas: "Compras Generales", "Materiales Detalle" e "Instrucciones"</li>
-                <li>• Complete los datos en las hojas correspondientes siguiendo el formato de ejemplo</li>
-                <li>• Los campos obligatorios están marcados en la hoja "Instrucciones"</li>
-                <li>• Las fechas deben estar en formato YYYY-MM-DD</li>
+              <h3 className="font-medium text-indigo-900 mb-2">Para cargar archivos de Compras V2:</h3>
+              <ul className="text-sm text-indigo-800 space-y-1">
+                <li>• Ve a la pestaña <strong>"Carga de Archivos"</strong> en el menú principal</li>
+                <li>• Busca la sección <strong>"Compras V2"</strong> (tercera columna)</li>
+                <li>• Descarga el layout Excel usando el botón correspondiente</li>
+                <li>• Completa el archivo siguiendo las instrucciones incluidas</li>
+                <li>• Sube el archivo completado en la misma sección</li>
               </ul>
             </div>
           </div>
         </div>
-        
-        <FileUpload
-          onFileUpload={handleFileUpload}
-          acceptedTypes=".xlsx,.xls"
-          maxSize={10 * 1024 * 1024} // 10MB
-          uploadText="Arrastra tu archivo Excel de compras aquí o haz clic para seleccionar"
-        />
       </div>
 
       {/* Error */}
