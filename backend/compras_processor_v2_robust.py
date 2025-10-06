@@ -231,7 +231,6 @@ class ComprasV2Processor:
             'material_codigo': ['material_codigo', 'Material Codigo', 'MATERIAL CODIGO', 'material_code', 'Material Code', 'concepto', 'Concepto', 'material codigo'],
             'kg': ['kg', 'KG', 'kilogramos', 'Kilogramos', 'KILOGRAMOS', 'quantity', 'Quantity', 'cantidad', 'Cantidad'],
             'pu_divisa': ['pu_divisa', 'PU Divisa', 'PU DIVISA', 'unit_price', 'Unit Price', 'precio_unitario', 'Precio Unitario', 'pu divisa'],
-            'pu_mxn': ['pu_mxn', 'PU MXN', 'precio_mxn', 'Precio MXN', 'PRECIO MXN', 'pu mxn'],
             'costo_total_divisa': ['costo_total_divisa', 'Costo Total Divisa', 'COSTO TOTAL DIVISA', 'total_cost', 'Total Cost', 'costo total divisa'],
             'costo_total_mxn': ['costo_total_mxn', 'Costo Total MXN', 'COSTO TOTAL MXN', 'costo total mxn'],
             'iva': ['iva', 'IVA', 'tax', 'Tax']
@@ -331,9 +330,6 @@ class ComprasV2Processor:
                 material_codigo = self.safe_string(row.get('material_codigo', ''))
                 kg = self.safe_float(row.get('kg', 0))
                 pu_divisa = self.safe_float(row.get('pu_divisa', 0))
-                pu_mxn = self.safe_float(row.get('pu_mxn', 0))
-                costo_total_divisa = self.safe_float(row.get('costo_total_divisa', 0))
-                costo_total_mxn = self.safe_float(row.get('costo_total_mxn', 0))
                 
                 if imi <= 0 or not material_codigo or kg <= 0:
                     logger.warning(f"Saltando material con datos incompletos: IMI={imi}, Material={material_codigo}, KG={kg}")
@@ -345,7 +341,17 @@ class ComprasV2Processor:
                     logger.warning(f"No se encontró compra con IMI {imi}")
                     continue
                 
-                # Calcular campos derivados
+                # Calcular campos derivados automáticamente
+                # PU MXN = PU_divisa * TC_real (o TC_estimado si no hay TC_real)
+                tipo_cambio = compra['tipo_cambio_real'] if compra['tipo_cambio_real'] > 0 else compra['tipo_cambio_estimado']
+                pu_mxn = pu_divisa * tipo_cambio
+                
+                # Costo total en divisa = PU_divisa * KG
+                costo_total_divisa = pu_divisa * kg
+                
+                # Costo total en MXN = PU_MXN * KG
+                costo_total_mxn = pu_mxn * kg
+                
                 # Total con gastos de importación en MXN
                 costo_total_mxn_con_gastos = costo_total_mxn + compra['gastos_importacion_mxn']
                 
