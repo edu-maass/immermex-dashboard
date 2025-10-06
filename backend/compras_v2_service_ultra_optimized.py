@@ -56,7 +56,7 @@ class ComprasV2ServiceUltraOptimized:
             logger.error("Variables SUPABASE_URL y SUPABASE_PASSWORD no encontradas")
             return None
         
-         try:
+        try:
              # Extraer componentes de la URL
              url = config['SUPABASE_URL']
              password = config['SUPABASE_PASSWORD']
