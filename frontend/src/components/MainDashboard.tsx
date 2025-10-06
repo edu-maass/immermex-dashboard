@@ -97,6 +97,7 @@ export const MainDashboard: FC = () => {
           <TabsList className="grid w-full grid-cols-6 bg-white shadow-lg border border-gray-200">
             <TabsTrigger 
               value="upload" 
+              data-tab="upload"
               className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-blue-700 data-[state=inactive]:hover:bg-blue-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
             >
               <Upload className="h-4 w-4" />

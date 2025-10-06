@@ -3,6 +3,7 @@ import { Button } from './ui/button';
 import { KPICard } from './KPICard';
 import { FileUpload } from './FileUpload';
 import { LoadingSpinner } from './LoadingSpinner';
+import { Tooltip } from './ui/tooltip';
 import { apiService } from '../services/api';
 import { 
   DollarSign, 
@@ -116,103 +117,101 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
         </p>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros y Carga de Archivos */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-4">Filtros</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Mes
-            </label>
-            <select
-              value={filtros.mes || ''}
-              onChange={(e) => handleFilterChange('mes', e.target.value ? parseInt(e.target.value) : undefined)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Todos</option>
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  {new Date(2024, i).toLocaleString('es', { month: 'long' })}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Año
-            </label>
-            <select
-              value={filtros.año || ''}
-              onChange={(e) => handleFilterChange('año', e.target.value ? parseInt(e.target.value) : undefined)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Todos</option>
-              <option value="2024">2024</option>
-              <option value="2023">2023</option>
-              <option value="2022">2022</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Proveedor
-            </label>
-            <input
-              type="text"
-              value={filtros.proveedor || ''}
-              onChange={(e) => handleFilterChange('proveedor', e.target.value)}
-              placeholder="Filtrar por proveedor..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Material
-            </label>
-            <input
-              type="text"
-              value={filtros.material || ''}
-              onChange={(e) => handleFilterChange('material', e.target.value)}
-              placeholder="Filtrar por material..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        {hasActiveFilters && (
-          <div className="mt-4">
-            <Button onClick={clearFilters} variant="outline" size="sm">
-              Limpiar Filtros
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* Información sobre carga de archivos */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          <Upload className="h-6 w-6 text-indigo-600" />
-          <h2 className="text-xl font-semibold">Carga de Archivos</h2>
-        </div>
-        
-        <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-          <div className="flex items-start gap-3">
-            <FileSpreadsheet className="h-5 w-5 text-indigo-600 mt-0.5" />
+        <div className="flex items-center justify-between mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
             <div>
-              <h3 className="font-medium text-indigo-900 mb-2">Para cargar archivos de Compras V2:</h3>
-              <ul className="text-sm text-indigo-800 space-y-1">
-                <li>• Ve a la pestaña <strong>"Carga de Archivos"</strong> en el menú principal</li>
-                <li>• Busca la sección <strong>"Compras V2"</strong> (tercera columna)</li>
-                <li>• Descarga el layout Excel usando el botón correspondiente</li>
-                <li>• Completa el archivo siguiendo las instrucciones incluidas</li>
-                <li>• Sube el archivo completado en la misma sección</li>
-              </ul>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mes
+              </label>
+              <select
+                value={filtros.mes || ''}
+                onChange={(e) => handleFilterChange('mes', e.target.value ? parseInt(e.target.value) : undefined)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Todos</option>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {new Date(2024, i).toLocaleString('es', { month: 'long' })}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Año
+              </label>
+              <select
+                value={filtros.año || ''}
+                onChange={(e) => handleFilterChange('año', e.target.value ? parseInt(e.target.value) : undefined)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Todos</option>
+                <option value="2024">2024</option>
+                <option value="2023">2023</option>
+                <option value="2022">2022</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Proveedor
+              </label>
+              <input
+                type="text"
+                value={filtros.proveedor || ''}
+                onChange={(e) => handleFilterChange('proveedor', e.target.value)}
+                placeholder="Filtrar por proveedor..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Material
+              </label>
+              <input
+                type="text"
+                value={filtros.material || ''}
+                onChange={(e) => handleFilterChange('material', e.target.value)}
+                placeholder="Filtrar por material..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
           </div>
+
+          <div className="flex items-center gap-2 ml-4">
+            <Tooltip 
+              content="Para cargar archivos de Compras V2:\n• Ve a la pestaña 'Carga de Archivos'\n• Busca la sección 'Compras V2'\n• Descarga el layout Excel\n• Completa y sube el archivo"
+              position="left"
+            >
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex items-center gap-2"
+                onClick={() => {
+                  // Scroll to upload section or show modal
+                  const uploadTab = document.querySelector('[data-tab="upload"]') as HTMLElement;
+                  if (uploadTab) {
+                    uploadTab.click();
+                  }
+                }}
+              >
+                <Upload className="h-4 w-4" />
+              </Button>
+            </Tooltip>
+
+            {hasActiveFilters && (
+              <Button onClick={clearFilters} variant="outline" size="sm">
+                Limpiar
+              </Button>
+            )}
+          </div>
         </div>
       </div>
+
 
       {/* Error */}
       {error && (
@@ -291,9 +290,6 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
       {/* Datos de compras */}
       {comprasData && (
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">
-            Compras Recientes ({comprasData.total_compras} registros)
-          </h2>
           
           {comprasData.compras.length > 0 ? (
             <div className="overflow-x-auto">
