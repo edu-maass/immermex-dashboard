@@ -437,12 +437,12 @@ async def upload_file(
         logger.error(f"Traceback completo: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/upload/compras")
-async def upload_compras_file(
+@app.post("/api/upload/compras-v2")
+async def upload_compras_v2_file(
     file: UploadFile = File(...),
     reemplazar_datos: bool = Query(True, description="Si true, reemplaza todos los datos existentes")
 ):
-    """Endpoint específico para subir archivos Excel de compras - SISTEMA COMPRAS_V2"""
+    """Endpoint específico para subir archivos Excel de compras_v2 - SISTEMA COMPRAS_V2"""
     try:
         logger.info("🚀🚀🚀 SISTEMA COMPRAS_V2 ACTIVADO 🚀🚀🚀")
         logger.info(f"Procesando archivo: {file.filename}")

@@ -1,9 +1,8 @@
 import { FC } from 'react';
 import { FileUpload } from './FileUpload';
-import { ComprasUpload } from './ComprasUpload';
 import { ComprasV2Upload } from './ComprasV2Upload';
 import { Card, CardContent } from './ui/card';
-import { FileText, ShoppingCart, ShoppingBag } from 'lucide-react';
+import { FileText, ShoppingBag } from 'lucide-react';
 
 interface DualUploadProps {
   onUploadSuccess?: (data: any) => void;
@@ -27,7 +26,7 @@ export const DualUpload: FC<DualUploadProps> = ({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Sección de Facturación y Cobranza */}
         <div className="space-y-4">
           <div className="flex items-center space-x-2 mb-4">
@@ -52,34 +51,6 @@ export const DualUpload: FC<DualUploadProps> = ({
               <li>• Información de cobranza</li>
               <li>• Detalles de pedidos</li>
               <li>• Materiales utilizados</li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Sección de Compras Legacy */}
-        <div className="space-y-4">
-          <div className="flex items-center space-x-2 mb-4">
-            <ShoppingCart className="h-5 w-5 text-orange-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Compras (Legacy)</h3>
-          </div>
-          
-          <Card className="border-orange-200">
-            <CardContent className="p-0">
-              <ComprasUpload 
-                onUploadSuccess={onUploadSuccess}
-                onUploadError={onUploadError}
-                onNewUpload={onNewUpload}
-              />
-            </CardContent>
-          </Card>
-
-          <div className="p-3 bg-orange-50 rounded-md">
-            <h4 className="text-sm font-medium text-orange-900 mb-2">Incluye:</h4>
-            <ul className="text-xs text-orange-800 space-y-1">
-              <li>• Datos de compras</li>
-              <li>• Información de importaciones</li>
-              <li>• Gastos aduanales</li>
-              <li>• Estados de pago</li>
             </ul>
           </div>
         </div>
@@ -118,7 +89,7 @@ export const DualUpload: FC<DualUploadProps> = ({
         <h4 className="text-sm font-medium text-gray-900 mb-2">Información importante:</h4>
         <div className="text-xs text-gray-600 space-y-1">
           <p>• Los archivos se procesan de forma independiente</p>
-          <p>• Puedes subir archivos de facturación, compras legacy y compras V2 por separado</p>
+          <p>• Puedes subir archivos de facturación y compras V2 por separado</p>
           <p>• Los datos se integran automáticamente en el dashboard</p>
           <p>• Formatos soportados: .xlsx y .xls</p>
           <p>• <strong>Recomendado:</strong> Usar Compras V2 para nuevas importaciones (sistema optimizado)</p>

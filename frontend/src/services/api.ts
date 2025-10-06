@@ -315,7 +315,7 @@ class ApiService {
       materiales_guardados?: number;
       total_procesados?: number;
       [key: string]: any 
-    }>('/upload/compras', {
+    }>('/upload/compras-v2', {
       method: 'POST',
       headers: {}, // No Content-Type header for FormData
       body: formData,

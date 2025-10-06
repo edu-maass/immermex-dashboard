@@ -88,19 +88,6 @@ export const ComprasV2Upload: React.FC<ComprasV2UploadProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="text-center mb-6">
-        <div className="flex items-center justify-center gap-3 mb-2">
-          <ShoppingBag className="h-8 w-8 text-indigo-600" />
-          <h2 className="text-2xl font-bold text-gray-900">
-            Sistema Compras V2
-          </h2>
-        </div>
-        <p className="text-gray-600">
-          Sistema optimizado para gestión de compras e importaciones
-        </p>
-      </div>
-
       {/* Botón de descarga de layout */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex justify-between items-center mb-4">
