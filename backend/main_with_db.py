@@ -1041,9 +1041,7 @@ async def download_compras_layout():
             'fecha_planta_real': ['2024-02-18', '2024-02-23', '2024-02-15'],
                 'tipo_cambio_estimado': [20.0, 20.5, 20.2],
                 'tipo_cambio_real': [20.1, 20.6, 20.3],
-                'gastos_importacion_divisa': [100.0, 150.0, 75.0],
-                'iva_monto_divisa': [200.0, 300.0, 150.0],
-                'total_con_iva_divisa': [2200.0, 3300.0, 1650.0]
+                'gastos_importacion_divisa': [100.0, 150.0, 75.0]
         }
         
         materiales_ejemplo = {
@@ -1078,7 +1076,6 @@ async def download_compras_layout():
                     'Anticipo %', 'Anticipo Monto', 'Fecha Anticipo', 'Fecha Pago Factura',
                     'Fecha Salida Real', 'Fecha Arribo Real', 'Fecha Planta Real',
                     'Tipo Cambio Estimado', 'Tipo Cambio Real', 'Gastos Importacion Divisa',
-                    'IVA Monto Divisa', 'Total Con IVA Divisa',
                     'Material Codigo', 'KG', 'PU Divisa', 'PU MXN', 'Costo Total Divisa',
                     'Costo Total MXN', 'IVA'
                 ],
@@ -1087,7 +1084,6 @@ async def download_compras_layout():
                     'NUMERIC', 'NUMERIC', 'DATE', 'DATE',
                     'DATE', 'DATE', 'DATE',
                     'NUMERIC', 'NUMERIC', 'NUMERIC',
-                    'NUMERIC', 'NUMERIC',
                     'VARCHAR', 'NUMERIC', 'NUMERIC', 'NUMERIC', 'NUMERIC',
                     'NUMERIC', 'NUMERIC'
                 ],
@@ -1096,7 +1092,6 @@ async def download_compras_layout():
                     'NO', 'NO', 'NO', 'NO',
                     'NO', 'NO', 'NO',
                     'NO', 'NO', 'NO',
-                    'NO', 'NO',
                     'SI', 'SI', 'SI', 'SI', 'SI',
                     'SI', 'NO'
                 ],
@@ -1105,7 +1100,6 @@ async def download_compras_layout():
                     'Porcentaje de anticipo', 'Monto del anticipo en moneda original', 'Fecha de pago anticipo', 'Fecha de pago factura',
                     'Fecha real de salida del puerto', 'Fecha real de arribo al puerto', 'Fecha real de llegada a planta',
                     'Tipo de cambio estimado', 'Tipo de cambio real', 'Gastos de importacion en pesos',
-                    'IVA en divisa', 'Total con IVA en divisa',
                     'Codigo del material', 'Cantidad en kilogramos', 'Precio unitario en divisa', 'Precio unitario en MXN', 'Costo total en divisa',
                     'Costo total en MXN', 'IVA del material'
                 ]
