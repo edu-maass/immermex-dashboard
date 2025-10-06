@@ -87,7 +87,8 @@ class ComprasV2ServiceUltraOptimized:
                     database=database,
                     user=username,
                     password=password_from_url,
-                    sslmode='require'
+                    sslmode='require',
+                    options='-c default_transaction_isolation=read_committed'
                 )
                 
                 logger.info("Conexión a Supabase establecida")
@@ -126,7 +127,8 @@ class ComprasV2ServiceUltraOptimized:
                 database=database,
                 user=username,
                 password=password_from_url,
-                sslmode='require'
+                sslmode='require',
+                options='-c default_transaction_isolation=read_committed'
             )
             
             logger.info("Conexión a Supabase establecida")
