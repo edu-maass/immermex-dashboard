@@ -57,17 +57,23 @@ class ComprasV2UploadService:
             
             logger.info(f"[COMPRAS_V2_SERVICE] Proceso completado exitosamente:")
             logger.info(f"  - Compras guardadas: {save_results['compras_guardadas']}")
+            logger.info(f"  - Compras omitidas: {save_results.get('compras_omitidas', 0)}")
             logger.info(f"  - Materiales guardados: {save_results['materiales_guardados']}")
+            logger.info(f"  - Materiales omitidos: {save_results.get('materiales_omitidos', 0)}")
             logger.info(f"  - Total procesados: {save_results['total_procesados']}")
+            logger.info(f"  - Total omitidos: {save_results.get('total_omitidos', 0)}")
             
             return {
                 "success": True,
                 "archivo_id": archivo_id,
                 "compras_guardadas": save_results['compras_guardadas'],
+                "compras_omitidas": save_results.get('compras_omitidas', 0),
                 "materiales_guardados": save_results['materiales_guardados'],
+                "materiales_omitidos": save_results.get('materiales_omitidos', 0),
                 "total_procesados": save_results['total_procesados'],
+                "total_omitidos": save_results.get('total_omitidos', 0),
                 "kpis": kpis,
-                "mensaje": f"Archivo de compras procesado exitosamente. {save_results['compras_guardadas']} compras y {save_results['materiales_guardados']} materiales guardados."
+                "mensaje": f"Archivo procesado exitosamente. Guardados: {save_results['compras_guardadas']} compras, {save_results['materiales_guardados']} materiales. Omitidos: {save_results.get('compras_omitidas', 0)} compras, {save_results.get('materiales_omitidos', 0)} materiales."
             }
             
         except Exception as e:

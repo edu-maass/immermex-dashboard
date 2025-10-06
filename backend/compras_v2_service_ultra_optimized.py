@@ -101,17 +101,18 @@ class ComprasV2ServiceUltraOptimized:
             logger.warning(f"Error convirtiendo porcentaje '{value}' a decimal, usando 0.0000")
             return Decimal('0.0000')
     
-    def save_compras_v2_ultra_batch(self, compras: List[Dict[str, Any]], archivo_id: int) -> int:
+    def save_compras_v2_ultra_batch(self, compras: List[Dict[str, Any]], archivo_id: int) -> Dict[str, int]:
         """Guarda compras_v2 usando execute_batch para máxima eficiencia"""
         if not compras:
-            return 0
+            return {"guardadas": 0, "omitidas": 0}
         
         conn = self.get_connection()
         if not conn:
-            return 0
+            return {"guardadas": 0, "omitidas": 0}
         
         cursor = conn.cursor()
         compras_guardadas = 0
+        compras_omitidas = 0
         
         try:
             # Obtener todos los IMIs existentes de una vez
@@ -126,6 +127,17 @@ class ComprasV2ServiceUltraOptimized:
             update_data = []
             
             for compra in compras:
+                # Validar campos obligatorios
+                if not compra.get('imi') or compra['imi'] <= 0:
+                    logger.warning(f"Saltando compra sin IMI válido: {compra.get('proveedor', 'N/A')}")
+                    compras_omitidas += 1
+                    continue
+                
+                if not compra.get('proveedor') or not compra.get('fecha_pedido'):
+                    logger.warning(f"Saltando compra con datos incompletos: IMI={compra['imi']}")
+                    compras_omitidas += 1
+                    continue
+                
                 # Calcular fecha_vencimiento automáticamente
                 fecha_vencimiento = self.calculate_fecha_vencimiento(
                     compra.get('fecha_salida_real'),
@@ -143,7 +155,7 @@ class ComprasV2ServiceUltraOptimized:
                     self.safe_decimal(compra.get('tipo_cambio_real')), self.safe_decimal(compra.get('gastos_importacion_divisa')), 
                     self.safe_decimal(compra.get('gastos_importacion_mxn')), self.safe_percentage(compra.get('porcentaje_gastos_importacion')), 
                     self.safe_decimal(compra.get('iva_monto_mxn')), self.safe_decimal(compra.get('total_con_iva_mxn')), 
-                    fecha_vencimiento, archivo_id, datetime.utcnow(), datetime.utcnow()
+                    fecha_vencimiento, datetime.utcnow(), datetime.utcnow()
                 )
                 
                 if compra['imi'] in existing_imis:
@@ -163,9 +175,9 @@ class ComprasV2ServiceUltraOptimized:
                         fecha_planta_real, tipo_cambio_estimado, tipo_cambio_real,
                         gastos_importacion_divisa, gastos_importacion_mxn,
                         porcentaje_gastos_importacion, iva_monto_mxn, total_con_iva_mxn,
-                        fecha_vencimiento, archivo_id, created_at, updated_at
+                        fecha_vencimiento, created_at, updated_at
                     ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                     )
                 """
                 execute_batch(cursor, insert_sql, insert_data, page_size=100)
@@ -184,7 +196,7 @@ class ComprasV2ServiceUltraOptimized:
                         tipo_cambio_real = %s, gastos_importacion_divisa = %s,
                         gastos_importacion_mxn = %s, porcentaje_gastos_importacion = %s,
                         iva_monto_mxn = %s, total_con_iva_mxn = %s,
-                        fecha_vencimiento = %s, archivo_id = %s, updated_at = %s
+                        fecha_vencimiento = %s, updated_at = %s
                     WHERE imi = %s
                 """
                 execute_batch(cursor, update_sql, update_data, page_size=100)
@@ -192,7 +204,7 @@ class ComprasV2ServiceUltraOptimized:
                 logger.info(f"Actualizados {len(update_data)} registros existentes")
             
             conn.commit()
-            logger.info(f"Total compras procesadas: {compras_guardadas}")
+            logger.info(f"Total compras procesadas: {compras_guardadas}, omitidas: {compras_omitidas}")
             
         except Exception as e:
             logger.error(f"Error en procesamiento por lotes: {str(e)}")
@@ -201,19 +213,20 @@ class ComprasV2ServiceUltraOptimized:
         finally:
             cursor.close()
         
-        return compras_guardadas
+        return {"guardadas": compras_guardadas, "omitidas": compras_omitidas}
     
-    def save_compras_v2_materiales_ultra_batch(self, materiales: List[Dict[str, Any]]) -> int:
+    def save_compras_v2_materiales_ultra_batch(self, materiales: List[Dict[str, Any]]) -> Dict[str, int]:
         """Guarda materiales usando execute_batch para máxima eficiencia"""
         if not materiales:
-            return 0
+            return {"guardadas": 0, "omitidas": 0}
         
         conn = self.get_connection()
         if not conn:
-            return 0
+            return {"guardadas": 0, "omitidas": 0}
         
         cursor = conn.cursor()
         materiales_guardados = 0
+        materiales_omitidos = 0
         
         try:
             # Obtener todos los IDs existentes de una vez
@@ -235,6 +248,12 @@ class ComprasV2ServiceUltraOptimized:
             update_data = []
             
             for material in materiales:
+                # Validar que tenga compra_id válido
+                if not material.get('compra_id') or material['compra_id'] <= 0:
+                    logger.warning(f"Saltando material sin compra_id válido: {material.get('material_codigo', 'N/A')}")
+                    materiales_omitidos += 1
+                    continue
+                
                 material_tuple = (
                     material['compra_id'], material['material_codigo'], self.safe_decimal(material['kg']),
                     self.safe_decimal(material['pu_divisa']), self.safe_decimal(material.get('pu_mxn')),
@@ -281,7 +300,7 @@ class ComprasV2ServiceUltraOptimized:
                 logger.info(f"Actualizados {len(update_data)} materiales existentes")
             
             conn.commit()
-            logger.info(f"Total materiales procesados: {materiales_guardados}")
+            logger.info(f"Total materiales procesados: {materiales_guardados}, omitidos: {materiales_omitidos}")
             
         except Exception as e:
             logger.error(f"Error en procesamiento de materiales por lotes: {str(e)}")
@@ -290,7 +309,7 @@ class ComprasV2ServiceUltraOptimized:
         finally:
             cursor.close()
         
-        return materiales_guardados
+        return {"guardadas": materiales_guardados, "omitidas": materiales_omitidos}
     
     def save_compras_data(self, processed_data_dict: Dict[str, Any], archivo_id: int) -> Dict[str, int]:
         """Método principal que guarda todos los datos usando procesamiento ultra optimizado"""
@@ -301,15 +320,18 @@ class ComprasV2ServiceUltraOptimized:
             logger.info(f"Iniciando guardado ultra optimizado de {len(compras)} compras y {len(materiales)} materiales")
             
             # Guardar compras usando procesamiento ultra optimizado
-            compras_guardadas = self.save_compras_v2_ultra_batch(compras, archivo_id)
+            compras_result = self.save_compras_v2_ultra_batch(compras, archivo_id)
             
             # Guardar materiales usando procesamiento ultra optimizado
-            materiales_guardados = self.save_compras_v2_materiales_ultra_batch(materiales)
+            materiales_result = self.save_compras_v2_materiales_ultra_batch(materiales)
             
             return {
-                'compras_guardadas': compras_guardadas,
-                'materiales_guardados': materiales_guardados,
-                'total_procesados': compras_guardadas + materiales_guardados
+                'compras_guardadas': compras_result['guardadas'],
+                'compras_omitidas': compras_result['omitidas'],
+                'materiales_guardados': materiales_result['guardadas'],
+                'materiales_omitidos': materiales_result['omitidas'],
+                'total_procesados': compras_result['guardadas'] + materiales_result['guardadas'],
+                'total_omitidos': compras_result['omitidas'] + materiales_result['omitidas']
             }
             
         except Exception as e:
