@@ -469,10 +469,11 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
 
         {/* Flujo de Pagos */}
         <ComprasV2FlujoPagosChart
-          data={flujoPagos ? flujoPagos.datasets?.[0]?.data?.map((pagos: number, index: number) => ({
-            semana: flujoPagos.labels[index] || `Semana ${index + 1}`,
-            pagos: pagos,
-            pendiente: flujoPagos.datasets?.[1]?.data?.[index] || 0
+          data={flujoPagos ? flujoPagos.labels?.map((label: string, index: number) => ({
+            semana: label || `Semana ${index + 1}`,
+            liquidaciones: flujoPagos.datasets[0]?.data?.[index] || 0,
+            gastos_importacion: flujoPagos.datasets[1]?.data?.[index] || 0,
+            anticipo: flujoPagos.datasets[2]?.data?.[index] || 0
           })) : []}
           moneda={monedaFlujoPagos}
           onMonedaChange={handleMonedaFlujoPagosChange}

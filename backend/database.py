@@ -300,6 +300,7 @@ class ComprasV2(Base):
     tipo_cambio_real = Column(Float, default=0.0)
     gastos_importacion_divisa = Column(Float, default=0.0)
     gastos_importacion_mxn = Column(Float, default=0.0)
+    gastos_importacion_estimado = Column(Float, default=0.0)
     porcentaje_gastos_importacion = Column(Float, default=0.0)  # NUMERIC(5,4)
     iva_monto_mxn = Column(Float, default=0.0)
     total_con_iva_mxn = Column(Float, default=0.0)

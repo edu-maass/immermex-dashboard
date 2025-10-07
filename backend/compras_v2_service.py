@@ -797,7 +797,7 @@ class ComprasV2Service:
             return {'labels': [], 'data': [], 'titulo': 'Error'}
     
     def get_flujo_pagos(self, filtros: Dict[str, Any] = None, moneda: str = 'USD') -> Dict[str, Any]:
-        """Obtiene flujo de pagos por semana"""
+        """Obtiene flujo de pagos por semana con columnas apiladas"""
         conn = self.get_connection()
         if not conn:
             return {'labels': [], 'datasets': [], 'titulo': 'Sin datos'}
@@ -805,33 +805,37 @@ class ComprasV2Service:
         try:
             cursor = conn.cursor()
             
-            # Query que incluye tipo de cambio para conversión correcta
+            # Query para obtener datos de flujo de pagos con las nuevas series
             query = """
                 SELECT 
-                    DATE_TRUNC('week', COALESCE(c2.fecha_pago_factura, c2.fecha_pedido)) as semana,
-                    SUM(CASE WHEN c2.fecha_pago_factura IS NOT NULL THEN 
-                        CASE 
-                            WHEN %s = 'MXN' THEN c2.total_con_iva_mxn
-                            WHEN c2.moneda = 'USD' THEN c2.total_con_iva_divisa
-                            WHEN c2.tipo_cambio_real > 0 THEN c2.total_con_iva_mxn / c2.tipo_cambio_real
-                            ELSE 0
-                        END
-                        ELSE 0 
-                    END) as pagos,
-                    SUM(CASE WHEN c2.fecha_pago_factura IS NULL THEN 
-                        CASE 
-                            WHEN %s = 'MXN' THEN c2.total_con_iva_mxn
-                            WHEN c2.moneda = 'USD' THEN c2.total_con_iva_divisa
-                            WHEN c2.tipo_cambio_real > 0 THEN c2.total_con_iva_mxn / c2.tipo_cambio_real
-                            ELSE 0
-                        END
-                        ELSE 0 
-                    END) as pendiente
+                    DATE_TRUNC('week', COALESCE(c2.fecha_vencimiento, c2.fecha_pago_factura, c2.fecha_pedido)) as semana_vencimiento,
+                    DATE_TRUNC('week', COALESCE(c2.fecha_arribo_real, c2.fecha_arribo_estimada, c2.fecha_pedido)) as semana_arribo,
+                    -- Liquidaciones: costo_total - anticipo
+                    CASE 
+                        WHEN %s = 'MXN' THEN c2.total_con_iva_mxn - COALESCE(c2.anticipo_monto, 0)
+                        WHEN c2.moneda = 'USD' THEN (c2.total_con_iva_divisa - COALESCE(c2.anticipo_monto, 0)) * COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado, 1.0)
+                        WHEN c2.tipo_cambio_real > 0 THEN (c2.total_con_iva_mxn - COALESCE(c2.anticipo_monto, 0)) / c2.tipo_cambio_real
+                        ELSE 0
+                    END as liquidaciones,
+                    -- Gastos de importación: gastos_importacion + gastos_importacion_estimado
+                    CASE 
+                        WHEN %s = 'MXN' THEN COALESCE(c2.gastos_importacion_mxn, 0) + COALESCE(c2.gastos_importacion_estimado, 0)
+                        WHEN c2.moneda = 'USD' THEN (COALESCE(c2.gastos_importacion_divisa, 0) + COALESCE(c2.gastos_importacion_estimado, 0)) * COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado, 1.0)
+                        WHEN c2.tipo_cambio_real > 0 THEN (COALESCE(c2.gastos_importacion_mxn, 0) + COALESCE(c2.gastos_importacion_estimado, 0)) / c2.tipo_cambio_real
+                        ELSE 0
+                    END as gastos_importacion,
+                    -- Anticipo
+                    CASE 
+                        WHEN %s = 'MXN' THEN COALESCE(c2.anticipo_monto, 0)
+                        WHEN c2.moneda = 'USD' THEN COALESCE(c2.anticipo_monto, 0) * COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado, 1.0)
+                        WHEN c2.tipo_cambio_real > 0 THEN COALESCE(c2.anticipo_monto, 0) / c2.tipo_cambio_real
+                        ELSE 0
+                    END as anticipo
                 FROM compras_v2 c2
                 WHERE c2.fecha_pedido IS NOT NULL
             """
             
-            params = [moneda, moneda]  # Parámetros para los CASE statements
+            params = [moneda, moneda, moneda]  # Parámetros para los CASE statements
             
             # Aplicar filtros
             if filtros:
@@ -847,11 +851,6 @@ class ComprasV2Service:
                     query += " AND c2.proveedor ILIKE %s"
                     params.append(f"%{filtros['proveedor']}%")
             
-            query += """
-                GROUP BY DATE_TRUNC('week', COALESCE(c2.fecha_pago_factura, c2.fecha_pedido))
-                ORDER BY semana ASC
-            """
-            
             cursor.execute(query, params)
             resultados = cursor.fetchall()
             cursor.close()
@@ -859,33 +858,65 @@ class ComprasV2Service:
             if not resultados:
                 return {'labels': [], 'datasets': [], 'titulo': 'Sin datos'}
             
-            labels = []
-            pagos_data = []
-            pendiente_data = []
+            # Procesar resultados por semana
+            semanas_data = {}
             
             for row in resultados:
-                semana = row['semana']
-                pagos = float(row['pagos']) if row['pagos'] else 0
-                pendiente = float(row['pendiente']) if row['pendiente'] else 0
+                semana_vencimiento = row['semana_vencimiento']
+                semana_arribo = row['semana_arribo']
+                liquidaciones = float(row['liquidaciones']) if row['liquidaciones'] else 0
+                gastos_importacion = float(row['gastos_importacion']) if row['gastos_importacion'] else 0
+                anticipo = float(row['anticipo']) if row['anticipo'] else 0
                 
-                labels.append(f"Semana {semana.isocalendar()[1]}")
-                pagos_data.append(pagos)
-                pendiente_data.append(pendiente)
+                # Usar semana de vencimiento para liquidaciones y anticipos
+                if semana_vencimiento:
+                    semana_key = f"Semana {semana_vencimiento.isocalendar()[1]}"
+                    if semana_key not in semanas_data:
+                        semanas_data[semana_key] = {'liquidaciones': 0, 'gastos_importacion': 0, 'anticipo': 0}
+                    semanas_data[semana_key]['liquidaciones'] += liquidaciones
+                    semanas_data[semana_key]['anticipo'] += anticipo
+                
+                # Usar semana de arribo para gastos de importación
+                if semana_arribo:
+                    semana_key = f"Semana {semana_arribo.isocalendar()[1]}"
+                    if semana_key not in semanas_data:
+                        semanas_data[semana_key] = {'liquidaciones': 0, 'gastos_importacion': 0, 'anticipo': 0}
+                    semanas_data[semana_key]['gastos_importacion'] += gastos_importacion
             
-            titulo = f"Flujo de Pagos Semanal ({moneda})"
+            # Ordenar semanas y preparar datos
+            semanas_ordenadas = sorted(semanas_data.keys(), key=lambda x: int(x.split()[1]))
+            
+            # Filtrar solo semanas con datos significativos (desde semana actual)
+            from datetime import datetime, timedelta
+            semana_actual = datetime.now().isocalendar()[1]
+            semanas_filtradas = [semana for semana in semanas_ordenadas if int(semana.split()[1]) >= semana_actual]
+            
+            if not semanas_filtradas:
+                semanas_filtradas = semanas_ordenadas[-4:]  # Últimas 4 semanas si no hay datos futuros
+            
+            liquidaciones_data = [semanas_data[semana]['liquidaciones'] for semana in semanas_filtradas]
+            gastos_data = [semanas_data[semana]['gastos_importacion'] for semana in semanas_filtradas]
+            anticipos_data = [semanas_data[semana]['anticipo'] for semana in semanas_filtradas]
+            
+            titulo = f"Flujo de Pagos Semanal ({moneda}) - Columnas Apiladas"
             
             return {
-                'labels': labels,
+                'labels': semanas_filtradas,
                 'datasets': [
                     {
-                        'label': 'Pagos Realizados',
-                        'data': pagos_data,
+                        'label': 'Liquidaciones',
+                        'data': liquidaciones_data,
                         'backgroundColor': '#10b981'
                     },
                     {
-                        'label': 'Pendiente',
-                        'data': pendiente_data,
+                        'label': 'Gastos de Importación',
+                        'data': gastos_data,
                         'backgroundColor': '#f59e0b'
+                    },
+                    {
+                        'label': 'Anticipo',
+                        'data': anticipos_data,
+                        'backgroundColor': '#3b82f6'
                     }
                 ],
                 'titulo': titulo

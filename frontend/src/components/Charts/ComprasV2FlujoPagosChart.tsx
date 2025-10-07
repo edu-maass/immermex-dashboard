@@ -1,19 +1,19 @@
 import { FC } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface ComprasV2FlujoPagosChartProps {
-  data: Array<{ semana: string; pagos: number; pendiente: number }>;
+  data: Array<{ semana: string; liquidaciones: number; gastos_importacion: number; anticipo: number }>;
   moneda: 'USD' | 'MXN';
+  onMonedaChange: (moneda: 'USD' | 'MXN') => void;
   titulo?: string;
-  onMonedaChange?: (moneda: 'USD' | 'MXN') => void;
 }
 
 export const ComprasV2FlujoPagosChart: FC<ComprasV2FlujoPagosChartProps> = ({ 
   data, 
   moneda, 
-  titulo = "Flujo de Pagos Semanal",
-  onMonedaChange 
+  onMonedaChange, 
+  titulo = "Flujo de Pagos Semanal" 
 }) => {
   // Safety check for data
   if (!data || !Array.isArray(data) || data.length === 0) {
@@ -21,32 +21,12 @@ export const ComprasV2FlujoPagosChart: FC<ComprasV2FlujoPagosChartProps> = ({
       <Card>
         <CardHeader>
           <CardTitle>{titulo}</CardTitle>
-          {onMonedaChange && (
-            <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => onMonedaChange('USD')}
-                className={`px-3 py-1 text-xs rounded ${
-                  moneda === 'USD' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-                }`}
-              >
-                USD
-              </button>
-              <button
-                onClick={() => onMonedaChange('MXN')}
-                className={`px-3 py-1 text-xs rounded ${
-                  moneda === 'MXN' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-                }`}
-              >
-                MXN
-              </button>
-            </div>
-          )}
         </CardHeader>
         <CardContent>
           <div className="h-80 flex items-center justify-center text-gray-500">
             <div className="text-center">
               <p className="text-lg font-medium">Sin datos disponibles</p>
-              <p className="text-sm">No hay información de pagos</p>
+              <p className="text-sm">No hay información de flujo de pagos</p>
             </div>
           </div>
         </CardContent>
@@ -60,59 +40,51 @@ export const ComprasV2FlujoPagosChart: FC<ComprasV2FlujoPagosChartProps> = ({
     return `$${value.toFixed(0)}`;
   };
 
-  const formatWeek = (weekString: string) => {
-    // Format week string like "Semana 1" or "Week 1"
-    if (weekString.includes('Semana')) return weekString;
-    if (weekString.includes('Week')) return weekString.replace('Week', 'Semana');
-    return `Semana ${weekString}`;
+  const formatCurrencyWithSymbol = (value: number) => {
+    const formatted = formatCurrency(value);
+    return `${formatted} ${moneda}`;
   };
-
-  // Format data for the chart
-  const chartData = data.map(item => ({
-    semana: formatWeek(item.semana),
-    pagos: item.pagos,
-    pendiente: item.pendiente
-  }));
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{titulo}</CardTitle>
-        {onMonedaChange && (
-          <div className="flex gap-2 mt-2">
+        <div className="flex justify-between items-center">
+          <CardTitle>{titulo}</CardTitle>
+          <div className="flex space-x-2">
             <button
               onClick={() => onMonedaChange('USD')}
-              className={`px-3 py-1 text-xs rounded ${
-                moneda === 'USD' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                moneda === 'USD' 
+                  ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
               USD
             </button>
             <button
               onClick={() => onMonedaChange('MXN')}
-              className={`px-3 py-1 text-xs rounded ${
-                moneda === 'MXN' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                moneda === 'MXN' 
+                  ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
               MXN
             </button>
           </div>
-        )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={chartData}
-              margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              data={data}
+              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="semana"
                 tick={{ fontSize: 12 }}
-                angle={-45}
-                textAnchor="end"
-                height={60}
               />
               <YAxis
                 tick={{ fontSize: 12 }}
@@ -120,8 +92,8 @@ export const ComprasV2FlujoPagosChart: FC<ComprasV2FlujoPagosChartProps> = ({
               />
               <Tooltip
                 formatter={(value: number, name: string) => [
-                  formatCurrency(value),
-                  name === 'pagos' ? 'Pagos Realizados' : 'Pendiente'
+                  formatCurrencyWithSymbol(value),
+                  name
                 ]}
                 labelStyle={{ color: '#374151' }}
                 contentStyle={{
@@ -130,16 +102,26 @@ export const ComprasV2FlujoPagosChart: FC<ComprasV2FlujoPagosChartProps> = ({
                   borderRadius: '8px',
                 }}
               />
+              <Legend />
               <Bar
-                dataKey="pagos"
+                dataKey="liquidaciones"
+                stackId="a"
                 fill="#10b981"
-                name="Pagos Realizados"
-                radius={[4, 4, 0, 0]}
+                name="Liquidaciones"
+                radius={[0, 0, 0, 0]}
               />
               <Bar
-                dataKey="pendiente"
+                dataKey="gastos_importacion"
+                stackId="a"
                 fill="#f59e0b"
-                name="Pendiente"
+                name="Gastos de Importación"
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="anticipo"
+                stackId="a"
+                fill="#3b82f6"
+                name="Anticipo"
                 radius={[4, 4, 0, 0]}
               />
             </BarChart>
@@ -149,4 +131,3 @@ export const ComprasV2FlujoPagosChart: FC<ComprasV2FlujoPagosChartProps> = ({
     </Card>
   );
 };
-
