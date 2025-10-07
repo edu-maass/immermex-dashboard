@@ -450,13 +450,17 @@ class ComprasV2Service:
             # Convertir a diccionarios
             compras = []
             for row in compras_raw:
-                compra = {
-                    'id': row[0],
-                    'imi': row[1],
-                    'proveedor': row[2],
-                    'fecha_pedido': row[3].isoformat() if row[3] else None
-                }
-                compras.append(compra)
+                try:
+                    compra = {
+                        'id': int(row[0]) if row[0] is not None else None,
+                        'imi': str(row[1]) if row[1] is not None else None,
+                        'proveedor': str(row[2]) if row[2] is not None else None,
+                        'fecha_pedido': row[3].isoformat() if row[3] is not None else None
+                    }
+                    compras.append(compra)
+                except Exception as e:
+                    logger.error(f"Error convirtiendo fila {row}: {str(e)}")
+                    continue
             
             cursor.close()
             return compras
