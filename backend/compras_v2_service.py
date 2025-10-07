@@ -878,6 +878,7 @@ class ComprasV2Service:
         """Obtiene lista de materiales únicos"""
         conn = self.get_connection()
         if not conn:
+            logger.error("No se pudo conectar a la base de datos para obtener materiales")
             return []
         
         try:
@@ -886,23 +887,29 @@ class ComprasV2Service:
             cursor.execute("""
                 SELECT DISTINCT material_codigo
                 FROM compras_v2_materiales
-                WHERE material_codigo IS NOT NULL
+                WHERE material_codigo IS NOT NULL AND material_codigo != ''
                 ORDER BY material_codigo
             """)
             
-            materiales = [row[0] for row in cursor.fetchall()]
+            results = cursor.fetchall()
+            materiales = [row[0] for row in results]
             cursor.close()
+            
+            logger.info(f"Materiales obtenidos: {len(materiales)}")
             
             return materiales
             
         except Exception as e:
             logger.error(f"Error obteniendo materiales: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             return []
     
     def get_proveedores(self) -> List[str]:
         """Obtiene lista de proveedores únicos"""
         conn = self.get_connection()
         if not conn:
+            logger.error("No se pudo conectar a la base de datos para obtener proveedores")
             return []
         
         try:
@@ -911,42 +918,53 @@ class ComprasV2Service:
             cursor.execute("""
                 SELECT DISTINCT proveedor
                 FROM compras_v2
-                WHERE proveedor IS NOT NULL
+                WHERE proveedor IS NOT NULL AND proveedor != ''
                 ORDER BY proveedor
             """)
             
-            proveedores = [row[0] for row in cursor.fetchall()]
+            results = cursor.fetchall()
+            proveedores = [row[0] for row in results]
             cursor.close()
+            
+            logger.info(f"Proveedores obtenidos: {len(proveedores)}")
             
             return proveedores
             
         except Exception as e:
             logger.error(f"Error obteniendo proveedores: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             return []
     
     def get_años_disponibles(self) -> List[int]:
         """Obtiene lista de años disponibles en compras_v2"""
         conn = self.get_connection()
         if not conn:
+            logger.error("No se pudo conectar a la base de datos para obtener años disponibles")
             return []
         
         try:
             cursor = conn.cursor()
             
             cursor.execute("""
-                SELECT DISTINCT EXTRACT(YEAR FROM fecha_pedido) as año
+                SELECT DISTINCT EXTRACT(YEAR FROM fecha_pedido)::integer as año
                 FROM compras_v2
                 WHERE fecha_pedido IS NOT NULL
                 ORDER BY año DESC
             """)
             
-            años = [int(row[0]) for row in cursor.fetchall() if row[0] is not None]
+            results = cursor.fetchall()
+            años = [int(row[0]) for row in results if row[0] is not None]
             cursor.close()
+            
+            logger.info(f"Años disponibles obtenidos: {años}")
             
             return años
             
         except Exception as e:
             logger.error(f"Error obteniendo años disponibles: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             return []
     
     def __del__(self):
