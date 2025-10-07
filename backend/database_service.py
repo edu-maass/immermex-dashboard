@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 from database import (
     Facturacion, Cobranza, CFDIRelacionado, Inventario, Pedido, PedidosCompras,
-    ArchivoProcesado, KPI, Compras, get_latest_data_summary
+    ArchivoProcesado, KPI, get_latest_data_summary
 )
 from services import FacturacionService, CobranzaService, PedidosService, KPIAggregator
 from utils.validators import DataValidator
@@ -405,7 +405,6 @@ class DatabaseService:
             self.db.query(CFDIRelacionado).delete()
             self.db.query(Cobranza).delete()
             self.db.query(Facturacion).delete()
-            self.db.query(Compras).delete()
             self.db.query(KPI).delete()
             self.db.query(ArchivoProcesado).delete()  # Limpiar también archivos procesados
             self.db.commit()
