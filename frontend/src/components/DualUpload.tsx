@@ -72,27 +72,30 @@ export const DualUpload: FC<DualUploadProps> = ({
             </CardContent>
           </Card>
 
-          <div className="p-3 bg-indigo-50 rounded-md">
-            <h4 className="text-sm font-medium text-indigo-900 mb-2">Características:</h4>
-            <ul className="text-xs text-indigo-800 space-y-1">
-              <li>• Sistema optimizado</li>
-              <li>• Cálculos automáticos</li>
-              <li>• Integración proveedores</li>
-              <li>• Layout descargable</li>
-            </ul>
-          </div>
         </div>
       </div>
 
-      {/* Información adicional */}
+      {/* Información consolidada */}
       <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-        <h4 className="text-sm font-medium text-gray-900 mb-2">Información importante:</h4>
-        <div className="text-xs text-gray-600 space-y-1">
-          <p>• Los archivos se procesan de forma independiente</p>
-          <p>• Puedes subir archivos de facturación y compras V2 por separado</p>
-          <p>• Los datos se integran automáticamente en el dashboard</p>
-          <p>• Formatos soportados: .xlsx y .xls</p>
-          <p>• <strong>Recomendado:</strong> Usar Compras V2 para nuevas importaciones (sistema optimizado)</p>
+        <h4 className="text-sm font-medium text-gray-900 mb-3">Información del Sistema:</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="text-xs text-gray-600 space-y-1">
+            <p className="font-medium text-gray-800 mb-1">Características Compras V2:</p>
+            <p>• Sistema optimizado para mejor rendimiento</p>
+            <p>• Cálculos automáticos de fechas estimadas</p>
+            <p>• Integración con datos de proveedores</p>
+            <p>• Layout descargable con instrucciones</p>
+            <p>• Validación robusta de columnas</p>
+            <p>• KPIs avanzados de importaciones</p>
+          </div>
+          <div className="text-xs text-gray-600 space-y-1">
+            <p className="font-medium text-gray-800 mb-1">Información General:</p>
+            <p>• Los archivos se procesan de forma independiente</p>
+            <p>• Puedes subir archivos de facturación y compras V2 por separado</p>
+            <p>• Los datos se integran automáticamente en el dashboard</p>
+            <p>• Formatos soportados: .xlsx y .xls</p>
+            <p>• <strong>Recomendado:</strong> Usar Compras V2 para nuevas importaciones</p>
+          </div>
         </div>
       </div>
     </div>
