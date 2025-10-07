@@ -441,7 +441,7 @@ class ComprasV2Service:
                     c2.iva_monto_mxn, c2.total_con_iva_divisa, c2.total_con_iva_mxn,
                     COUNT(c2m.id) as materiales_count
                 FROM compras_v2 c2
-                LEFT JOIN compras_v2_materiales c2m ON c2.imi = c2m.compra_id
+                LEFT JOIN compras_v2_materiales c2m ON c2.id = c2m.compra_id
                 WHERE 1=1
             """
             
@@ -534,7 +534,7 @@ class ComprasV2Service:
                     SUM(c2.total_con_iva_mxn) / NULLIF(COUNT(DISTINCT c2.proveedor), 0) as promedio_por_proveedor,
                     COUNT(DISTINCT c2.proveedor) as proveedores_unicos
                 FROM compras_v2 c2
-                LEFT JOIN compras_v2_materiales c2m ON c2.imi = c2m.compra_id
+                LEFT JOIN compras_v2_materiales c2m ON c2.id = c2m.compra_id
                 WHERE 1=1
             """
             
@@ -573,7 +573,7 @@ class ComprasV2Service:
                     AVG(c2m.pu_mxn) as precio_unitario_promedio_mxn,
                     COUNT(DISTINCT c2m.material_codigo) as materiales_unicos
                 FROM compras_v2 c2
-                LEFT JOIN compras_v2_materiales c2m ON c2.imi = c2m.compra_id
+                LEFT JOIN compras_v2_materiales c2m ON c2.id = c2m.compra_id
                 WHERE 1=1
             """
             
@@ -645,7 +645,7 @@ class ComprasV2Service:
                     MIN(c2m.{precio_field}) as precio_min,
                     MAX(c2m.{precio_field}) as precio_max
                 FROM compras_v2 c2
-                JOIN compras_v2_materiales c2m ON c2.imi = c2m.compra_id
+                JOIN compras_v2_materiales c2m ON c2.id = c2m.compra_id
                 WHERE c2.fecha_pedido IS NOT NULL
             """
             
@@ -954,7 +954,7 @@ class ComprasV2Service:
             """)
             
             results = cursor.fetchall()
-            años = [int(row[0]) for row in results if row[0] is not None]
+            años = [int(row['año']) for row in results if row['año'] is not None]
             cursor.close()
             
             logger.info(f"Años disponibles obtenidos: {años}")
