@@ -40,9 +40,20 @@ export const DualUpload: FC<DualUploadProps> = ({
 
         {/* Sección de Compras V2 */}
         <div className="space-y-4">
-          <div className="flex items-center space-x-2 mb-4">
-            <ShoppingBag className="h-5 w-5 text-indigo-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Compras</h3>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <ShoppingBag className="h-5 w-5 text-indigo-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Compras</h3>
+            </div>
+            {/* Botón de descarga en la esquina superior derecha */}
+            <div className="relative">
+              <ComprasV2Upload 
+                onUploadSuccess={onUploadSuccess}
+                onUploadError={onUploadError}
+                onNewUpload={onNewUpload}
+                showDownloadButton={true}
+              />
+            </div>
           </div>
           
           <Card className="border-indigo-200">
@@ -51,6 +62,7 @@ export const DualUpload: FC<DualUploadProps> = ({
                 onUploadSuccess={onUploadSuccess}
                 onUploadError={onUploadError}
                 onNewUpload={onNewUpload}
+                showDownloadButton={false}
               />
             </CardContent>
           </Card>

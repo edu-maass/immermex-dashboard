@@ -15,11 +15,13 @@ interface ComprasV2UploadProps {
   onUploadSuccess?: (data: any) => void;
   onUploadError?: (error: string) => void;
   onNewUpload?: () => void;
+  showDownloadButton?: boolean;
 }
 
 export const ComprasV2Upload: React.FC<ComprasV2UploadProps> = ({
   onUploadSuccess,
-  onUploadError
+  onUploadError,
+  showDownloadButton = false
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -112,100 +114,102 @@ export const ComprasV2Upload: React.FC<ComprasV2UploadProps> = ({
 • Los proveedores deben existir en la base de datos para cálculos automáticos`;
 
   return (
-    <div className="space-y-6">
-      {/* Botón de descarga de layout */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex justify-center items-center mb-4">
-          <Tooltip content={excelInstructions} position="bottom">
-            <Button 
-              onClick={handleDownloadLayout}
-              variant="outline"
-              className="flex items-center gap-2"
-              disabled={loading}
-            >
-              <Download className="h-4 w-4" />
-              Descargar Layout Excel
-            </Button>
-          </Tooltip>
-        </div>
-      </div>
+    <>
+      {/* Botón de descarga de layout - solo se muestra cuando showDownloadButton es true */}
+      {showDownloadButton && (
+        <Tooltip content={excelInstructions} position="bottom">
+          <Button 
+            onClick={handleDownloadLayout}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+            disabled={loading}
+          >
+            <Download className="h-4 w-4" />
+            Descargar Layout Excel
+          </Button>
+        </Tooltip>
+      )}
 
-      {/* Upload de archivos */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      {/* Upload de archivos - solo se muestra cuando showDownloadButton es false */}
+      {!showDownloadButton && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow-md p-6">
         
-        <div
-          {...getRootProps()}
-          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-            isDragActive
-              ? 'border-blue-500 bg-blue-50'
-              : error
-              ? 'border-red-500 bg-red-50'
-              : success
-              ? 'border-green-500 bg-green-50'
-              : 'border-gray-300 hover:border-gray-400'
-          }`}
-        >
-          <input {...getInputProps()} />
-          
-          <div className="flex flex-col items-center">
-            {error ? (
-              <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-            ) : success ? (
-              <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
-            ) : (
-              <Upload className="h-12 w-12 text-gray-400 mb-4" />
-            )}
-            
-            <p className="text-lg font-medium text-gray-900 mb-2">
-              {isDragActive
-                ? 'Suelta el archivo aquí...'
-                : 'Arrastra tu archivo Excel de compras aquí o haz clic para seleccionar'}
-            </p>
-            
-            <p className="text-sm text-gray-500 mb-4">
-              Solo archivos .xlsx y .xls son aceptados
-            </p>
-            
-            <Button
-              type="button"
-              variant="outline"
-              className="mt-2"
-              disabled={loading}
+            <div
+              {...getRootProps()}
+              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                isDragActive
+                  ? 'border-blue-500 bg-blue-50'
+                  : error
+                  ? 'border-red-500 bg-red-50'
+                  : success
+                  ? 'border-green-500 bg-green-50'
+                  : 'border-gray-300 hover:border-gray-400'
+              }`}
             >
-              Seleccionar archivo
-            </Button>
+              <input {...getInputProps()} />
+              
+              <div className="flex flex-col items-center">
+                {error ? (
+                  <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+                ) : success ? (
+                  <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
+                ) : (
+                  <Upload className="h-12 w-12 text-gray-400 mb-4" />
+                )}
+                
+                <p className="text-lg font-medium text-gray-900 mb-2">
+                  {isDragActive
+                    ? 'Suelta el archivo aquí...'
+                    : 'Arrastra tu archivo Excel de compras aquí o haz clic para seleccionar'}
+                </p>
+                
+                <p className="text-sm text-gray-500 mb-4">
+                  Solo archivos .xlsx y .xls son aceptados
+                </p>
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-2"
+                  disabled={loading}
+                >
+                  Seleccionar archivo
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Loading */}
-      {loading && (
-        <div className="flex items-center justify-center p-4">
-          <LoadingSpinner />
-          <span className="ml-2 text-gray-600">Procesando...</span>
+          {/* Loading */}
+          {loading && (
+            <div className="flex items-center justify-center p-4">
+              <LoadingSpinner />
+              <span className="ml-2 text-gray-600">Procesando...</span>
+            </div>
+          )}
+
+          {/* Success Message */}
+          {success && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                <span className="text-green-800">{success}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+                <span className="text-red-800">{error}</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
-
-      {/* Success Message */}
-      {success && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-            <span className="text-green-800">{success}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
-            <span className="text-red-800">{error}</span>
-          </div>
-        </div>
-      )}
-
-    </div>
+    </>
   );
 };
