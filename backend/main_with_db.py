@@ -846,6 +846,50 @@ async def get_compras_v2_kpis(
         logger.error(f"Error obteniendo KPIs de compras_v2: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/compras-v2/debug")
+async def debug_compras_v2():
+    """Endpoint de debug para verificar estructura de base de datos"""
+    try:
+        from compras_v2_service import ComprasV2Service
+        
+        service = ComprasV2Service()
+        conn = service.get_connection()
+        
+        if not conn:
+            return {"error": "No se pudo conectar a la base de datos"}
+        
+        cursor = conn.cursor()
+        
+        # Verificar si la tabla existe
+        cursor.execute("""
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name LIKE '%compras%'
+        """)
+        tables = cursor.fetchall()
+        
+        # Verificar estructura de compras_v2 si existe
+        cursor.execute("""
+            SELECT column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_name = 'compras_v2'
+            ORDER BY ordinal_position
+        """)
+        columns = cursor.fetchall()
+        
+        cursor.close()
+        
+        return {
+            "success": True,
+            "tables": [t[0] for t in tables],
+            "compras_v2_columns": [{"name": c[0], "type": c[1]} for c in columns]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error en debug: {str(e)}")
+        return {"error": str(e)}
+
 @app.get("/api/compras-v2/test")
 async def test_compras_v2_data():
     """Endpoint de prueba para verificar datos de compras_v2"""
