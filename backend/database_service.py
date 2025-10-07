@@ -1273,3 +1273,4 @@ class DatabaseService:
             "margen_por_kg": 0.0
         }
     
+

@@ -1754,11 +1754,11 @@ async def get_data_summary(db: Session = Depends(get_db)):
 
 if __name__ == "__main__":
     import uvicorn
-    print("🚀 Iniciando servidor Immermex Dashboard (Con Base de Datos)")
-    print("📊 Backend: http://localhost:8000")
-    print("📚 API Docs: http://localhost:8000/docs")
-    print("🔄 Frontend: http://localhost:3000")
-    print("💾 Base de datos: Persistencia habilitada")
+    print("Iniciando servidor Immermex Dashboard (Con Base de Datos)")
+    print("Backend: http://localhost:8000")
+    print("API Docs: http://localhost:8000/docs")
+    print("Frontend: http://localhost:3000")
+    print("Base de datos: Persistencia habilitada")
     print("=" * 60)
     
     uvicorn.run(
