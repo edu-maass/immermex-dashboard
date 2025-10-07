@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { KPICard } from './KPICard';
 import { UnitEconomicsCard } from './UnitEconomicsCard';
+import { ActivityIndicatorsCard } from './ActivityIndicatorsCard';
 import { LoadingSpinner } from './LoadingSpinner';
 import { Tooltip } from './ui/tooltip';
 import { ComprasV2EvolucionPreciosChart } from './Charts/ComprasV2EvolucionPreciosChart';
@@ -391,6 +392,8 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
           value={formatCurrency(kpis.total_costo_mxn || 0)}
           description={`${kpis.total_kilogramos ? kpis.total_kilogramos.toLocaleString() : '0'} kg`}
           icon={Package}
+          iconColor="text-blue-600"
+          iconBgColor="bg-blue-100"
           raw={true}
         />
         <KPICard
@@ -398,32 +401,18 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
           value={formatCurrency(kpis.compras_pendientes || 0)}
           description={`${kpis.compras_pendientes_count || 0} facturas pendientes`}
           icon={Clock}
-          raw={true}
-        />
-        <KPICard
-          title="Días Promedio Crédito"
-          value={kpis.dias_credito_promedio ? kpis.dias_credito_promedio.toFixed(0) : '0'}
-          description="días promedio"
-          icon={Calendar}
+          iconColor="text-orange-600"
+          iconBgColor="bg-orange-100"
           raw={true}
         />
       </div>
 
-      {/* KPIs Consolidados */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <KPICard
-          title="Rotación Inventario"
-          value={`${(kpis.rotacion_inventario || 0).toFixed(1)}`}
-          description="veces por año"
-          icon={Package}
-          raw={true}
-        />
-        <KPICard
-          title="Ciclo de Compras"
-          value={`${(kpis.ciclo_compras || 0).toFixed(0)}`}
-          description="días promedio"
-          icon={TrendingUp}
-          raw={true}
+      {/* Indicadores de Actividad Consolidados */}
+      <div className="mb-8">
+        <ActivityIndicatorsCard
+          diasCreditoPromedio={kpis.dias_credito_promedio}
+          rotacionInventario={kpis.rotacion_inventario}
+          cicloCompras={kpis.ciclo_compras}
         />
       </div>
 
@@ -444,17 +433,23 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
           value={kpis.proveedores_unicos || 0}
           description="proveedores activos"
           icon={Truck}
+          iconColor="text-green-600"
+          iconBgColor="bg-green-100"
           raw={true}
         />
         <KPICard
           title="Compras con Anticipo"
           value={kpis.compras_con_anticipo || 0}
           icon={CheckCircle}
+          iconColor="text-emerald-600"
+          iconBgColor="bg-emerald-100"
         />
         <KPICard
           title="Tipo Cambio Promedio"
           value={kpis.tipo_cambio_promedio ? kpis.tipo_cambio_promedio.toFixed(2) : '0.00'}
           icon={DollarSign}
+          iconColor="text-purple-600"
+          iconBgColor="bg-purple-100"
           raw={true}
         />
       </div>

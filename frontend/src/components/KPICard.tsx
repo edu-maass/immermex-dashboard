@@ -7,6 +7,8 @@ interface KPICardProps {
   value: string | number;
   description?: string;
   icon?: LucideIcon;
+  iconColor?: string;
+  iconBgColor?: string;
   trend?: {
     value: number;
     isPositive: boolean;
@@ -20,6 +22,8 @@ export const KPICard: FC<KPICardProps> = ({
   value,
   description,
   icon: Icon,
+  iconColor = 'text-blue-600',
+  iconBgColor = 'bg-blue-100',
   trend,
   className = '',
   raw = false,
@@ -37,12 +41,16 @@ export const KPICard: FC<KPICardProps> = ({
   };
 
   return (
-    <Card className={`backdrop-blur-sm bg-card/90 ${className}`}>
+    <Card className={`backdrop-blur-sm bg-card/90 hover:shadow-lg transition-shadow duration-200 ${className}`}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
         </CardTitle>
-        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+        {Icon && (
+          <div className={`p-2 rounded-lg ${iconBgColor}`}>
+            <Icon className={`h-4 w-4 ${iconColor}`} />
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <div className="text-3xl font-bold tracking-tight">{formatValue(value)}</div>

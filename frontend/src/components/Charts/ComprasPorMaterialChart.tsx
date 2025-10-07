@@ -1,6 +1,6 @@
 import { FC } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface ComprasPorMaterialChartProps {
   data: Array<{ material: string; total_compras: number; total_kg: number }>;
@@ -90,15 +90,6 @@ export const ComprasPorMaterialChart: FC<ComprasPorMaterialChartProps> = ({
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                 }}
-              />
-              <Legend 
-                verticalAlign="bottom" 
-                height={36}
-                formatter={(value, entry) => (
-                  <span style={{ color: entry.color }}>
-                    {value.length > 15 ? value.substring(0, 15) + '...' : value}
-                  </span>
-                )}
               />
             </PieChart>
           </ResponsiveContainer>
