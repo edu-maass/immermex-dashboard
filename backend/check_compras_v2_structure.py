@@ -97,3 +97,4 @@ def check_table_structure():
 
 if __name__ == "__main__":
     check_table_structure()
+

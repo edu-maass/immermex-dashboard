@@ -849,9 +849,25 @@ class DatabaseService:
         """Obtiene resumen de datos disponibles"""
         return get_latest_data_summary(self.db)
     
-    # ==================== MÉTODOS DE COMPRAS ====================
+    # ==================== MÉTODOS DE COMPRAS (LEGACY) - ELIMINADOS ====================
+    # Todos los métodos de compras legacy han sido eliminados
+    # Usar ComprasV2Service en su lugar
     
-    def calculate_compras_kpis(self, filtros: dict = None) -> dict:
+    """
+    MÉTODOS ELIMINADOS:
+    - calculate_compras_kpis()
+    - get_evolucion_precios()
+    - get_flujo_pagos_compras()
+    - get_aging_cuentas_pagar()
+    - get_materiales_compras()
+    - get_proveedores_compras()
+    - _get_default_compras_kpis()
+    - _calculate_margen_bruto_compras_pedidos()
+    - _calculate_rotacion_inventario_compras()
+    - _calculate_ciclo_compras()
+    """
+    
+    def calculate_compras_kpis_DEPRECATED(self, filtros: dict = None) -> dict:
         """Calcula KPIs de compras con filtros opcionales"""
         try:
             # Query base para compras
