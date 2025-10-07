@@ -977,6 +977,58 @@ async def debug_pagos():
         logger.error(f"Error en debug pagos: {str(e)}")
         return {"error": str(e)}
 
+@app.get("/api/compras-v2/debug-relacion")
+async def debug_relacion():
+    """Endpoint de debug para verificar relación entre compras_v2 y materiales"""
+    try:
+        from compras_v2_service import ComprasV2Service
+        
+        service = ComprasV2Service()
+        conn = service.get_connection()
+        
+        if not conn:
+            return {"error": "No se pudo conectar a la base de datos"}
+        
+        cursor = conn.cursor()
+        
+        # Verificar IDs en compras_v2
+        cursor.execute("SELECT id, imi FROM compras_v2 ORDER BY id LIMIT 5")
+        compras_ids = cursor.fetchall()
+        
+        # Verificar IDs en compras_v2_materiales
+        cursor.execute("SELECT compra_id FROM compras_v2_materiales ORDER BY compra_id LIMIT 5")
+        materiales_compra_ids = cursor.fetchall()
+        
+        # Verificar si hay overlap
+        cursor.execute("""
+            SELECT COUNT(*) as overlap_count
+            FROM compras_v2 c2
+            WHERE EXISTS (SELECT 1 FROM compras_v2_materiales c2m WHERE c2m.compra_id = c2.id)
+        """)
+        overlap = cursor.fetchone()
+        
+        # Verificar materiales sin compra
+        cursor.execute("""
+            SELECT COUNT(*) as materiales_sin_compra
+            FROM compras_v2_materiales c2m
+            WHERE NOT EXISTS (SELECT 1 FROM compras_v2 c2 WHERE c2.id = c2m.compra_id)
+        """)
+        materiales_sin_compra = cursor.fetchone()
+        
+        cursor.close()
+        
+        return {
+            "success": True,
+            "compras_ids": [{"id": row['id'], "imi": row['imi']} for row in compras_ids],
+            "materiales_compra_ids": [row['compra_id'] for row in materiales_compra_ids],
+            "overlap_count": overlap['overlap_count'],
+            "materiales_sin_compra": materiales_sin_compra['materiales_sin_compra']
+        }
+        
+    except Exception as e:
+        logger.error(f"Error en debug relacion: {str(e)}")
+        return {"error": str(e)}
+
 @app.get("/api/compras-v2/debug")
 async def debug_compras_v2():
     """Endpoint de debug para verificar estructura de base de datos"""
