@@ -217,34 +217,57 @@ class ImmermexDataProcessor:
             folio_col = df_renamed.get('folio_factura', pd.Series())
             if isinstance(folio_col, str):
                 folio_col = pd.Series([folio_col])
-            # Convertir folio_factura a entero, manejar valores no numéricos
-            clean_df['folio_factura'] = pd.to_numeric(
-                self.clean_string_column(folio_col), 
-                errors='coerce'
-            ).fillna(0).astype(int)
+            
+            # Filtrar solo folios numéricos válidos
+            def is_numeric_folio(folio_str):
+                if pd.isna(folio_str) or folio_str == '':
+                    return False
+                # Convertir a string y limpiar
+                folio_clean = str(folio_str).strip()
+                # Verificar si es completamente numérico y mayor que 0
+                return folio_clean.isdigit() and int(folio_clean) > 0
+            
+            # Aplicar filtro
+            numeric_mask = folio_col.apply(is_numeric_folio)
+            folios_numericos = folio_col[numeric_mask]
+            
+            # Contar registros eliminados
+            registros_originales = len(df_renamed)
+            registros_filtrados = len(folios_numericos)
+            registros_eliminados = registros_originales - registros_filtrados
+            
+            logger.info(f"Facturación - Registros originales: {registros_originales}")
+            logger.info(f"Facturación - Registros con folios numéricos válidos: {registros_filtrados}")
+            logger.info(f"Facturación - Registros eliminados (folios no numéricos): {registros_eliminados}")
+            
+            # Crear DataFrame solo con registros válidos
+            df_filtrado = df_renamed[numeric_mask].copy()
+            
+            # Convertir folio_factura a entero solo para registros válidos
+            clean_df['folio_factura'] = pd.to_numeric(folios_numericos, errors='coerce').astype(int)
             
             # Cliente
-            cliente_col = df_renamed.get('cliente', pd.Series())
+            cliente_col = df_filtrado.get('cliente', pd.Series())
             if isinstance(cliente_col, str):
                 cliente_col = pd.Series([cliente_col])
             clean_df['cliente'] = self.clean_string_column(cliente_col)
             
             # Montos numéricos
             for col in ['monto_neto', 'monto_total', 'saldo_pendiente']:
-                col_data = df_renamed.get(col, pd.Series())
+                col_data = df_filtrado.get(col, pd.Series())
                 if isinstance(col_data, str):
                     col_data = pd.Series([col_data])
                 clean_df[col] = pd.to_numeric(col_data, errors='coerce').fillna(0)
             
             # Días de crédito - usar la misma lógica que pedidos
             # Primero intentar obtener de la columna dias_credito directamente
-            dias_credito_col = df_renamed.get('dias_credito', pd.Series())
+            dias_credito_col = df_filtrado.get('dias_credito', pd.Series())
             if isinstance(dias_credito_col, str):
                 dias_credito_col = pd.Series([dias_credito_col])
             
             # Si no hay columna dias_credito, extraer de condiciones_pago
             if dias_credito_col.empty or dias_credito_col.isna().all():
-                condiciones = df_renamed.get('condiciones_pago', pd.Series())
+                condiciones = df_filtrado.get('condiciones_pago', pd.Series())
                 if isinstance(condiciones, str):
                     condiciones = pd.Series([condiciones])
                 clean_df['dias_credito'] = pd.to_numeric(
@@ -257,13 +280,13 @@ class ImmermexDataProcessor:
                 ).fillna(30)
             
             # Agente
-            agente_col = df_renamed.get('agente', pd.Series())
+            agente_col = df_filtrado.get('agente', pd.Series())
             if isinstance(agente_col, str):
                 agente_col = pd.Series([agente_col])
             clean_df['agente'] = self.clean_string_column(agente_col)
             
             # UUID
-            uuid_col = df_renamed.get('uuid_factura', pd.Series())
+            uuid_col = df_filtrado.get('uuid_factura', pd.Series())
             if isinstance(uuid_col, str):
                 uuid_col = pd.Series([uuid_col])
             clean_df['uuid_factura'] = self.clean_uuid(uuid_col)
