@@ -742,7 +742,7 @@ class ComprasV2Service:
                     MIN(c2m.{precio_field}) as precio_min,
                     MAX(c2m.{precio_field}) as precio_max
                 FROM compras_v2 c2
-                LEFT JOIN compras_v2_materiales c2m ON c2.id = c2m.compra_id
+                LEFT JOIN compras_v2_materiales c2m ON c2.imi = c2m.compra_id
                 WHERE c2.fecha_pedido IS NOT NULL 
                 AND c2m.{precio_field} IS NOT NULL 
                 AND c2m.{precio_field} > 0

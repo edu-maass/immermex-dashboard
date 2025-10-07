@@ -876,7 +876,7 @@ async def debug_precios():
         cursor.execute("""
             SELECT COUNT(*) as total_joins
             FROM compras_v2 c2
-            JOIN compras_v2_materiales c2m ON c2.id = c2m.compra_id
+            LEFT JOIN compras_v2_materiales c2m ON c2.imi = c2m.compra_id
             WHERE c2.fecha_pedido IS NOT NULL
         """)
         joins_count = cursor.fetchone()
@@ -1003,7 +1003,7 @@ async def debug_relacion():
         cursor.execute("""
             SELECT COUNT(*) as overlap_count
             FROM compras_v2 c2
-            WHERE EXISTS (SELECT 1 FROM compras_v2_materiales c2m WHERE c2m.compra_id = c2.id)
+            WHERE EXISTS (SELECT 1 FROM compras_v2_materiales c2m WHERE c2m.compra_id = c2.imi)
         """)
         overlap = cursor.fetchone()
         
@@ -1011,7 +1011,7 @@ async def debug_relacion():
         cursor.execute("""
             SELECT COUNT(*) as materiales_sin_compra
             FROM compras_v2_materiales c2m
-            WHERE NOT EXISTS (SELECT 1 FROM compras_v2 c2 WHERE c2.id = c2m.compra_id)
+            WHERE NOT EXISTS (SELECT 1 FROM compras_v2 c2 WHERE c2.imi = c2m.compra_id)
         """)
         materiales_sin_compra = cursor.fetchone()
         
