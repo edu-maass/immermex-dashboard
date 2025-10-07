@@ -3,7 +3,7 @@ Configuración de base de datos PostgreSQL/SQLite para Immermex Dashboard
 Soporte para persistencia en la nube
 """
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, Boolean, Index
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Date, Text, Boolean, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
