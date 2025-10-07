@@ -431,7 +431,7 @@ class ComprasV2Service:
             # Construir query base
             query = """
                 SELECT 
-                    c2.imi, c2.proveedor, c2.fecha_pedido, c2.puerto_origen,
+                    c2.id, c2.imi, c2.proveedor, c2.fecha_pedido, c2.puerto_origen,
                     c2.fecha_salida_estimada, c2.fecha_arribo_estimada,
                     c2.moneda, c2.dias_credito, c2.anticipo_pct, c2.anticipo_monto,
                     c2.fecha_anticipo, c2.fecha_pago_factura,
@@ -439,9 +439,8 @@ class ComprasV2Service:
                     c2.gastos_importacion_divisa, c2.gastos_importacion_mxn,
                     c2.porcentaje_gastos_importacion, c2.iva_monto_divisa,
                     c2.iva_monto_mxn, c2.total_con_iva_divisa, c2.total_con_iva_mxn,
-                    COUNT(c2m.id) as materiales_count
+                    (SELECT COUNT(*) FROM compras_v2_materiales WHERE compra_id = c2.id) as materiales_count
                 FROM compras_v2 c2
-                LEFT JOIN compras_v2_materiales c2m ON c2.id = c2m.compra_id
                 WHERE 1=1
             """
             
@@ -464,8 +463,8 @@ class ComprasV2Service:
                 query += " AND c2.moneda = %s"
                 params.append(filtros['moneda'])
             
-            # Agrupar y ordenar
-            query += " GROUP BY c2.imi ORDER BY c2.fecha_pedido DESC"
+            # Ordenar
+            query += " ORDER BY c2.fecha_pedido DESC"
             
             if filtros.get('limit'):
                 query += " LIMIT %s"
@@ -478,28 +477,29 @@ class ComprasV2Service:
             compras = []
             for row in compras_raw:
                 compra = {
-                    'imi': row[0],
-                    'proveedor': row[1],
-                    'fecha_pedido': row[2].isoformat() if row[2] else None,
-                    'puerto_origen': row[3],
-                    'fecha_salida_estimada': row[4].isoformat() if row[4] else None,
-                    'fecha_arribo_estimada': row[5].isoformat() if row[5] else None,
-                    'moneda': row[6],
-                    'dias_credito': row[7],
-                    'anticipo_pct': float(row[8]) if row[8] else 0,
-                    'anticipo_monto': float(row[9]) if row[9] else 0,
-                    'fecha_anticipo': row[10].isoformat() if row[10] else None,
-                    'fecha_pago_factura': row[11].isoformat() if row[11] else None,
-                    'tipo_cambio_estimado': float(row[12]) if row[12] else 0,
-                    'tipo_cambio_real': float(row[13]) if row[13] else 0,
-                    'gastos_importacion_divisa': float(row[14]) if row[14] else 0,
-                    'gastos_importacion_mxn': float(row[15]) if row[15] else 0,
-                    'porcentaje_gastos_importacion': float(row[16]) if row[16] else 0,
-                    'iva_monto_divisa': float(row[17]) if row[17] else 0,
-                    'iva_monto_mxn': float(row[18]) if row[18] else 0,
-                    'total_con_iva_divisa': float(row[19]) if row[19] else 0,
-                    'total_con_iva_mxn': float(row[20]) if row[20] else 0,
-                    'materiales_count': int(row[21]) if row[21] else 0
+                    'id': row[0],
+                    'imi': row[1],
+                    'proveedor': row[2],
+                    'fecha_pedido': row[3].isoformat() if row[3] else None,
+                    'puerto_origen': row[4],
+                    'fecha_salida_estimada': row[5].isoformat() if row[5] else None,
+                    'fecha_arribo_estimada': row[6].isoformat() if row[6] else None,
+                    'moneda': row[7],
+                    'dias_credito': row[8],
+                    'anticipo_pct': float(row[9]) if row[9] else 0,
+                    'anticipo_monto': float(row[10]) if row[10] else 0,
+                    'fecha_anticipo': row[11].isoformat() if row[11] else None,
+                    'fecha_pago_factura': row[12].isoformat() if row[12] else None,
+                    'tipo_cambio_estimado': float(row[13]) if row[13] else 0,
+                    'tipo_cambio_real': float(row[14]) if row[14] else 0,
+                    'gastos_importacion_divisa': float(row[15]) if row[15] else 0,
+                    'gastos_importacion_mxn': float(row[16]) if row[16] else 0,
+                    'porcentaje_gastos_importacion': float(row[17]) if row[17] else 0,
+                    'iva_monto_divisa': float(row[18]) if row[18] else 0,
+                    'iva_monto_mxn': float(row[19]) if row[19] else 0,
+                    'total_con_iva_divisa': float(row[20]) if row[20] else 0,
+                    'total_con_iva_mxn': float(row[21]) if row[21] else 0,
+                    'materiales_count': int(row[22]) if row[22] else 0
                 }
                 compras.append(compra)
             
