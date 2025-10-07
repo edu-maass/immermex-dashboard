@@ -546,10 +546,10 @@ class ComprasV2Service:
             compras = []
             for row in compras_raw:
                 compra = {
-                    'id': row[0],
-                    'imi': row[1],
-                    'proveedor': row[2],
-                    'fecha_pedido': row[3].isoformat() if row[3] else None
+                    'id': int(row['id']) if row['id'] is not None else None,
+                    'imi': str(row['imi']) if row['imi'] is not None else None,
+                    'proveedor': str(row['proveedor']) if row['proveedor'] is not None else None,
+                    'fecha_pedido': row['fecha_pedido'].isoformat() if row['fecha_pedido'] is not None else None
                 }
                 compras.append(compra)
             
@@ -580,8 +580,26 @@ class ComprasV2Service:
             """, (imi,))
             
             materiales = cursor.fetchall()
+            
+            # Convertir a diccionarios
+            materiales_list = []
+            for row in materiales:
+                material = {
+                    'material_codigo': str(row['material_codigo']) if row['material_codigo'] is not None else None,
+                    'kg': float(row['kg']) if row['kg'] is not None else 0.0,
+                    'pu_divisa': float(row['pu_divisa']) if row['pu_divisa'] is not None else 0.0,
+                    'pu_mxn': float(row['pu_mxn']) if row['pu_mxn'] is not None else 0.0,
+                    'costo_total_divisa': float(row['costo_total_divisa']) if row['costo_total_divisa'] is not None else 0.0,
+                    'costo_total_mxn': float(row['costo_total_mxn']) if row['costo_total_mxn'] is not None else 0.0,
+                    'pu_mxn_importacion': float(row['pu_mxn_importacion']) if row['pu_mxn_importacion'] is not None else 0.0,
+                    'costo_total_mxn_imporacion': float(row['costo_total_mxn_imporacion']) if row['costo_total_mxn_imporacion'] is not None else 0.0,
+                    'iva': float(row['iva']) if row['iva'] is not None else 0.0,
+                    'costo_total_con_iva': float(row['costo_total_con_iva']) if row['costo_total_con_iva'] is not None else 0.0
+                }
+                materiales_list.append(material)
+            
             cursor.close()
-            return materiales
+            return materiales_list
             
         except Exception as e:
             logger.error(f"Error obteniendo materiales para compra {imi}: {str(e)}")
@@ -753,10 +771,10 @@ class ComprasV2Service:
             data = []
             
             for row in resultados:
-                mes = row[0]
-                precio_promedio = float(row[1]) if row[1] else 0
-                precio_min = float(row[2]) if row[2] else 0
-                precio_max = float(row[3]) if row[3] else 0
+                mes = row['mes']
+                precio_promedio = float(row['precio_promedio']) if row['precio_promedio'] else 0
+                precio_min = float(row['precio_min']) if row['precio_min'] else 0
+                precio_max = float(row['precio_max']) if row['precio_max'] else 0
                 
                 labels.append(mes.strftime('%Y-%m'))
                 data.append({
@@ -834,9 +852,9 @@ class ComprasV2Service:
             pendiente_data = []
             
             for row in resultados:
-                semana = row[0]
-                pagos = float(row[1]) if row[1] else 0
-                pendiente = float(row[2]) if row[2] else 0
+                semana = row['semana']
+                pagos = float(row['pagos']) if row['pagos'] else 0
+                pendiente = float(row['pendiente']) if row['pendiente'] else 0
                 
                 labels.append(f"Semana {semana.isocalendar()[1]}")
                 pagos_data.append(pagos)
@@ -937,8 +955,8 @@ class ComprasV2Service:
             data = []
             
             for row in resultados:
-                periodo = row[0]
-                monto = float(row[1]) if row[1] else 0
+                periodo = row['periodo']
+                monto = float(row['monto']) if row['monto'] else 0
                 
                 labels.append(periodo)
                 data.append(monto)
@@ -973,7 +991,7 @@ class ComprasV2Service:
             """)
             
             results = cursor.fetchall()
-            materiales = [row[0] for row in results]
+            materiales = [row['material_codigo'] for row in results]
             cursor.close()
             
             logger.info(f"Materiales obtenidos: {len(materiales)}")
@@ -1004,7 +1022,7 @@ class ComprasV2Service:
             """)
             
             results = cursor.fetchall()
-            proveedores = [row[0] for row in results]
+            proveedores = [row['proveedor'] for row in results]
             cursor.close()
             
             logger.info(f"Proveedores obtenidos: {len(proveedores)}")
