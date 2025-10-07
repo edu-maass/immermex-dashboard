@@ -870,10 +870,8 @@ async def get_compras_v2_data(
             filtros['proveedor'] = proveedor
         if material:
             filtros['material'] = material
-        if limit:
-            filtros['limit'] = limit
         
-        compras = service.get_compras_by_filtros(filtros)
+        compras = service.get_compras_by_filtros(filtros, limit=limit)
         
         return {
             "success": True,

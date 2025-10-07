@@ -419,7 +419,7 @@ class ComprasV2Service:
                 'total_procesados': 0
             }
     
-    def get_compras_by_filtros(self, filtros: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def get_compras_by_filtros(self, filtros: Dict[str, Any], limit: int = 100) -> List[Dict[str, Any]]:
         """Obtiene compras filtradas de compras_v2"""
         conn = self.get_connection()
         if not conn:
@@ -470,9 +470,10 @@ class ComprasV2Service:
             # Ordenar
             query += " ORDER BY c2.fecha_pedido DESC"
             
-            if filtros.get('limit'):
+            # Aplicar límite
+            if limit:
                 query += " LIMIT %s"
-                params.append(filtros['limit'])
+                params.append(limit)
             
             logger.info(f"Ejecutando query: {query}")
             logger.info(f"Con parámetros: {params}")
