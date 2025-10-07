@@ -846,6 +846,137 @@ async def get_compras_v2_kpis(
         logger.error(f"Error obteniendo KPIs de compras_v2: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/compras-v2/debug-precios")
+async def debug_precios():
+    """Endpoint de debug para verificar datos de precios"""
+    try:
+        from compras_v2_service import ComprasV2Service
+        
+        service = ComprasV2Service()
+        conn = service.get_connection()
+        
+        if not conn:
+            return {"error": "No se pudo conectar a la base de datos"}
+        
+        cursor = conn.cursor()
+        
+        # Verificar datos en compras_v2_materiales
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_materiales,
+                COUNT(CASE WHEN pu_divisa IS NOT NULL AND pu_divisa > 0 THEN 1 END) as con_precio_divisa,
+                COUNT(CASE WHEN pu_mxn IS NOT NULL AND pu_mxn > 0 THEN 1 END) as con_precio_mxn,
+                AVG(pu_divisa) as avg_divisa,
+                AVG(pu_mxn) as avg_mxn
+            FROM compras_v2_materiales
+        """)
+        materiales_stats = cursor.fetchone()
+        
+        # Verificar JOIN entre compras_v2 y materiales
+        cursor.execute("""
+            SELECT COUNT(*) as total_joins
+            FROM compras_v2 c2
+            JOIN compras_v2_materiales c2m ON c2.id = c2m.compra_id
+            WHERE c2.fecha_pedido IS NOT NULL
+        """)
+        joins_count = cursor.fetchone()
+        
+        # Verificar fechas disponibles
+        cursor.execute("""
+            SELECT 
+                MIN(fecha_pedido) as fecha_min,
+                MAX(fecha_pedido) as fecha_max,
+                COUNT(DISTINCT DATE_TRUNC('month', fecha_pedido)) as meses_distintos
+            FROM compras_v2
+            WHERE fecha_pedido IS NOT NULL
+        """)
+        fechas_stats = cursor.fetchone()
+        
+        cursor.close()
+        
+        return {
+            "success": True,
+            "materiales_stats": {
+                "total_materiales": materiales_stats['total_materiales'],
+                "con_precio_divisa": materiales_stats['con_precio_divisa'],
+                "con_precio_mxn": materiales_stats['con_precio_mxn'],
+                "avg_divisa": float(materiales_stats['avg_divisa']) if materiales_stats['avg_divisa'] else 0,
+                "avg_mxn": float(materiales_stats['avg_mxn']) if materiales_stats['avg_mxn'] else 0
+            },
+            "joins_count": joins_count['total_joins'],
+            "fechas_stats": {
+                "fecha_min": fechas_stats['fecha_min'].isoformat() if fechas_stats['fecha_min'] else None,
+                "fecha_max": fechas_stats['fecha_max'].isoformat() if fechas_stats['fecha_max'] else None,
+                "meses_distintos": fechas_stats['meses_distintos']
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error en debug precios: {str(e)}")
+        return {"error": str(e)}
+
+@app.get("/api/compras-v2/debug-pagos")
+async def debug_pagos():
+    """Endpoint de debug para verificar datos de pagos"""
+    try:
+        from compras_v2_service import ComprasV2Service
+        
+        service = ComprasV2Service()
+        conn = service.get_connection()
+        
+        if not conn:
+            return {"error": "No se pudo conectar a la base de datos"}
+        
+        cursor = conn.cursor()
+        
+        # Verificar datos de pagos
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_compras,
+                COUNT(CASE WHEN fecha_pago_factura IS NOT NULL THEN 1 END) as compras_pagadas,
+                COUNT(CASE WHEN fecha_pago_factura IS NULL THEN 1 END) as compras_pendientes,
+                MIN(fecha_pago_factura) as primer_pago,
+                MAX(fecha_pago_factura) as ultimo_pago
+            FROM compras_v2
+        """)
+        pagos_stats = cursor.fetchone()
+        
+        # Verificar fechas de pago por semana
+        cursor.execute("""
+            SELECT 
+                DATE_TRUNC('week', fecha_pago_factura) as semana,
+                COUNT(*) as pagos_semana
+            FROM compras_v2
+            WHERE fecha_pago_factura IS NOT NULL
+            GROUP BY DATE_TRUNC('week', fecha_pago_factura)
+            ORDER BY semana DESC
+            LIMIT 5
+        """)
+        pagos_semanales = cursor.fetchall()
+        
+        cursor.close()
+        
+        return {
+            "success": True,
+            "pagos_stats": {
+                "total_compras": pagos_stats['total_compras'],
+                "compras_pagadas": pagos_stats['compras_pagadas'],
+                "compras_pendientes": pagos_stats['compras_pendientes'],
+                "primer_pago": pagos_stats['primer_pago'].isoformat() if pagos_stats['primer_pago'] else None,
+                "ultimo_pago": pagos_stats['ultimo_pago'].isoformat() if pagos_stats['ultimo_pago'] else None
+            },
+            "pagos_semanales": [
+                {
+                    "semana": row['semana'].isoformat() if row['semana'] else None,
+                    "pagos": row['pagos_semana']
+                } for row in pagos_semanales
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error en debug pagos: {str(e)}")
+        return {"error": str(e)}
+
 @app.get("/api/compras-v2/debug")
 async def debug_compras_v2():
     """Endpoint de debug para verificar estructura de base de datos"""
