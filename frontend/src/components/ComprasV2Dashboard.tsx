@@ -75,6 +75,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
   const [añosDisponibles, setAñosDisponibles] = useState<number[]>([]);
   const [monedaPrecios, setMonedaPrecios] = useState<'USD' | 'MXN'>('USD');
   const [monedaFlujoPagos, setMonedaFlujoPagos] = useState<'USD' | 'MXN'>('USD');
+  const [updatingFechas, setUpdatingFechas] = useState(false);
 
   const loadData = async () => {
     try {
@@ -150,6 +151,31 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
       setFlujoPagos(flujoData);
     } catch (err) {
       console.error('Error recargando flujo de pagos:', err);
+    }
+  };
+
+  const handleUpdateFechasEstimadas = async () => {
+    if (!confirm('¿Está seguro de que desea recalcular todas las fechas estimadas basándose en los datos de fecha de compra y proveedores? Esta operación puede tardar unos momentos.')) {
+      return;
+    }
+
+    try {
+      setUpdatingFechas(true);
+      setError(null);
+      
+      const result = await apiService.updateComprasV2FechasEstimadas();
+      
+      alert(`Actualización completada:\n- Total de registros: ${result.total_records}\n- Registros actualizados: ${result.updated}\n- Registros sin cambios: ${result.skipped}`);
+      
+      // Recargar datos después de la actualización
+      await loadData();
+      
+    } catch (err: any) {
+      console.error('Error actualizando fechas estimadas:', err);
+      setError(err.message || 'Error al actualizar fechas estimadas');
+      alert('Error al actualizar fechas estimadas. Por favor, intente nuevamente.');
+    } finally {
+      setUpdatingFechas(false);
     }
   };
 
@@ -287,6 +313,22 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Actualizar
             </Button>
+
+            <Tooltip 
+              content="Recalcular todas las fechas estimadas (salida, arribo y planta) basándose en la fecha de compra y los datos de proveedores"
+              position="left"
+            >
+              <Button 
+                onClick={handleUpdateFechasEstimadas} 
+                disabled={loading || updatingFechas}
+                variant="outline" 
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Calendar className={`h-4 w-4 ${updatingFechas ? 'animate-pulse' : ''}`} />
+                {updatingFechas ? 'Actualizando...' : 'Actualizar Fechas'}
+              </Button>
+            </Tooltip>
 
             <Tooltip 
               content="Para cargar archivos de Compras V2:\n• Ve a la pestaña 'Carga de Archivos'\n• Busca la sección 'Compras V2'\n• Descarga el layout Excel\n• Completa y sube el archivo"

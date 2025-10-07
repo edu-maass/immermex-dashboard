@@ -340,6 +340,12 @@ class ApiService {
     return this.request('/compras-v2/años-disponibles');
   }
 
+  async updateComprasV2FechasEstimadas(): Promise<any> {
+    return this.request('/compras-v2/update-fechas-estimadas', {
+      method: 'POST',
+    });
+  }
+
   async validateComprasFile(file: File): Promise<any> {
     const formData = new FormData();
     formData.append('file', file);
