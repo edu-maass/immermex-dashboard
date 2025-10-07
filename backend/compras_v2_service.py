@@ -428,10 +428,10 @@ class ComprasV2Service:
         try:
             cursor = conn.cursor()
             
-            # Construir query base ultra simplificada
+            # Construir query base ultra simplificada - solo campos básicos
             query = """
                 SELECT 
-                    c2.id, c2.imi, c2.proveedor, c2.fecha_pedido, c2.moneda
+                    c2.id, c2.imi, c2.proveedor, c2.fecha_pedido
                 FROM compras_v2 c2
                 WHERE 1=1
             """
@@ -490,8 +490,7 @@ class ComprasV2Service:
                     'id': row[0],
                     'imi': row[1],
                     'proveedor': row[2],
-                    'fecha_pedido': row[3].isoformat() if row[3] else None,
-                    'moneda': row[4]
+                    'fecha_pedido': row[3].isoformat() if row[3] else None
                 }
                 compras.append(compra)
             
