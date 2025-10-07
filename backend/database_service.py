@@ -1059,7 +1059,7 @@ class DatabaseService:
                 ComprasV2.proveedor,
                 func.sum(ComprasV2Materiales.kg).label('total_kg')
             ).join(
-                ComprasV2Materiales, ComprasV2.id == ComprasV2Materiales.compra_id
+                ComprasV2Materiales, ComprasV2.imi == ComprasV2Materiales.compra_imi
             ).filter(
                 ComprasV2.fecha_pedido.isnot(None),
                 ComprasV2Materiales.kg > 0
@@ -1100,7 +1100,7 @@ class DatabaseService:
                 func.sum(ComprasV2Materiales.costo_total_con_iva).label('total_compras'),
                 func.sum(ComprasV2Materiales.kg).label('total_kg')
             ).join(
-                ComprasV2, ComprasV2.id == ComprasV2Materiales.compra_id
+                ComprasV2, ComprasV2.imi == ComprasV2Materiales.compra_imi
             ).filter(
                 ComprasV2Materiales.material_codigo.isnot(None),
                 ComprasV2Materiales.material_codigo != ""
