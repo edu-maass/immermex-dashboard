@@ -44,15 +44,6 @@ export const DualUpload: FC<DualUploadProps> = ({
             </CardContent>
           </Card>
 
-          <div className="p-3 bg-blue-50 rounded-md">
-            <h4 className="text-sm font-medium text-blue-900 mb-2">Incluye:</h4>
-            <ul className="text-xs text-blue-800 space-y-1">
-              <li>• Datos de facturación</li>
-              <li>• Información de cobranza</li>
-              <li>• Detalles de pedidos</li>
-              <li>• Materiales utilizados</li>
-            </ul>
-          </div>
         </div>
 
         {/* Sección de Compras V2 */}
@@ -76,25 +67,38 @@ export const DualUpload: FC<DualUploadProps> = ({
       </div>
 
       {/* Información consolidada */}
-      <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-        <h4 className="text-sm font-medium text-gray-900 mb-3">Información del Sistema:</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="text-xs text-gray-600 space-y-1">
-            <p className="font-medium text-gray-800 mb-1">Características Compras V2:</p>
-            <p>• Sistema optimizado para mejor rendimiento</p>
-            <p>• Cálculos automáticos de fechas estimadas</p>
-            <p>• Integración con datos de proveedores</p>
-            <p>• Layout descargable con instrucciones</p>
-            <p>• Validación robusta de columnas</p>
-            <p>• KPIs avanzados de importaciones</p>
+      <div className="mt-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
+        <h4 className="text-lg font-semibold text-gray-900 mb-4 text-center">Información del Sistema</h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="text-sm text-gray-600 space-y-2">
+            <p className="font-semibold text-gray-800 mb-2">Facturación y Cobranza:</p>
+            <ul className="space-y-1">
+              <li>• Datos de facturación</li>
+              <li>• Información de cobranza</li>
+              <li>• Detalles de pedidos</li>
+              <li>• Materiales utilizados</li>
+            </ul>
           </div>
-          <div className="text-xs text-gray-600 space-y-1">
-            <p className="font-medium text-gray-800 mb-1">Información General:</p>
-            <p>• Los archivos se procesan de forma independiente</p>
-            <p>• Puedes subir archivos de facturación y compras V2 por separado</p>
-            <p>• Los datos se integran automáticamente en el dashboard</p>
-            <p>• Formatos soportados: .xlsx y .xls</p>
-            <p>• <strong>Recomendado:</strong> Usar Compras V2 para nuevas importaciones</p>
+          <div className="text-sm text-gray-600 space-y-2">
+            <p className="font-semibold text-gray-800 mb-2">Características Compras V2:</p>
+            <ul className="space-y-1">
+              <li>• Sistema optimizado para mejor rendimiento</li>
+              <li>• Cálculos automáticos de fechas estimadas</li>
+              <li>• Integración con datos de proveedores</li>
+              <li>• Layout descargable con instrucciones</li>
+              <li>• Validación robusta de columnas</li>
+              <li>• KPIs avanzados de importaciones</li>
+            </ul>
+          </div>
+          <div className="text-sm text-gray-600 space-y-2">
+            <p className="font-semibold text-gray-800 mb-2">Información General:</p>
+            <ul className="space-y-1">
+              <li>• Los archivos se procesan de forma independiente</li>
+              <li>• Puedes subir archivos de facturación y compras V2 por separado</li>
+              <li>• Los datos se integran automáticamente en el dashboard</li>
+              <li>• Formatos soportados: .xlsx y .xls</li>
+              <li>• <strong>Recomendado:</strong> Usar Compras V2 para nuevas importaciones</li>
+            </ul>
           </div>
         </div>
       </div>
