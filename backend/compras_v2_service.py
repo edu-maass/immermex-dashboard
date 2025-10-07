@@ -447,10 +447,16 @@ class ComprasV2Service:
             logger.info(f"Parámetros: {[limit]}")
             logger.info(f"Resultados obtenidos: {len(compras_raw)} registros")
             
+            # Log de los primeros registros para debug
+            if compras_raw:
+                logger.info(f"Primer registro raw: {compras_raw[0]}")
+                logger.info(f"Tipo del primer registro: {type(compras_raw[0])}")
+            
             # Convertir a diccionarios
             compras = []
-            for row in compras_raw:
+            for i, row in enumerate(compras_raw):
                 try:
+                    logger.info(f"Procesando fila {i}: {row}")
                     compra = {
                         'id': int(row[0]) if row[0] is not None else None,
                         'imi': str(row[1]) if row[1] is not None else None,
@@ -458,10 +464,12 @@ class ComprasV2Service:
                         'fecha_pedido': row[3].isoformat() if row[3] is not None else None
                     }
                     compras.append(compra)
+                    logger.info(f"Fila {i} convertida exitosamente: {compra}")
                 except Exception as e:
-                    logger.error(f"Error convirtiendo fila {row}: {str(e)}")
+                    logger.error(f"Error convirtiendo fila {i} {row}: {str(e)}")
                     continue
             
+            logger.info(f"Total compras convertidas: {len(compras)}")
             cursor.close()
             return compras
             
