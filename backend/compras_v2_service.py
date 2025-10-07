@@ -419,7 +419,7 @@ class ComprasV2Service:
                 'total_procesados': 0
             }
     
-    def get_compras_simple(self, limit: int = 100) -> List[Dict[str, Any]]:
+    def get_compras_simple(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
         """Obtiene datos básicos de compras con todos los campos necesarios para el dashboard"""
         conn = self.get_connection()
         if not conn:
@@ -439,7 +439,7 @@ class ComprasV2Service:
                     c2.fecha_arribo_estimada,
                     c2.fecha_salida_real,
                     c2.fecha_arribo_real,
-                    COUNT(c2m.material_codigo) as materiales_count
+                    ARRAY_AGG(DISTINCT c2m.material_codigo) FILTER (WHERE c2m.material_codigo IS NOT NULL) as materiales_codigos
                 FROM compras_v2 c2
                 LEFT JOIN compras_v2_materiales c2m ON c2.imi = c2m.compra_id
                 WHERE c2.fecha_pedido IS NOT NULL
@@ -447,14 +447,14 @@ class ComprasV2Service:
                          c2.fecha_salida_estimada, c2.fecha_arribo_estimada, 
                          c2.fecha_salida_real, c2.fecha_arribo_real
                 ORDER BY c2.fecha_pedido DESC
-                LIMIT %s
+                LIMIT %s OFFSET %s
             """
             
-            cursor.execute(query, [limit])
+            cursor.execute(query, [limit, offset])
             compras_raw = cursor.fetchall()
             
             logger.info(f"Query ejecutada: {query}")
-            logger.info(f"Parámetros: {[limit]}")
+            logger.info(f"Parámetros: {[limit, offset]}")
             logger.info(f"Resultados obtenidos: {len(compras_raw)} registros")
             
             # Log de los primeros registros para debug
@@ -476,7 +476,7 @@ class ComprasV2Service:
                         'fecha_arribo_estimada': row['fecha_arribo_estimada'].isoformat() if row['fecha_arribo_estimada'] is not None else None,
                         'fecha_salida_real': row['fecha_salida_real'].isoformat() if row['fecha_salida_real'] is not None else None,
                         'fecha_arribo_real': row['fecha_arribo_real'].isoformat() if row['fecha_arribo_real'] is not None else None,
-                        'materiales_count': int(row['materiales_count']) if row['materiales_count'] is not None else 0
+                        'materiales_codigos': row['materiales_codigos'] if row['materiales_codigos'] is not None else []
                     }
                     compras.append(compra)
                     logger.info(f"Fila {i} convertida exitosamente: {compra}")
@@ -491,6 +491,51 @@ class ComprasV2Service:
         except Exception as e:
             logger.error(f"Error en get_compras_simple: {str(e)}")
             return []
+
+    def get_compras_count(self, filtros: Dict[str, Any] = None) -> int:
+        """Obtiene el conteo total de compras con filtros"""
+        conn = self.get_connection()
+        if not conn:
+            return 0
+        
+        try:
+            cursor = conn.cursor()
+            
+            query = """
+                SELECT COUNT(DISTINCT c2.imi)
+                FROM compras_v2 c2
+                WHERE c2.fecha_pedido IS NOT NULL
+            """
+            
+            params = []
+            
+            # Aplicar filtros
+            if filtros:
+                if filtros.get('mes'):
+                    query += " AND EXTRACT(MONTH FROM c2.fecha_pedido) = %s"
+                    params.append(filtros['mes'])
+                
+                if filtros.get('año'):
+                    query += " AND EXTRACT(YEAR FROM c2.fecha_pedido) = %s"
+                    params.append(filtros['año'])
+                
+                if filtros.get('proveedor'):
+                    query += " AND c2.proveedor ILIKE %s"
+                    params.append(f"%{filtros['proveedor']}%")
+                
+                if filtros.get('material'):
+                    query += " AND EXISTS (SELECT 1 FROM compras_v2_materiales c2m WHERE c2m.compra_id = c2.imi AND c2m.material_codigo ILIKE %s)"
+                    params.append(f"%{filtros['material']}%")
+            
+            cursor.execute(query, params)
+            result = cursor.fetchone()
+            cursor.close()
+            
+            return result[0] if result else 0
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo conteo de compras: {str(e)}")
+            return 0
 
     def get_compras_by_filtros(self, filtros: Dict[str, Any], limit: int = 100) -> List[Dict[str, Any]]:
         """Obtiene compras filtradas de compras_v2"""

@@ -9,6 +9,8 @@ import { ComprasV2FlujoPagosChart } from './Charts/ComprasV2FlujoPagosChart';
 import { ComprasV2AgingCuentasPagarChart } from './Charts/ComprasV2AgingCuentasPagarChart';
 import { TopProveedoresChart } from './Charts/TopProveedoresChart';
 import { ComprasPorMaterialChart } from './Charts/ComprasPorMaterialChart';
+import { MaterialChips } from './MaterialChips';
+import { Pagination } from './Pagination';
 import { apiService } from '../services/api';
 import { 
   DollarSign, 
@@ -20,9 +22,7 @@ import {
   Upload,
   RefreshCw,
   Clock,
-  Building,
-  Calendar,
-  Percent
+  Calendar
 } from 'lucide-react';
 
 interface ComprasV2DashboardProps {
@@ -86,6 +86,11 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
   const [monedaPrecios, setMonedaPrecios] = useState<'USD' | 'MXN'>('USD');
   const [monedaFlujoPagos, setMonedaFlujoPagos] = useState<'USD' | 'MXN'>('USD');
   const [updatingFechas, setUpdatingFechas] = useState(false);
+  
+  // Estados para paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [totalItems, setTotalItems] = useState(0);
 
   const loadData = async () => {
     try {
@@ -95,7 +100,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
       // Cargar KPIs, datos y gráficos en paralelo
       const [kpisResponse, dataResponse, evolucionResponse, flujoResponse, agingResponse, materialesResponse, proveedoresResponse, añosResponse, topProveedoresResponse, comprasPorMaterialResponse] = await Promise.all([
         apiService.getComprasV2KPIs(filtros),
-        apiService.getComprasV2Data(filtros, 50),
+        apiService.getComprasV2Data(filtros, itemsPerPage, (currentPage - 1) * itemsPerPage),
         apiService.getComprasV2EvolucionPrecios(filtros.material, monedaPrecios),
         apiService.getComprasV2FlujoPagos(filtros, monedaFlujoPagos),
         apiService.getComprasV2AgingCuentasPagar(filtros),
@@ -108,6 +113,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
 
       setKpis(kpisResponse);
       setComprasData(dataResponse);
+      setTotalItems(dataResponse.total_compras || 0);
       setEvolucionPrecios(evolucionResponse);
       setFlujoPagos(flujoResponse);
       setAgingCuentasPagar(agingResponse);
@@ -127,7 +133,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
 
   useEffect(() => {
     loadData();
-  }, [filtros, monedaPrecios, monedaFlujoPagos]);
+  }, [filtros, monedaPrecios, monedaFlujoPagos, currentPage, itemsPerPage]);
 
 
   const handleFilterChange = (key: string, value: any) => {
@@ -135,6 +141,16 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
       ...prev,
       [key]: value === '' ? undefined : value
     }));
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
   };
 
   const clearFilters = () => {
@@ -369,7 +385,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
       )}
 
       {/* KPIs Principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <KPICard
           title="Total Compras"
           value={formatCurrency(kpis.total_costo_mxn || 0)}
@@ -385,13 +401,6 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
           raw={true}
         />
         <KPICard
-          title="Promedio por Proveedor"
-          value={formatCurrency(kpis.promedio_por_proveedor || 0)}
-          description={`${kpis.proveedores_unicos || 0} proveedores activos`}
-          icon={Building}
-          raw={true}
-        />
-        <KPICard
           title="Días Promedio Crédito"
           value={kpis.dias_credito_promedio ? kpis.dias_credito_promedio.toFixed(0) : '0'}
           description="días promedio"
@@ -400,15 +409,8 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
         />
       </div>
 
-      {/* KPIs Adicionales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <KPICard
-          title="Margen Bruto Promedio"
-          value={`${(kpis.margen_bruto_promedio || 0).toFixed(1)}%`}
-          description="Precio venta vs costo compra"
-          icon={Percent}
-          raw={true}
-        />
+      {/* KPIs Consolidados */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <KPICard
           title="Rotación Inventario"
           value={`${(kpis.rotacion_inventario || 0).toFixed(1)}`}
@@ -440,7 +442,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
         <KPICard
           title="Total Proveedores"
           value={kpis.proveedores_unicos || 0}
-          description={`Promedio: ${formatCurrency(kpis.promedio_por_proveedor || 0)}`}
+          description="proveedores activos"
           icon={Truck}
           raw={true}
         />
@@ -578,7 +580,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
                         }
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {compra.materiales_count || 0}
+                        <MaterialChips materiales={compra.materiales_codigos || []} />
                       </td>
                     </tr>
                   ))}
@@ -590,6 +592,17 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
               <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">No hay datos de compras disponibles</p>
             </div>
+          )}
+          
+          {/* Paginación */}
+          {comprasData.compras.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              onPageChange={handlePageChange}
+              onItemsPerPageChange={handleItemsPerPageChange}
+            />
           )}
         </div>
       )}

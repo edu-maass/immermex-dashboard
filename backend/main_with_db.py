@@ -1120,9 +1120,10 @@ async def get_compras_v2_data(
     año: Optional[int] = Query(None, description="Filtrar por año"),
     proveedor: Optional[str] = Query(None, description="Filtrar por proveedor"),
     material: Optional[str] = Query(None, description="Filtrar por material"),
-    limit: int = Query(100, ge=1, le=1000, description="Límite de registros")
+    limit: int = Query(100, ge=1, le=1000, description="Límite de registros"),
+    offset: int = Query(0, ge=0, description="Offset para paginación")
 ):
-    """Obtiene datos de compras_v2 con filtros opcionales"""
+    """Obtiene datos de compras_v2 con filtros opcionales y paginación"""
     try:
         from compras_v2_service import ComprasV2Service
         
@@ -1139,12 +1140,15 @@ async def get_compras_v2_data(
         if material:
             filtros['material'] = material
         
-        compras = service.get_compras_simple(limit=limit)
+        compras = service.get_compras_simple(limit=limit, offset=offset)
+        total_count = service.get_compras_count(filtros)
         
         return {
             "success": True,
             "compras": compras,
-            "total_compras": len(compras),
+            "total_compras": total_count,
+            "limit": limit,
+            "offset": offset,
             "filtros_aplicados": filtros
         }
         
