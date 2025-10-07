@@ -458,10 +458,10 @@ class ComprasV2Service:
                 try:
                     logger.info(f"Procesando fila {i}: {row}")
                     compra = {
-                        'id': int(row[0]) if row[0] is not None else None,
-                        'imi': str(row[1]) if row[1] is not None else None,
-                        'proveedor': str(row[2]) if row[2] is not None else None,
-                        'fecha_pedido': row[3].isoformat() if row[3] is not None else None
+                        'id': int(row['id']) if row['id'] is not None else None,
+                        'imi': str(row['imi']) if row['imi'] is not None else None,
+                        'proveedor': str(row['proveedor']) if row['proveedor'] is not None else None,
+                        'fecha_pedido': row['fecha_pedido'].isoformat() if row['fecha_pedido'] is not None else None
                     }
                     compras.append(compra)
                     logger.info(f"Fila {i} convertida exitosamente: {compra}")
