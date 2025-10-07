@@ -264,6 +264,32 @@ class ApiService {
     });
   }
 
+  async getComprasV2TopProveedores(limite: number = 10, filtros?: any): Promise<any> {
+    const params = new URLSearchParams();
+    params.append('limite', limite.toString());
+    if (filtros?.mes) params.append('mes', filtros.mes.toString());
+    if (filtros?.año) params.append('año', filtros.año.toString());
+    if (filtros?.proveedor) params.append('proveedor', filtros.proveedor);
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/compras-v2/top-proveedores?${queryString}` : '/compras-v2/top-proveedores';
+    
+    return this.request(endpoint);
+  }
+
+  async getComprasV2PorMaterial(limite: number = 10, filtros?: any): Promise<any> {
+    const params = new URLSearchParams();
+    params.append('limite', limite.toString());
+    if (filtros?.mes) params.append('mes', filtros.mes.toString());
+    if (filtros?.año) params.append('año', filtros.año.toString());
+    if (filtros?.material) params.append('material', filtros.material);
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/compras-v2/compras-por-material?${queryString}` : '/compras-v2/compras-por-material';
+    
+    return this.request(endpoint);
+  }
+
   async validateComprasFile(file: File): Promise<any> {
     const formData = new FormData();
     formData.append('file', file);

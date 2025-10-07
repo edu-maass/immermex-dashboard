@@ -1049,21 +1049,21 @@ class DatabaseService:
             return []
 
     def get_top_proveedores_compras_v2(self, limite: int = 10, filtros: dict = None) -> dict:
-        """Obtiene top proveedores por monto de compras_v2"""
+        """Obtiene top proveedores por kg comprados en compras_v2"""
         try:
             from database import ComprasV2, ComprasV2Materiales
-            from sqlalchemy import func
+            from sqlalchemy import func, extract
 
-            # Query que suma los costos totales por proveedor
+            # Query que suma los kg por proveedor
             query = self.db.query(
                 ComprasV2.proveedor,
-                func.sum(ComprasV2Materiales.costo_total_con_iva).label('total_compras')
+                func.sum(ComprasV2Materiales.kg).label('total_kg')
             ).join(
                 ComprasV2Materiales, ComprasV2.id == ComprasV2Materiales.compra_id
             ).filter(
-                ComprasV2.proveedor.isnot(None),
-                ComprasV2.proveedor != ""
-            ).group_by(ComprasV2.proveedor)
+                ComprasV2.fecha_pedido.isnot(None),
+                ComprasV2Materiales.kg > 0
+            )
 
             # Aplicar filtros
             if filtros:
@@ -1077,10 +1077,12 @@ class DatabaseService:
                     from sqlalchemy import extract
                     query = query.filter(extract('year', ComprasV2.fecha_pedido) == filtros['año'])
 
-            # Ordenar por total y limitar
-            result = query.order_by(func.sum(ComprasV2Materiales.costo_total_con_iva).desc()).limit(limite).all()
+            # Agrupar por proveedor y ordenar por total kg
+            result = query.group_by(ComprasV2.proveedor).order_by(
+                func.sum(ComprasV2Materiales.kg).desc()
+            ).limit(limite).all()
 
-            return {proveedor: float(total or 0) for proveedor, total in result}
+            return {proveedor: float(total_kg or 0) for proveedor, total_kg in result}
 
         except Exception as e:
             logger.error(f"Error obteniendo top proveedores compras_v2: {str(e)}")

@@ -7,6 +7,8 @@ import { Tooltip } from './ui/tooltip';
 import { ComprasV2EvolucionPreciosChart } from './Charts/ComprasV2EvolucionPreciosChart';
 import { ComprasV2FlujoPagosChart } from './Charts/ComprasV2FlujoPagosChart';
 import { ComprasV2AgingCuentasPagarChart } from './Charts/ComprasV2AgingCuentasPagarChart';
+import { TopProveedoresChart } from './Charts/TopProveedoresChart';
+import { ComprasPorMaterialChart } from './Charts/ComprasPorMaterialChart';
 import { apiService } from '../services/api';
 import { 
   DollarSign, 
@@ -76,6 +78,8 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
   const [evolucionPrecios, setEvolucionPrecios] = useState<any>(null);
   const [flujoPagos, setFlujoPagos] = useState<any>(null);
   const [agingCuentasPagar, setAgingCuentasPagar] = useState<any>(null);
+  const [topProveedores, setTopProveedores] = useState<any>(null);
+  const [comprasPorMaterial, setComprasPorMaterial] = useState<any>(null);
   const [materiales, setMateriales] = useState<string[]>([]);
   const [proveedores, setProveedores] = useState<string[]>([]);
   const [añosDisponibles, setAñosDisponibles] = useState<number[]>([]);
@@ -89,7 +93,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
       setError(null);
 
       // Cargar KPIs, datos y gráficos en paralelo
-      const [kpisResponse, dataResponse, evolucionResponse, flujoResponse, agingResponse, materialesResponse, proveedoresResponse, añosResponse] = await Promise.all([
+      const [kpisResponse, dataResponse, evolucionResponse, flujoResponse, agingResponse, materialesResponse, proveedoresResponse, añosResponse, topProveedoresResponse, comprasPorMaterialResponse] = await Promise.all([
         apiService.getComprasV2KPIs(filtros),
         apiService.getComprasV2Data(filtros, 50),
         apiService.getComprasV2EvolucionPrecios(filtros.material, monedaPrecios),
@@ -97,7 +101,9 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
         apiService.getComprasV2AgingCuentasPagar(filtros),
         apiService.getComprasV2MaterialesList(),
         apiService.getComprasV2Proveedores(),
-        apiService.getComprasV2AñosDisponibles()
+        apiService.getComprasV2AñosDisponibles(),
+        apiService.getComprasV2TopProveedores(10, filtros),
+        apiService.getComprasV2PorMaterial(10, filtros)
       ]);
 
       setKpis(kpisResponse);
@@ -108,6 +114,8 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
       setMateriales(materialesResponse);
       setProveedores(proveedoresResponse);
       setAñosDisponibles(añosResponse);
+      setTopProveedores(topProveedoresResponse);
+      setComprasPorMaterial(comprasPorMaterialResponse);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error cargando datos');
@@ -196,18 +204,6 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
       currency: 'MXN',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatCurrencyUSD = (value: number) => {
-    if (value === null || value === undefined || isNaN(value)) {
-      return '$0 USD';
-    }
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
     }).format(value);
   };
 
@@ -443,8 +439,10 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <KPICard
           title="Total Proveedores"
-          value={kpis.total_proveedores || 0}
+          value={kpis.proveedores_unicos || 0}
+          description={`Promedio: ${formatCurrency(kpis.promedio_por_proveedor || 0)}`}
           icon={Truck}
+          raw={true}
         />
         <KPICard
           title="Compras con Anticipo"
@@ -479,6 +477,28 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
           moneda={monedaFlujoPagos}
           onMonedaChange={handleMonedaFlujoPagosChange}
           titulo={flujoPagos?.titulo}
+        />
+      </div>
+
+      {/* Nuevos Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Top Proveedores por KG */}
+        <TopProveedoresChart
+          data={topProveedores ? Object.entries(topProveedores).map(([proveedor, total_kg]) => ({
+            proveedor,
+            total_kg: total_kg as number
+          })) : []}
+          titulo="Top Proveedores por KG Comprados"
+        />
+
+        {/* Compras por Material */}
+        <ComprasPorMaterialChart
+          data={comprasPorMaterial ? Object.entries(comprasPorMaterial).map(([material, data]) => ({
+            material,
+            total_compras: (data as any).total_compras,
+            total_kg: (data as any).total_kg
+          })) : []}
+          titulo="Compras por Material"
         />
       </div>
 
