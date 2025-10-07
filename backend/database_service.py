@@ -949,7 +949,7 @@ class DatabaseService:
                 ComprasV2.tipo_cambio_real,
                 ComprasV2.tipo_cambio_estimado
             ).join(
-                ComprasV2Materiales, ComprasV2.id == ComprasV2Materiales.compra_id
+                ComprasV2Materiales, ComprasV2.imi == ComprasV2Materiales.compra_imi
             ).filter(
                 ComprasV2.fecha_pedido.isnot(None),
                 ComprasV2Materiales.kg > 0
@@ -1054,10 +1054,12 @@ class DatabaseService:
             from database import ComprasV2, ComprasV2Materiales
             from sqlalchemy import func, extract
 
-            # Query que suma los kg por proveedor
+            # Query que suma los kg, compras y calcula precio unitario por proveedor
             query = self.db.query(
                 ComprasV2.proveedor,
-                func.sum(ComprasV2Materiales.kg).label('total_kg')
+                func.sum(ComprasV2Materiales.kg).label('total_kg'),
+                func.sum(ComprasV2Materiales.costo_total_con_iva).label('total_compras'),
+                func.avg(ComprasV2Materiales.precio_por_kg_mxn).label('precio_unitario')
             ).join(
                 ComprasV2Materiales, ComprasV2.imi == ComprasV2Materiales.compra_imi
             ).filter(
@@ -1082,7 +1084,16 @@ class DatabaseService:
                 func.sum(ComprasV2Materiales.kg).desc()
             ).limit(limite).all()
 
-            return {proveedor: float(total_kg or 0) for proveedor, total_kg in result}
+            # Convertir a lista de diccionarios para el frontend
+            return [
+                {
+                    'proveedor': row[0],
+                    'total_kg': float(row[1] or 0),
+                    'total_compras': float(row[2] or 0),
+                    'precio_unitario': float(row[3] or 0)
+                }
+                for row in result
+            ]
 
         except Exception as e:
             logger.error(f"Error obteniendo top proveedores compras_v2: {str(e)}")

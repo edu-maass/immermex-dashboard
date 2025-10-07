@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { KPICard } from './KPICard';
 import { UnitEconomicsCard } from './UnitEconomicsCard';
 import { ActivityIndicatorsCard } from './ActivityIndicatorsCard';
@@ -385,30 +386,34 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
         </div>
       )}
 
-      {/* KPIs Principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <KPICard
-          title="Total Compras"
-          value={formatCurrency(kpis.total_costo_mxn || 0)}
-          description={`${kpis.total_kilogramos ? kpis.total_kilogramos.toLocaleString() : '0'} kg`}
-          icon={Package}
-          iconColor="text-blue-600"
-          iconBgColor="bg-blue-100"
-          raw={true}
-        />
-        <KPICard
-          title="Compras Pendientes"
-          value={formatCurrency(kpis.compras_pendientes || 0)}
-          description={`${kpis.compras_pendientes_count || 0} facturas pendientes`}
-          icon={Clock}
-          iconColor="text-orange-600"
-          iconBgColor="bg-orange-100"
-          raw={true}
-        />
-      </div>
-
-      {/* Indicadores de Actividad Consolidados */}
-      <div className="mb-8">
+      {/* KPIs Principales y Indicadores de Actividad */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Total Compras KPI - Más visible */}
+        <div className="lg:col-span-1">
+          <Card className="backdrop-blur-sm bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-200 hover:shadow-xl transition-all duration-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-lg font-semibold text-blue-800">
+                Total Compras
+              </CardTitle>
+              <div className="p-3 bg-blue-500 rounded-xl shadow-lg">
+                <Package className="h-6 w-6 text-white" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-4xl font-bold text-blue-900 mb-2">
+                {formatCurrency(kpis.total_costo_mxn || 0)}
+              </div>
+              <div className="text-lg font-semibold text-blue-700">
+                {kpis.total_kilogramos ? kpis.total_kilogramos.toLocaleString() : '0'} kg
+              </div>
+              <div className="text-sm text-blue-600 mt-1">
+                Total de compras realizadas
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* Indicadores de Actividad Consolidados */}
         <ActivityIndicatorsCard
           diasCreditoPromedio={kpis.dias_credito_promedio}
           rotacionInventario={kpis.rotacion_inventario}
@@ -482,10 +487,10 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Top Proveedores por KG */}
         <TopProveedoresChart
-          data={topProveedores ? Object.entries(topProveedores).map(([proveedor, total_kg]) => ({
+          data={topProveedores ? (Array.isArray(topProveedores) ? topProveedores : Object.entries(topProveedores).map(([proveedor, total_kg]) => ({
             proveedor,
             total_kg: total_kg as number
-          })) : []}
+          }))) : []}
           titulo="Top Proveedores por KG Comprados"
         />
 

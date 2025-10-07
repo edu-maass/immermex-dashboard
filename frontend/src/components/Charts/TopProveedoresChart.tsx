@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface TopProveedoresChartProps {
-  data: Array<{ proveedor: string; total_kg: number }>;
+  data: Array<{ proveedor: string; total_kg: number; total_compras?: number; precio_unitario?: number }>;
   titulo?: string;
 }
 
@@ -30,10 +30,20 @@ export const TopProveedoresChart: FC<TopProveedoresChartProps> = ({
     );
   }
 
-  const formatKg = (value: number) => {
-    if (value >= 1000000) return `${Math.round(value / 1000000)}M kg`;
-    if (value >= 1000) return `${Math.round(value / 1000)}K kg`;
-    return `${value.toFixed(0)} kg`;
+  const formatTons = (value: number) => {
+    const tons = value / 1000;
+    if (tons >= 1000) return `${Math.round(tons / 1000)}K ton`;
+    return `${tons.toFixed(1)} ton`;
+  };
+
+  const formatCurrency = (value: number) => {
+    if (value >= 1000000) return `$${Math.round(value / 1000000)}M`;
+    if (value >= 1000) return `$${Math.round(value / 1000)}K`;
+    return `$${value.toFixed(0)}`;
+  };
+
+  const formatPricePerKg = (value: number) => {
+    return `$${value.toFixed(2)}`;
   };
 
   // Format data for the chart
@@ -65,24 +75,41 @@ export const TopProveedoresChart: FC<TopProveedoresChartProps> = ({
               />
               <YAxis
                 tick={{ fontSize: 12 }}
-                tickFormatter={formatKg}
+                tickFormatter={formatTons}
               />
               <Tooltip
-                formatter={(value: number) => [
-                  formatKg(value),
-                  'KG Comprados'
-                ]}
+                formatter={(value: number, name: string, props: any) => {
+                  const payload = props.payload;
+                  return [
+                    <div key="tooltip-content" className="space-y-1">
+                      <div className="font-semibold text-blue-600">
+                        {formatTons(payload.total_kg)}
+                      </div>
+                      {payload.total_compras && (
+                        <div className="text-sm text-gray-600">
+                          Monto: {formatCurrency(payload.total_compras)}
+                        </div>
+                      )}
+                      {payload.precio_unitario && (
+                        <div className="text-sm text-gray-600">
+                          Precio unitario: {formatPricePerKg(payload.precio_unitario)} MXN/kg
+                        </div>
+                      )}
+                    </div>
+                  ];
+                }}
                 labelFormatter={(label, payload) => {
                   if (payload && payload[0] && payload[0].payload) {
                     return payload[0].payload.fullName;
                   }
                   return label;
                 }}
-                labelStyle={{ color: '#374151' }}
+                labelStyle={{ color: '#374151', fontWeight: 'bold' }}
                 contentStyle={{
                   backgroundColor: '#f9fafb',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
+                  padding: '12px',
                 }}
               />
               <Bar
