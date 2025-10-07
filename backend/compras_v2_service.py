@@ -472,7 +472,36 @@ class ComprasV2Service:
                 params.append(filtros['limit'])
             
             cursor.execute(query, params)
-            compras = cursor.fetchall()
+            compras_raw = cursor.fetchall()
+            
+            # Convertir a diccionarios
+            compras = []
+            for row in compras_raw:
+                compra = {
+                    'imi': row[0],
+                    'proveedor': row[1],
+                    'fecha_pedido': row[2].isoformat() if row[2] else None,
+                    'puerto_origen': row[3],
+                    'fecha_salida_estimada': row[4].isoformat() if row[4] else None,
+                    'fecha_arribo_estimada': row[5].isoformat() if row[5] else None,
+                    'moneda': row[6],
+                    'dias_credito': row[7],
+                    'anticipo_pct': float(row[8]) if row[8] else 0,
+                    'anticipo_monto': float(row[9]) if row[9] else 0,
+                    'fecha_anticipo': row[10].isoformat() if row[10] else None,
+                    'fecha_pago_factura': row[11].isoformat() if row[11] else None,
+                    'tipo_cambio_estimado': float(row[12]) if row[12] else 0,
+                    'tipo_cambio_real': float(row[13]) if row[13] else 0,
+                    'gastos_importacion_divisa': float(row[14]) if row[14] else 0,
+                    'gastos_importacion_mxn': float(row[15]) if row[15] else 0,
+                    'porcentaje_gastos_importacion': float(row[16]) if row[16] else 0,
+                    'iva_monto_divisa': float(row[17]) if row[17] else 0,
+                    'iva_monto_mxn': float(row[18]) if row[18] else 0,
+                    'total_con_iva_divisa': float(row[19]) if row[19] else 0,
+                    'total_con_iva_mxn': float(row[20]) if row[20] else 0,
+                    'materiales_count': int(row[21]) if row[21] else 0
+                }
+                compras.append(compra)
             
             cursor.close()
             return compras
@@ -646,7 +675,9 @@ class ComprasV2Service:
                     MAX(c2m.{precio_field}) as precio_max
                 FROM compras_v2 c2
                 JOIN compras_v2_materiales c2m ON c2.id = c2m.compra_id
-                WHERE c2.fecha_pedido IS NOT NULL
+                WHERE c2.fecha_pedido IS NOT NULL 
+                AND c2m.{precio_field} IS NOT NULL 
+                AND c2m.{precio_field} > 0
             """
             
             params = []
