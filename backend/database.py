@@ -101,7 +101,7 @@ class Facturacion(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     serie_factura = Column(String, index=True)
-    folio_factura = Column(String, index=True)
+    folio_factura = Column(Integer, index=True)
     fecha_factura = Column(DateTime, index=True)
     cliente = Column(String, index=True)
     agente = Column(String)
@@ -208,7 +208,7 @@ class Pedido(Base):
     __tablename__ = "pedidos"
     
     id = Column(Integer, primary_key=True, index=True)
-    folio_factura = Column(String, index=True)
+    folio_factura = Column(Integer, index=True)
     pedido = Column(String, index=True)
     kg = Column(Float, default=0.0)
     precio_unitario = Column(Float, default=0.0)
@@ -234,7 +234,7 @@ class PedidosCompras(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     compra_imi = Column(Integer, index=True)
-    folio_factura = Column(String, index=True)
+    folio_factura = Column(Integer, index=True)
     material_codigo = Column(String, index=True)
     kg = Column(Float, default=0.0)
     precio_unitario = Column(Float, default=0.0)

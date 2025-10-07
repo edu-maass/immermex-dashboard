@@ -27,7 +27,7 @@ class FacturacionService:
                 
                 factura = Facturacion(
                     serie_factura=DataValidator.safe_string(factura_data.get('serie_factura', '')),
-                    folio_factura=DataValidator.safe_string(factura_data.get('folio_factura', '')),
+                    folio_factura=DataValidator.safe_int(factura_data.get('folio_factura', 0)),
                     fecha_factura=fecha_factura,
                     cliente=DataValidator.safe_string(factura_data.get('cliente', '')),
                     agente=DataValidator.safe_string(factura_data.get('agente', '')),

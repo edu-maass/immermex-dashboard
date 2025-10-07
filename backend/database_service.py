@@ -367,7 +367,7 @@ class DatabaseService:
                         return default
                 
                 pedido = Pedido(
-                    folio_factura=safe_string(pedido_data.get('folio_factura', '')),
+                    folio_factura=safe_int(pedido_data.get('folio_factura', 0)),
                     pedido=safe_string(pedido_data.get('pedido', '')),
                     kg=safe_float(pedido_data.get('kg', 0)),
                     precio_unitario=safe_float(pedido_data.get('precio_unitario', 0)),

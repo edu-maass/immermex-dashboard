@@ -217,7 +217,11 @@ class ImmermexDataProcessor:
             folio_col = df_renamed.get('folio_factura', pd.Series())
             if isinstance(folio_col, str):
                 folio_col = pd.Series([folio_col])
-            clean_df['folio_factura'] = self.clean_string_column(folio_col)
+            # Convertir folio_factura a entero, manejar valores no numéricos
+            clean_df['folio_factura'] = pd.to_numeric(
+                self.clean_string_column(folio_col), 
+                errors='coerce'
+            ).fillna(0).astype(int)
             
             # Cliente
             cliente_col = df_renamed.get('cliente', pd.Series())
@@ -1333,7 +1337,7 @@ def _map_facturacion_columns(df: pd.DataFrame) -> pd.DataFrame:
     if 'serie_factura' not in df_mapped.columns and len(columns) >= 2:
         df_mapped['serie_factura'] = df_mapped.iloc[:, 1]
     if 'folio_factura' not in df_mapped.columns and len(columns) >= 3:
-        df_mapped['folio_factura'] = df_mapped.iloc[:, 2]
+        df_mapped['folio_factura'] = pd.to_numeric(df_mapped.iloc[:, 2], errors='coerce').fillna(0).astype(int)
     if 'cliente' not in df_mapped.columns and len(columns) >= 4:
         df_mapped['cliente'] = df_mapped.iloc[:, 3]
     if 'monto_neto' not in df_mapped.columns and len(columns) >= 5:
@@ -1788,7 +1792,7 @@ def _map_pedidos_columns(df: pd.DataFrame) -> pd.DataFrame:
     
     # Mapeo por posición según la estructura real de Excel
     if 'folio_factura' not in df_mapped.columns and len(columns) >= 1:
-        df_mapped['folio_factura'] = df_mapped.iloc[:, 0]  # A6: "No de factura"
+        df_mapped['folio_factura'] = pd.to_numeric(df_mapped.iloc[:, 0], errors='coerce').fillna(0).astype(int)  # A6: "No de factura"
     if 'pedido' not in df_mapped.columns and len(columns) >= 3:
         df_mapped['pedido'] = df_mapped.iloc[:, 2]         # C6: "Pedido"
     if 'kg' not in df_mapped.columns and len(columns) >= 4:
@@ -1808,7 +1812,7 @@ def _map_pedidos_columns(df: pd.DataFrame) -> pd.DataFrame:
     
     # Valores por defecto para campos no encontrados
     if 'folio_factura' not in df_mapped.columns:
-        df_mapped['folio_factura'] = ''
+        df_mapped['folio_factura'] = 0
     if 'pedido' not in df_mapped.columns:
         df_mapped['pedido'] = ''
     if 'kg' not in df_mapped.columns:
