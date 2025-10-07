@@ -860,8 +860,16 @@ async def test_compras_v2_data():
             return {"error": "No se pudo conectar a la base de datos"}
         
         cursor = conn.cursor()
+        
+        # Probar consulta simple
         cursor.execute("SELECT COUNT(*) FROM compras_v2")
-        count = cursor.fetchone()[0]
+        count_result = cursor.fetchone()
+        count = count_result[0] if count_result else 0
+        
+        # Probar consulta con campos específicos
+        cursor.execute("SELECT id, imi, proveedor FROM compras_v2 LIMIT 3")
+        sample_data = cursor.fetchall()
+        
         cursor.close()
         
         # Prueba con el método
@@ -870,6 +878,7 @@ async def test_compras_v2_data():
         return {
             "success": True,
             "count_direct": count,
+            "sample_data": sample_data,
             "count_method": len(compras),
             "compras": compras[:2] if compras else []
         }
