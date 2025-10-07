@@ -12,13 +12,13 @@ export const ConsumoMaterialChart: FC<ConsumoMaterialChartProps> = ({ data }) =>
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Consumo por Material</CardTitle>
+          <CardTitle>Ventas por Material</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-80 flex items-center justify-center text-gray-500">
             <div className="text-center">
-              <p className="text-lg font-medium">Sin datos disponibles</p>
-              <p className="text-sm">No hay información de consumo de material</p>
+              <p className="text-lg font-medium">Sin datos de ventas disponibles</p>
+              <p className="text-sm">No hay información de ventas por material</p>
             </div>
           </div>
         </CardContent>

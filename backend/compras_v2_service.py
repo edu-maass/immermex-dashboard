@@ -200,7 +200,7 @@ class ComprasV2Service:
                                              'iva_monto_mxn', 'total_con_iva_mxn']:
                                     update_fields.append(f"{field} = %s")
                                     update_values.append(self.safe_decimal(value))
-                                else:
+                        else:
                                     update_fields.append(f"{field} = %s")
                                     update_values.append(value)
                         
@@ -214,9 +214,9 @@ class ComprasV2Service:
                         if update_fields:
                             # Construir query dinámico
                             update_query = f"""
-                                UPDATE compras_v2 SET
+                            UPDATE compras_v2 SET
                                     {', '.join(update_fields)}
-                                WHERE imi = %s
+                            WHERE imi = %s
                             """
                             
                             cursor.execute(update_query, update_values)
@@ -798,20 +798,20 @@ class ComprasV2Service:
                     periodo,
                     SUM(monto) as monto
                 FROM (
-                    SELECT 
-                        CASE 
-                            WHEN c2.fecha_vencimiento IS NULL THEN 'Sin fecha'
-                            WHEN c2.fecha_vencimiento < CURRENT_DATE THEN 'Vencido'
-                            WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '30 days' THEN '0-30 días'
-                            WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '60 days' THEN '31-60 días'
-                            WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '90 days' THEN '61-90 días'
-                            ELSE '90+ días'
-                        END as periodo,
+                SELECT 
+                    CASE 
+                        WHEN c2.fecha_vencimiento IS NULL THEN 'Sin fecha'
+                        WHEN c2.fecha_vencimiento < CURRENT_DATE THEN 'Vencido'
+                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '30 days' THEN '0-30 días'
+                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '60 days' THEN '31-60 días'
+                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '90 days' THEN '61-90 días'
+                        ELSE '90+ días'
+                    END as periodo,
                         c2.total_con_iva_mxn as monto,
                         c2.fecha_pedido,
                         c2.proveedor
-                    FROM compras_v2 c2
-                    WHERE c2.fecha_pago_factura IS NULL
+                FROM compras_v2 c2
+                WHERE c2.fecha_pago_factura IS NULL
                 ) subquery
                 WHERE 1=1
             """

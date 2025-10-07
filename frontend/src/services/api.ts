@@ -163,94 +163,12 @@ class ApiService {
     }
   }
 
-  // ==================== MÉTODOS DE COMPRAS ====================
-
-  async getComprasKPIs(filtros?: any): Promise<any> {
-    const params = new URLSearchParams();
-    if (filtros?.mes) params.append('mes', filtros.mes.toString());
-    if (filtros?.año) params.append('año', filtros.año.toString());
-    if (filtros?.material) params.append('material', filtros.material);
-    if (filtros?.proveedor) params.append('proveedor', filtros.proveedor);
-    
-    const response = await fetch(`${this.baseUrl}/api/compras/kpis?${params}`);
-    if (!response.ok) throw new Error('Error obteniendo KPIs de compras');
-    return response.json();
-  }
-
-  async getEvolucionPrecios(material?: string, moneda: string = 'USD'): Promise<any> {
-    const params = new URLSearchParams();
-    if (material) params.append('material', material);
-    params.append('moneda', moneda);
-    
-    const response = await fetch(`${this.baseUrl}/api/compras/evolucion-precios?${params}`);
-    if (!response.ok) throw new Error('Error obteniendo evolución de precios');
-    return response.json();
-  }
-
-  async getFlujoPagosCompras(filtros?: any, moneda: string = 'USD'): Promise<any> {
-    const params = new URLSearchParams();
-    if (filtros?.mes) params.append('mes', filtros.mes.toString());
-    if (filtros?.año) params.append('año', filtros.año.toString());
-    if (filtros?.material) params.append('material', filtros.material);
-    if (filtros?.proveedor) params.append('proveedor', filtros.proveedor);
-    params.append('moneda', moneda);
-    
-    const response = await fetch(`${this.baseUrl}/api/compras/flujo-pagos?${params}`);
-    if (!response.ok) throw new Error('Error obteniendo flujo de pagos');
-    return response.json();
-  }
-
-  async getAgingCuentasPagar(filtros?: any): Promise<any> {
-    const params = new URLSearchParams();
-    if (filtros?.mes) params.append('mes', filtros.mes.toString());
-    if (filtros?.año) params.append('año', filtros.año.toString());
-    if (filtros?.material) params.append('material', filtros.material);
-    if (filtros?.proveedor) params.append('proveedor', filtros.proveedor);
-    
-    const response = await fetch(`${this.baseUrl}/api/compras/aging-cuentas-pagar?${params}`);
-    if (!response.ok) throw new Error('Error obteniendo aging de cuentas por pagar');
-    return response.json();
-  }
-
-  async getMaterialesCompras(): Promise<string[]> {
-    const response = await fetch(`${this.baseUrl}/api/compras/materiales`);
-    if (!response.ok) throw new Error('Error obteniendo materiales de compras');
-    return response.json();
-  }
-
-  async getProveedoresCompras(): Promise<string[]> {
-    const response = await fetch(`${this.baseUrl}/api/compras/proveedores`);
-    if (!response.ok) throw new Error('Error obteniendo proveedores de compras');
-    return response.json();
-  }
-
   // Archivos
   async uploadFile(file: File): Promise<{ registros_procesados?: number; [key: string]: any }> {
     const formData = new FormData();
     formData.append('file', file);
 
     return this.request<{ registros_procesados?: number; [key: string]: any }>('/upload', {
-      method: 'POST',
-      headers: {}, // No Content-Type header for FormData
-      body: formData,
-    });
-  }
-
-  async uploadComprasFile(file: File): Promise<{ 
-    compras_guardadas?: number; 
-    materiales_guardados?: number;
-    total_procesados?: number;
-    [key: string]: any 
-  }> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    return this.request<{ 
-      compras_guardadas?: number; 
-      materiales_guardados?: number;
-      total_procesados?: number;
-      [key: string]: any 
-    }>('/upload/compras', {
       method: 'POST',
       headers: {}, // No Content-Type header for FormData
       body: formData,
@@ -463,10 +381,10 @@ class ApiService {
     return this.request(`/pedidos/top-proveedores?${queryString}`);
   }
 
-  async getComprasPorMaterial(limite: number = 10, filtros?: any) {
+  async getVentasPorMaterial(limite: number = 10, filtros?: any) {
     const params = new URLSearchParams();
     params.append('limite', limite.toString());
-    
+
     if (filtros) {
       Object.entries(filtros).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {
@@ -474,9 +392,51 @@ class ApiService {
         }
       });
     }
-    
+
     const queryString = params.toString();
-    return this.request(`/pedidos/compras-por-material?${queryString}`);
+    return this.request(`/pedidos/ventas-por-material?${queryString}`);
+  }
+
+  // ==================== MÉTODOS DE COMPRAS_V2 ====================
+
+  async getTopProveedoresComprasV2(limite: number = 10, filtros?: any): Promise<any> {
+    const params = new URLSearchParams();
+    params.append('limite', limite.toString());
+
+    if (filtros) {
+      Object.entries(filtros).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, value.toString());
+        }
+      });
+    }
+
+    const queryString = params.toString();
+    return this.request(`/compras-v2/top-proveedores?${queryString}`);
+  }
+
+  async getComprasPorMaterialV2(limite: number = 10, filtros?: any): Promise<any> {
+    const params = new URLSearchParams();
+    params.append('limite', limite.toString());
+
+    if (filtros) {
+      Object.entries(filtros).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, value.toString());
+        }
+      });
+    }
+
+    const queryString = params.toString();
+    return this.request(`/compras-v2/compras-por-material?${queryString}`);
+  }
+
+  async getMaterialesComprasV2(): Promise<string[]> {
+    return this.request('/compras-v2/materiales');
+  }
+
+  async getProveedoresComprasV2(): Promise<string[]> {
+    return this.request('/compras-v2/proveedores');
   }
 
   async getEvolucionPreciosPedidos(filtros?: any) {

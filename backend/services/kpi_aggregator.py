@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from .facturacion_service import FacturacionService
 from .cobranza_service import CobranzaService
 from .pedidos_service import PedidosService
-from database import CFDIRelacionado, Cobranza, Compras
+from database import CFDIRelacionado, Cobranza
 from utils.logging_config import log_performance
 from utils.cache import cache_kpis, invalidate_data_cache
 import time
@@ -111,10 +111,39 @@ class KPIAggregator:
         precios_unitarios = [p.precio_unitario for p in pedidos if p.precio_unitario and p.precio_unitario > 0]
         precio_unitario_promedio = sum(precios_unitarios) / len(precios_unitarios) if precios_unitarios else 0
         
-        # Calcular costo unitario promedio desde compras
-        compras = self.db.query(Compras).filter(Compras.precio_unitario > 0).all()
-        costos_unitarios = [c.precio_unitario for c in compras if c.precio_unitario and c.precio_unitario > 0]
-        costo_unitario_promedio = sum(costos_unitarios) / len(costos_unitarios) if costos_unitarios else 0
+        # Calcular costo unitario promedio desde compras_v2
+        try:
+            from database import ComprasV2Materiales, ComprasV2
+            from sqlalchemy import func
+
+            # Obtener costo promedio ponderado desde compras_v2
+            costo_query = self.db.query(
+                func.sum(ComprasV2Materiales.costo_total_con_iva).label('total_costo'),
+                func.sum(ComprasV2Materiales.kg).label('total_kg')
+            ).join(
+                ComprasV2, ComprasV2.id == ComprasV2Materiales.compra_id
+            ).filter(
+                ComprasV2Materiales.kg > 0,
+                ComprasV2Materiales.costo_total_con_iva > 0
+            )
+
+            # Aplicar filtros de fecha si existen
+            if filtros and filtros.get('año'):
+                from sqlalchemy import extract
+                costo_query = costo_query.filter(extract('year', ComprasV2.fecha_pedido) == filtros['año'])
+                if filtros.get('mes'):
+                    costo_query = costo_query.filter(extract('month', ComprasV2.fecha_pedido) == filtros['mes'])
+
+            costo_result = costo_query.first()
+
+            if costo_result and costo_result.total_kg and costo_result.total_kg > 0:
+                costo_unitario_promedio = costo_result.total_costo / costo_result.total_kg
+            else:
+                costo_unitario_promedio = 0
+
+        except Exception as e:
+            logger.warning(f"Error calculando costo unitario desde compras_v2: {str(e)}")
+            costo_unitario_promedio = 0
         
         # Calcular utilidad y margen por kg
         utilidad_por_kg = precio_unitario_promedio - costo_unitario_promedio
@@ -190,10 +219,39 @@ class KPIAggregator:
         precios_unitarios = [p.precio_unitario for p in pedidos if p.precio_unitario and p.precio_unitario > 0]
         precio_unitario_promedio = sum(precios_unitarios) / len(precios_unitarios) if precios_unitarios else 0
         
-        # Calcular costo unitario promedio desde compras
-        compras = self.db.query(Compras).filter(Compras.precio_unitario > 0).all()
-        costos_unitarios = [c.precio_unitario for c in compras if c.precio_unitario and c.precio_unitario > 0]
-        costo_unitario_promedio = sum(costos_unitarios) / len(costos_unitarios) if costos_unitarios else 0
+        # Calcular costo unitario promedio desde compras_v2
+        try:
+            from database import ComprasV2Materiales, ComprasV2
+            from sqlalchemy import func
+
+            # Obtener costo promedio ponderado desde compras_v2
+            costo_query = self.db.query(
+                func.sum(ComprasV2Materiales.costo_total_con_iva).label('total_costo'),
+                func.sum(ComprasV2Materiales.kg).label('total_kg')
+            ).join(
+                ComprasV2, ComprasV2.id == ComprasV2Materiales.compra_id
+            ).filter(
+                ComprasV2Materiales.kg > 0,
+                ComprasV2Materiales.costo_total_con_iva > 0
+            )
+
+            # Aplicar filtros de fecha si existen
+            if filtros and filtros.get('año'):
+                from sqlalchemy import extract
+                costo_query = costo_query.filter(extract('year', ComprasV2.fecha_pedido) == filtros['año'])
+                if filtros.get('mes'):
+                    costo_query = costo_query.filter(extract('month', ComprasV2.fecha_pedido) == filtros['mes'])
+
+            costo_result = costo_query.first()
+
+            if costo_result and costo_result.total_kg and costo_result.total_kg > 0:
+                costo_unitario_promedio = costo_result.total_costo / costo_result.total_kg
+            else:
+                costo_unitario_promedio = 0
+
+        except Exception as e:
+            logger.warning(f"Error calculando costo unitario desde compras_v2: {str(e)}")
+            costo_unitario_promedio = 0
         
         # Calcular utilidad y margen por kg
         utilidad_por_kg = precio_unitario_promedio - costo_unitario_promedio

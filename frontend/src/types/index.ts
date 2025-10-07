@@ -46,7 +46,7 @@ export interface KPIs {
   
   // Nuevos gráficos para pedidos
   top_proveedores?: Record<string, number>;
-  compras_por_material?: Record<string, number>;
+  ventas_por_material?: Record<string, any>;
   evolucion_precios?: Record<string, number>;
   flujo_pagos_semanal?: Record<string, number>;
   

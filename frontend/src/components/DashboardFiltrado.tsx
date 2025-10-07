@@ -5,7 +5,7 @@ import { apiService } from '../services/api';
 import { KPIs, DataTableRow } from '../types';
 import { PedidoFilter } from './PedidoFilter';
 import { TopProvidersChart } from './Charts/TopProvidersChart';
-import { ComprasMaterialChart } from './Charts/ComprasMaterialChart';
+import { ConsumoMaterialChart } from './Charts/ConsumoMaterialChart';
 import { EvolucionPreciosChart } from './Charts/EvolucionPreciosChart';
 import { FlujoPagosChart } from './Charts/FlujoPagosChart';
 import { DataTable } from './DataTable';
@@ -40,9 +40,9 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
       const filtros = { pedidos: pedidosAplicar?.join(',') };
 
       try {
-        const [topProveedores, comprasPorMaterial, evolucionPrecios, flujoPagos, datosFiltrados] = await Promise.allSettled([
+        const [topProveedores, ventasPorMaterial, evolucionPrecios, flujoPagos, datosFiltrados] = await Promise.allSettled([
           apiService.getTopProveedores(10, filtros),
-          apiService.getComprasPorMaterial(10, filtros),
+          apiService.getVentasPorMaterial(10, filtros),
           apiService.getEvolucionPreciosPedidos(filtros),
           apiService.getFlujoPagosSemanal(filtros),
           apiService.getDatosFiltrados(filtros)
@@ -52,8 +52,8 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
         if (topProveedores.status === 'fulfilled') {
           kpisData.top_proveedores = topProveedores.value as Record<string, number>;
         }
-        if (comprasPorMaterial.status === 'fulfilled') {
-          kpisData.compras_por_material = comprasPorMaterial.value as Record<string, number>;
+        if (ventasPorMaterial.status === 'fulfilled') {
+          kpisData.ventas_por_material = ventasPorMaterial.value as Record<string, any>;
         }
         if (evolucionPrecios.status === 'fulfilled') {
           kpisData.evolucion_precios = evolucionPrecios.value as Record<string, number>;
@@ -173,8 +173,11 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
     return Object.entries(proveedores).map(([name, value]) => ({ name, value }));
   };
 
-  const formatComprasMaterialData = (materiales: Record<string, number>) => {
-    return Object.entries(materiales).map(([name, value]) => ({ name, value }));
+  const formatVentasMaterialData = (materiales: Record<string, any>) => {
+    return Object.entries(materiales).map(([name, data]) => ({
+      name,
+      value: typeof data === 'object' ? data.total_ventas || 0 : data
+    }));
   };
 
   const formatEvolucionPreciosData = (precios: Record<string, any>) => {
@@ -380,8 +383,8 @@ export const DashboardFiltrado: FC<DashboardFiltradoProps> = ({ onUploadSuccess,
           <TopProvidersChart data={formatTopProvidersData(kpis.top_proveedores)} />
         )}
         
-        {kpis.compras_por_material && Object.keys(kpis.compras_por_material).length > 0 && (
-          <ComprasMaterialChart data={formatComprasMaterialData(kpis.compras_por_material)} />
+        {kpis.ventas_por_material && Object.keys(kpis.ventas_por_material).length > 0 && (
+          <ConsumoMaterialChart data={formatVentasMaterialData(kpis.ventas_por_material)} />
         )}
       </div>
 

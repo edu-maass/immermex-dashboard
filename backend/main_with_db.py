@@ -66,112 +66,7 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # PEDIDOS ENDPOINTS - Now Active
-@app.get("/api/pedidos/top-proveedores")
-async def get_top_proveedores(
-    limite: int = Query(10, description="Número máximo de proveedores a retornar"),
-    mes: Optional[int] = Query(None, description="Filtrar por mes"),
-    año: Optional[int] = Query(None, description="Filtrar por año"),
-    pedidos: Optional[str] = Query(None, description="Lista de pedidos separados por coma"),
-    db: Session = Depends(get_db)
-):
-    try:
-        db_service = DatabaseService(db)
-        filtros = {}
-        if mes: filtros['mes'] = mes
-        if año: filtros['año'] = año
-        if pedidos: filtros['pedidos'] = pedidos
 
-        pedidos_service = db_service.pedidos_service
-        result = pedidos_service.get_top_proveedores(limite, filtros)
-        return result
-    except Exception as e:
-        logger.error(f"Error obteniendo top proveedores: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/pedidos/compras-por-material")
-async def get_compras_por_material(
-    limite: int = Query(10, description="Número máximo de materiales a retornar"),
-    mes: Optional[int] = Query(None, description="Filtrar por mes"),
-    año: Optional[int] = Query(None, description="Filtrar por año"),
-    pedidos: Optional[str] = Query(None, description="Lista de pedidos separados por coma"),
-    db: Session = Depends(get_db)
-):
-    try:
-        db_service = DatabaseService(db)
-        filtros = {}
-        if mes: filtros['mes'] = mes
-        if año: filtros['año'] = año
-        if pedidos: filtros['pedidos'] = pedidos
-
-        pedidos_service = db_service.pedidos_service
-        result = pedidos_service.get_compras_por_material(limite, filtros)
-        return result
-    except Exception as e:
-        logger.error(f"Error obteniendo compras por material: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/pedidos/evolucion-precios")
-async def get_evolucion_precios(
-    mes: Optional[int] = Query(None, description="Filtrar por mes"),
-    año: Optional[int] = Query(None, description="Filtrar por año"),
-    pedidos: Optional[str] = Query(None, description="Lista de pedidos separados por coma"),
-    db: Session = Depends(get_db)
-):
-    try:
-        db_service = DatabaseService(db)
-        filtros = {}
-        if mes: filtros['mes'] = mes
-        if año: filtros['año'] = año
-        if pedidos: filtros['pedidos'] = pedidos
-
-        pedidos_service = db_service.pedidos_service
-        result = pedidos_service.get_evolucion_precios(filtros)
-        return result
-    except Exception as e:
-        logger.error(f"Error obteniendo evolución de precios: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/pedidos/flujo-pagos-semanal")
-async def get_flujo_pagos_semanal(
-    mes: Optional[int] = Query(None, description="Filtrar por mes"),
-    año: Optional[int] = Query(None, description="Filtrar por año"),
-    pedidos: Optional[str] = Query(None, description="Lista de pedidos separados por coma"),
-    db: Session = Depends(get_db)
-):
-    try:
-        db_service = DatabaseService(db)
-        filtros = {}
-        if mes: filtros['mes'] = mes
-        if año: filtros['año'] = año
-        if pedidos: filtros['pedidos'] = pedidos
-
-        pedidos_service = db_service.pedidos_service
-        result = pedidos_service.get_flujo_pagos_semanal(filtros)
-        return result
-    except Exception as e:
-        logger.error(f"Error obteniendo flujo de pagos semanal: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/pedidos/datos-filtrados")
-async def get_datos_filtrados(
-    mes: Optional[int] = Query(None, description="Filtrar por mes"),
-    año: Optional[int] = Query(None, description="Filtrar por año"),
-    pedidos: Optional[str] = Query(None, description="Lista de pedidos separados por coma"),
-    db: Session = Depends(get_db)
-):
-    try:
-        db_service = DatabaseService(db)
-        filtros = {}
-        if mes: filtros['mes'] = mes
-        if año: filtros['año'] = año
-        if pedidos: filtros['pedidos'] = pedidos
-
-        pedidos_service = db_service.pedidos_service
-        result = pedidos_service.get_datos_filtrados(filtros)
-        return result
-    except Exception as e:
-        logger.error(f"Error obteniendo datos filtrados: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 # Fully commented out startup event
 
@@ -1051,6 +946,81 @@ async def get_compras_v2_flujo_pagos(
         logger.error(f"Error obteniendo flujo de pagos de compras_v2: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/compras-v2/top-proveedores")
+async def get_compras_v2_top_proveedores(
+    limite: int = Query(10, description="Número máximo de proveedores a retornar"),
+    mes: Optional[int] = Query(None, description="Filtrar por mes"),
+    año: Optional[int] = Query(None, description="Filtrar por año"),
+    db: Session = Depends(get_db)
+):
+    """Obtiene top proveedores por monto de compras_v2"""
+    try:
+        db_service = DatabaseService(db)
+
+        filtros = {}
+        if mes:
+            filtros['mes'] = mes
+        if año:
+            filtros['año'] = año
+
+        result = db_service.get_top_proveedores_compras_v2(limite, filtros)
+        return result
+
+    except Exception as e:
+        logger.error(f"Error obteniendo top proveedores de compras_v2: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/compras-v2/compras-por-material")
+async def get_compras_v2_por_material(
+    limite: int = Query(10, description="Número máximo de materiales a retornar"),
+    mes: Optional[int] = Query(None, description="Filtrar por mes"),
+    año: Optional[int] = Query(None, description="Filtrar por año"),
+    proveedor: Optional[str] = Query(None, description="Filtrar por proveedor"),
+    db: Session = Depends(get_db)
+):
+    """Obtiene compras agrupadas por material en compras_v2"""
+    try:
+        db_service = DatabaseService(db)
+
+        filtros = {}
+        if mes:
+            filtros['mes'] = mes
+        if año:
+            filtros['año'] = año
+        if proveedor:
+            filtros['proveedor'] = proveedor
+
+        result = db_service.get_compras_por_material_v2(limite, filtros)
+        return result
+
+    except Exception as e:
+        logger.error(f"Error obteniendo compras por material de compras_v2: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/compras-v2/materiales")
+async def get_compras_v2_materiales(db: Session = Depends(get_db)):
+    """Obtiene lista de materiales disponibles en compras_v2"""
+    try:
+        db_service = DatabaseService(db)
+        result = db_service.get_materiales_compras_v2()
+        return result
+
+    except Exception as e:
+        logger.error(f"Error obteniendo materiales de compras_v2: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/compras-v2/proveedores")
+async def get_compras_v2_proveedores(db: Session = Depends(get_db)):
+    """Obtiene lista de proveedores disponibles en compras_v2"""
+    try:
+        db_service = DatabaseService(db)
+        result = db_service.get_proveedores_compras_v2()
+        return result
+
+    except Exception as e:
+        logger.error(f"Error obteniendo proveedores de compras_v2: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/compras-v2/aging-cuentas-pagar")
 async def get_compras_v2_aging_cuentas_pagar(
     mes: Optional[int] = Query(None, description="Filtrar por mes"),
@@ -1419,6 +1389,28 @@ async def get_pedidos_filtro(db: Session = Depends(get_db)):
         
     except Exception as e:
         logger.error(f"Error obteniendo pedidos para filtro: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/pedidos/ventas-por-material")
+async def get_ventas_por_material(
+    limite: int = Query(10, description="Número máximo de materiales a retornar"),
+    mes: Optional[int] = Query(None, description="Filtrar por mes"),
+    año: Optional[int] = Query(None, description="Filtrar por año"),
+    pedidos: Optional[str] = Query(None, description="Lista de pedidos separados por coma"),
+    db: Session = Depends(get_db)
+):
+    try:
+        db_service = DatabaseService(db)
+        filtros = {}
+        if mes: filtros['mes'] = mes
+        if año: filtros['año'] = año
+        if pedidos: filtros['pedidos'] = pedidos
+
+        pedidos_service = db_service.pedidos_service
+        result = pedidos_service.get_ventas_por_material(limite, filtros)
+        return result
+    except Exception as e:
+        logger.error(f"Error obteniendo ventas por material: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/clientes-filtro")
