@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { KPICard } from './KPICard';
+import { UnitEconomicsCard } from './UnitEconomicsCard';
 import { LoadingSpinner } from './LoadingSpinner';
 import { Tooltip } from './ui/tooltip';
 import { ComprasV2EvolucionPreciosChart } from './Charts/ComprasV2EvolucionPreciosChart';
@@ -45,6 +46,11 @@ interface ComprasV2KPIs {
   rotacion_inventario?: number;
   ciclo_compras?: number;
   materiales_unicos?: number;
+  // Unit Economics
+  precio_unitario_promedio?: number;
+  costo_unitario_promedio?: number;
+  utilidad_por_kg?: number;
+  margen_por_kg?: number;
 }
 
 interface ComprasV2Data {
@@ -216,19 +222,12 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Dashboard de Compras V2
-        </h1>
-        <p className="text-gray-600">
-          Sistema optimizado de gestión de compras con cálculo automático de fechas
-        </p>
-      </div>
 
-      {/* Filtros y Carga de Archivos */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
+      {/* Filtros y Acciones */}
+      <div className="flex gap-6 mb-8">
+        {/* Filtros */}
+        <div className="bg-white rounded-lg shadow-md p-6 flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Mes
@@ -301,8 +300,11 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
               </select>
             </div>
           </div>
+        </div>
 
-          <div className="flex items-center gap-2 ml-4">
+        {/* Acciones */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex flex-col gap-3">
             <Button 
               onClick={loadData} 
               disabled={loading}
@@ -375,7 +377,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
         <KPICard
           title="Total Compras"
           value={formatCurrency(kpis.total_costo_mxn || 0)}
-          description={kpis.total_costo_divisa ? formatCurrencyUSD(kpis.total_costo_divisa) : ''}
+          description={`${kpis.total_kilogramos ? kpis.total_kilogramos.toLocaleString() : '0'} kg`}
           icon={Package}
           raw={true}
         />
@@ -427,18 +429,22 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
         />
       </div>
 
+      {/* Unit Economics KPI */}
+      <div className="mb-8">
+        <UnitEconomicsCard
+          precioUnitarioPromedio={kpis.precio_unitario_promedio}
+          costoUnitarioPromedio={kpis.costo_unitario_promedio}
+          utilidadPorKg={kpis.utilidad_por_kg}
+          margenPorKg={kpis.margen_por_kg}
+        />
+      </div>
+
       {/* KPIs de Resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <KPICard
           title="Total Proveedores"
           value={kpis.total_proveedores || 0}
           icon={Truck}
-        />
-        <KPICard
-          title="Total KG"
-          value={kpis.total_kilogramos ? kpis.total_kilogramos.toLocaleString() : '0'}
-          icon={TrendingUp}
-          raw={true}
         />
         <KPICard
           title="Compras con Anticipo"

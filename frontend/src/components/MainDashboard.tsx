@@ -23,7 +23,7 @@ export const MainDashboard: FC = () => {
         const summary = await apiService.getDataSummary();
         setDataSummary(summary);
         
-        if (summary.has_data) {
+        if (summary && typeof summary === 'object' && 'has_data' in summary && summary.has_data) {
           setDataLoaded(true);
           // Si hay datos persistentes, ir directamente al dashboard
           setActiveTab('dashboard');
@@ -50,9 +50,10 @@ export const MainDashboard: FC = () => {
     try {
       const summary = await apiService.getDataSummary();
       setDataSummary(summary);
-      setDataLoaded(summary.has_data);
+      const hasData = summary && typeof summary === 'object' && 'has_data' in summary && summary.has_data;
+      setDataLoaded(hasData);
       
-      if (summary.has_data) {
+      if (hasData) {
         // Cambiar automáticamente a la pestaña de dashboard general
         setActiveTab('dashboard');
       }
@@ -90,50 +91,57 @@ export const MainDashboard: FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
+      {/* Barra de navegación fija */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-white shadow-lg border-b border-gray-200">
+        <div className="container mx-auto px-4 py-4">
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
+            <TabsList className="grid w-full grid-cols-5 bg-white shadow-lg border border-gray-200">
+              <TabsTrigger 
+                value="upload" 
+                data-tab="upload"
+                className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-blue-700 data-[state=inactive]:hover:bg-blue-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
+              >
+                <Upload className="h-4 w-4" />
+                Carga de Archivos
+              </TabsTrigger>
+              <TabsTrigger 
+                value="dashboard" 
+                className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-green-700 data-[state=inactive]:hover:bg-green-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
+              >
+                <BarChart3 className="h-4 w-4" />
+                Facturación
+              </TabsTrigger>
+              <TabsTrigger 
+                value="pedidos" 
+                className="flex items-center gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-purple-700 data-[state=inactive]:hover:bg-purple-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
+              >
+                <Package className="h-4 w-4" />
+                Análisis por Pedido
+              </TabsTrigger>
+              <TabsTrigger 
+                value="compras-v2" 
+                className="flex items-center gap-2 data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-indigo-700 data-[state=inactive]:hover:bg-indigo-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                Compras
+              </TabsTrigger>
+              <TabsTrigger 
+                value="data" 
+                className="flex items-center gap-2 data-[state=active]:bg-gray-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-gray-700 data-[state=inactive]:hover:bg-gray-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
+              >
+                <Database className="h-4 w-4" />
+                Gestión de Datos
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      </div>
 
+      {/* Contenido principal con padding-top para compensar la barra fija */}
+      <div className="pt-24">
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-5 bg-white shadow-lg border border-gray-200">
-            <TabsTrigger 
-              value="upload" 
-              data-tab="upload"
-              className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-blue-700 data-[state=inactive]:hover:bg-blue-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
-            >
-              <Upload className="h-4 w-4" />
-              Carga de Archivos
-            </TabsTrigger>
-            <TabsTrigger 
-              value="dashboard" 
-              className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-green-700 data-[state=inactive]:hover:bg-green-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
-            >
-              <BarChart3 className="h-4 w-4" />
-              Facturación
-            </TabsTrigger>
-            <TabsTrigger 
-              value="pedidos" 
-              className="flex items-center gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-purple-700 data-[state=inactive]:hover:bg-purple-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
-            >
-              <Package className="h-4 w-4" />
-              Análisis por Pedido
-            </TabsTrigger>
-            <TabsTrigger 
-              value="compras-v2" 
-              className="flex items-center gap-2 data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-indigo-700 data-[state=inactive]:hover:bg-indigo-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
-            >
-              <ShoppingBag className="h-4 w-4" />
-              Compras
-            </TabsTrigger>
-            <TabsTrigger 
-              value="data" 
-              className="flex items-center gap-2 data-[state=active]:bg-gray-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-gray-700 data-[state=inactive]:hover:bg-gray-50 data-[state=inactive]:text-gray-600 transition-all duration-200"
-            >
-              <Database className="h-4 w-4" />
-              Gestión de Datos
-            </TabsTrigger>
-          </TabsList>
-
           <TabsContent value="upload" className="mt-6">
-            <div className="max-w-6xl mx-auto">
+            <div className="max-w-6xl mx-auto px-4">
               <DualUpload onUploadSuccess={handleUploadSuccess} onNewUpload={handleNewUpload} />
             </div>
           </TabsContent>

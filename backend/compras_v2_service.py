@@ -431,11 +431,11 @@ class ComprasV2Service:
             # Usar exactamente el mismo patrón que KPIs
             query = """
                 SELECT 
-                    c2.id, c2.imi, c2.proveedor, c2.fecha_pedido
+                    c2.imi, c2.proveedor, c2.fecha_pedido
                 FROM compras_v2 c2
-                LEFT JOIN compras_v2_materiales c2m ON c2.id = c2m.compra_id
+                LEFT JOIN compras_v2_materiales c2m ON c2.imi = c2m.compra_id
                 WHERE 1=1
-                GROUP BY c2.id, c2.imi, c2.proveedor, c2.fecha_pedido
+                GROUP BY c2.imi, c2.proveedor, c2.fecha_pedido
                 ORDER BY c2.fecha_pedido DESC
                 LIMIT %s
             """
@@ -458,7 +458,6 @@ class ComprasV2Service:
                 try:
                     logger.info(f"Procesando fila {i}: {row}")
                     compra = {
-                        'id': int(row['id']) if row['id'] is not None else None,
                         'imi': str(row['imi']) if row['imi'] is not None else None,
                         'proveedor': str(row['proveedor']) if row['proveedor'] is not None else None,
                         'fecha_pedido': row['fecha_pedido'].isoformat() if row['fecha_pedido'] is not None else None
@@ -489,9 +488,9 @@ class ComprasV2Service:
             # Construir query base usando el mismo patrón que KPIs (que funciona)
             query = """
                 SELECT 
-                    c2.id, c2.imi, c2.proveedor, c2.fecha_pedido
+                    c2.imi, c2.proveedor, c2.fecha_pedido
                 FROM compras_v2 c2
-                LEFT JOIN compras_v2_materiales c2m ON c2.id = c2m.compra_id
+                LEFT JOIN compras_v2_materiales c2m ON c2.imi = c2m.compra_id
                 WHERE 1=1
             """
             
@@ -503,7 +502,7 @@ class ComprasV2Service:
                 params.append(f"%{filtros['proveedor']}%")
             
             if filtros.get('material'):
-                query += " AND EXISTS (SELECT 1 FROM compras_v2_materiales WHERE compra_id = c2.id AND material_codigo ILIKE %s)"
+                query += " AND EXISTS (SELECT 1 FROM compras_v2_materiales WHERE compra_id = c2.imi AND material_codigo ILIKE %s)"
                 params.append(f"%{filtros['material']}%")
             
             if filtros.get('mes') and filtros.get('año'):
@@ -527,7 +526,7 @@ class ComprasV2Service:
                 params.append(filtros['moneda'])
             
             # Agrupar y ordenar (necesario por el LEFT JOIN)
-            query += " GROUP BY c2.id, c2.imi, c2.proveedor, c2.fecha_pedido ORDER BY c2.fecha_pedido DESC"
+            query += " GROUP BY c2.imi, c2.proveedor, c2.fecha_pedido ORDER BY c2.fecha_pedido DESC"
             
             # Aplicar límite
             if limit:
@@ -546,7 +545,6 @@ class ComprasV2Service:
             compras = []
             for row in compras_raw:
                 compra = {
-                    'id': int(row['id']) if row['id'] is not None else None,
                     'imi': str(row['imi']) if row['imi'] is not None else None,
                     'proveedor': str(row['proveedor']) if row['proveedor'] is not None else None,
                     'fecha_pedido': row['fecha_pedido'].isoformat() if row['fecha_pedido'] is not None else None
@@ -575,7 +573,7 @@ class ComprasV2Service:
                     costo_total_divisa, costo_total_mxn, pu_mxn_importacion,
                     costo_total_mxn_imporacion, iva, costo_total_con_iva
                 FROM compras_v2_materiales
-                WHERE compra_id = %s
+                WHERE compra_imi = %s
                 ORDER BY material_codigo
             """, (imi,))
             
@@ -631,7 +629,7 @@ class ComprasV2Service:
                     SUM(c2.total_con_iva_mxn) / NULLIF(COUNT(DISTINCT c2.proveedor), 0) as promedio_por_proveedor,
                     COUNT(DISTINCT c2.proveedor) as proveedores_unicos
                 FROM compras_v2 c2
-                LEFT JOIN compras_v2_materiales c2m ON c2.id = c2m.compra_id
+                LEFT JOIN compras_v2_materiales c2m ON c2.imi = c2m.compra_id
                 WHERE 1=1
             """
             
@@ -670,7 +668,7 @@ class ComprasV2Service:
                     AVG(c2m.pu_mxn) as precio_unitario_promedio_mxn,
                     COUNT(DISTINCT c2m.material_codigo) as materiales_unicos
                 FROM compras_v2 c2
-                LEFT JOIN compras_v2_materiales c2m ON c2.id = c2m.compra_id
+                LEFT JOIN compras_v2_materiales c2m ON c2.imi = c2m.compra_id
                 WHERE 1=1
             """
             
@@ -807,19 +805,33 @@ class ComprasV2Service:
         try:
             cursor = conn.cursor()
             
-            # Determinar campo de monto según moneda
-            monto_field = 'total_con_iva_divisa' if moneda == 'USD' else 'total_con_iva_mxn'
-            
-            query = f"""
+            # Query que incluye tipo de cambio para conversión correcta
+            query = """
                 SELECT 
                     DATE_TRUNC('week', COALESCE(c2.fecha_pago_factura, c2.fecha_pedido)) as semana,
-                    SUM(CASE WHEN c2.fecha_pago_factura IS NOT NULL THEN c2.{monto_field} ELSE 0 END) as pagos,
-                    SUM(CASE WHEN c2.fecha_pago_factura IS NULL THEN c2.{monto_field} ELSE 0 END) as pendiente
+                    SUM(CASE WHEN c2.fecha_pago_factura IS NOT NULL THEN 
+                        CASE 
+                            WHEN %s = 'MXN' THEN c2.total_con_iva_mxn
+                            WHEN c2.moneda = 'USD' THEN c2.total_con_iva_divisa
+                            WHEN c2.tipo_cambio_real > 0 THEN c2.total_con_iva_mxn / c2.tipo_cambio_real
+                            ELSE 0
+                        END
+                        ELSE 0 
+                    END) as pagos,
+                    SUM(CASE WHEN c2.fecha_pago_factura IS NULL THEN 
+                        CASE 
+                            WHEN %s = 'MXN' THEN c2.total_con_iva_mxn
+                            WHEN c2.moneda = 'USD' THEN c2.total_con_iva_divisa
+                            WHEN c2.tipo_cambio_real > 0 THEN c2.total_con_iva_mxn / c2.tipo_cambio_real
+                            ELSE 0
+                        END
+                        ELSE 0 
+                    END) as pendiente
                 FROM compras_v2 c2
                 WHERE c2.fecha_pedido IS NOT NULL
             """
             
-            params = []
+            params = [moneda, moneda]  # Parámetros para los CASE statements
             
             # Aplicar filtros
             if filtros:
@@ -836,7 +848,7 @@ class ComprasV2Service:
                     params.append(f"%{filtros['proveedor']}%")
             
             query += """
-                GROUP BY DATE_TRUNC('week', c2.fecha_pago_factura)
+                GROUP BY DATE_TRUNC('week', COALESCE(c2.fecha_pago_factura, c2.fecha_pedido))
                 ORDER BY semana ASC
             """
             

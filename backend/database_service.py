@@ -890,6 +890,28 @@ class DatabaseService:
             dias_credito_values = [c.dias_credito for c in compras if c.dias_credito and c.dias_credito > 0]
             dias_credito_promedio = sum(dias_credito_values) / len(dias_credito_values) if dias_credito_values else 0
 
+            # Calcular tipo de cambio promedio solo para compras en USD
+            compras_usd = [c for c in compras if c.moneda and c.moneda.upper() == 'USD']
+            tipo_cambio_promedio = 0.0
+            
+            if compras_usd:
+                # Solo usar tipo_cambio_real, ignorar estimado
+                tipos_cambio = []
+                for c in compras_usd:
+                    if c.tipo_cambio_real and c.tipo_cambio_real > 0:
+                        tipos_cambio.append(c.tipo_cambio_real)
+                
+                if tipos_cambio:
+                    tipo_cambio_promedio = sum(tipos_cambio) / len(tipos_cambio)
+
+            # Calcular Unit Economics
+            # Para Unit Economics necesitamos obtener datos de ventas para calcular precio promedio
+            # Por ahora usaremos datos de compras como base
+            precio_unitario_promedio = costo_promedio_kg * 1.2  # Asumiendo 20% de margen sobre costo
+            costo_unitario_promedio = costo_promedio_kg
+            utilidad_por_kg = precio_unitario_promedio - costo_unitario_promedio
+            margen_por_kg = (utilidad_por_kg / precio_unitario_promedio * 100) if precio_unitario_promedio > 0 else 0
+
             return {
                 "total_compras": total_compras,
                 "total_kg": round(total_kg, 2),
@@ -898,7 +920,13 @@ class DatabaseService:
                 "costo_promedio_kg": round(costo_promedio_kg, 2),
                 "proveedores_unicos": proveedores_unicos,
                 "promedio_por_proveedor": round(promedio_por_proveedor, 2),
-                "dias_credito_promedio": round(dias_credito_promedio, 0)
+                "dias_credito_promedio": round(dias_credito_promedio, 0),
+                "tipo_cambio_promedio": round(tipo_cambio_promedio, 2),
+                # Unit Economics
+                "precio_unitario_promedio": round(precio_unitario_promedio, 2),
+                "costo_unitario_promedio": round(costo_unitario_promedio, 2),
+                "utilidad_por_kg": round(utilidad_por_kg, 2),
+                "margen_por_kg": round(margen_por_kg, 1)
             }
 
         except Exception as e:
@@ -917,7 +945,9 @@ class DatabaseService:
                 extract('month', ComprasV2.fecha_pedido).label('mes'),
                 ComprasV2Materiales.pu_divisa.label('precio_divisa'),
                 ComprasV2Materiales.pu_mxn_importacion.label('precio_mxn'),
-                ComprasV2.moneda
+                ComprasV2.moneda,
+                ComprasV2.tipo_cambio_real,
+                ComprasV2.tipo_cambio_estimado
             ).join(
                 ComprasV2Materiales, ComprasV2.id == ComprasV2Materiales.compra_id
             ).filter(
@@ -940,11 +970,23 @@ class DatabaseService:
             for row in results:
                 mes_key = f"{int(row.año)}-{int(row.mes):02d}"
 
-                # Usar precio según moneda solicitada
+                # Calcular precio según moneda solicitada
                 if moneda == 'MXN':
                     precio = row.precio_mxn or 0
                 else:  # USD
-                    precio = row.precio_divisa or 0
+                    # Si la compra está en USD, usar precio_divisa directamente
+                    if row.moneda and row.moneda.upper() == 'USD':
+                        precio = row.precio_divisa or 0
+                    else:
+                        # Si la compra está en MXN, convertir a USD usando solo tipo_cambio_real
+                        precio_mxn = row.precio_mxn or 0
+                        tipo_cambio = row.tipo_cambio_real or 0
+                        # Solo convertir si hay tipo_cambio_real válido
+                        if tipo_cambio > 0:
+                            precio = precio_mxn / tipo_cambio
+                        else:
+                            # Si no hay tipo_cambio_real, no incluir esta compra en el promedio
+                            precio = 0
 
                 if mes_key not in precios_por_mes:
                     precios_por_mes[mes_key] = []
@@ -1099,6 +1141,12 @@ class DatabaseService:
             "costo_promedio_kg": 0.0,
             "proveedores_unicos": 0,
             "promedio_por_proveedor": 0.0,
-            "dias_credito_promedio": 0.0
+            "dias_credito_promedio": 0.0,
+            "tipo_cambio_promedio": 0.0,
+            # Unit Economics defaults
+            "precio_unitario_promedio": 0.0,
+            "costo_unitario_promedio": 0.0,
+            "utilidad_por_kg": 0.0,
+            "margen_por_kg": 0.0
         }
     
