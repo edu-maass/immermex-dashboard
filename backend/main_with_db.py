@@ -846,6 +846,38 @@ async def get_compras_v2_kpis(
         logger.error(f"Error obteniendo KPIs de compras_v2: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/compras-v2/test")
+async def test_compras_v2_data():
+    """Endpoint de prueba para verificar datos de compras_v2"""
+    try:
+        from compras_v2_service import ComprasV2Service
+        
+        service = ComprasV2Service()
+        
+        # Prueba directa sin filtros
+        conn = service.get_connection()
+        if not conn:
+            return {"error": "No se pudo conectar a la base de datos"}
+        
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM compras_v2")
+        count = cursor.fetchone()[0]
+        cursor.close()
+        
+        # Prueba con el método
+        compras = service.get_compras_by_filtros({}, limit=5)
+        
+        return {
+            "success": True,
+            "count_direct": count,
+            "count_method": len(compras),
+            "compras": compras[:2] if compras else []
+        }
+        
+    except Exception as e:
+        logger.error(f"Error en test: {str(e)}")
+        return {"error": str(e)}
+
 @app.get("/api/compras-v2/data")
 async def get_compras_v2_data(
     mes: Optional[int] = Query(None, description="Filtrar por mes"),
