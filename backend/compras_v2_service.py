@@ -443,6 +443,18 @@ class ComprasV2Service:
                 query += " AND c2.proveedor ILIKE %s"
                 params.append(f"%{filtros['proveedor']}%")
             
+            if filtros.get('material'):
+                query += " AND EXISTS (SELECT 1 FROM compras_v2_materiales WHERE compra_id = c2.id AND material_codigo ILIKE %s)"
+                params.append(f"%{filtros['material']}%")
+            
+            if filtros.get('mes') and filtros.get('año'):
+                query += " AND EXTRACT(MONTH FROM c2.fecha_pedido) = %s AND EXTRACT(YEAR FROM c2.fecha_pedido) = %s"
+                params.append(filtros['mes'])
+                params.append(filtros['año'])
+            elif filtros.get('año'):
+                query += " AND EXTRACT(YEAR FROM c2.fecha_pedido) = %s"
+                params.append(filtros['año'])
+            
             if filtros.get('fecha_desde'):
                 query += " AND c2.fecha_pedido >= %s"
                 params.append(filtros['fecha_desde'])
