@@ -890,6 +890,37 @@ class DatabaseService:
             dias_credito_values = [c.dias_credito for c in compras if c.dias_credito and c.dias_credito > 0]
             dias_credito_promedio = sum(dias_credito_values) / len(dias_credito_values) if dias_credito_values else 0
 
+            # Calcular días de transporte promedio (fecha arribo - fecha salida)
+            dias_transporte_values = []
+            for c in compras:
+                if c.fecha_salida_real and c.fecha_arribo_real:
+                    dias_transporte = (c.fecha_arribo_real - c.fecha_salida_real).days
+                    if dias_transporte > 0:
+                        dias_transporte_values.append(dias_transporte)
+                elif c.fecha_salida_estimada and c.fecha_arribo_estimada:
+                    dias_transporte = (c.fecha_arribo_estimada - c.fecha_salida_estimada).days
+                    if dias_transporte > 0:
+                        dias_transporte_values.append(dias_transporte)
+            
+            dias_transporte_promedio = sum(dias_transporte_values) / len(dias_transporte_values) if dias_transporte_values else 0
+
+            # Calcular días puerto-planta promedio (fecha planta - fecha arribo)
+            dias_puerto_planta_values = []
+            for c in compras:
+                if c.fecha_arribo_real and c.fecha_planta_real:
+                    dias_puerto_planta = (c.fecha_planta_real - c.fecha_arribo_real).days
+                    if dias_puerto_planta > 0:
+                        dias_puerto_planta_values.append(dias_puerto_planta)
+                elif c.fecha_arribo_estimada and c.fecha_planta_estimada:
+                    dias_puerto_planta = (c.fecha_planta_estimada - c.fecha_arribo_estimada).days
+                    if dias_puerto_planta > 0:
+                        dias_puerto_planta_values.append(dias_puerto_planta)
+            
+            dias_puerto_planta_promedio = sum(dias_puerto_planta_values) / len(dias_puerto_planta_values) if dias_puerto_planta_values else 0
+
+            # Calcular días crédito neto (días crédito - días transporte - días puerto-planta)
+            dias_credito_neto = dias_credito_promedio - dias_transporte_promedio - dias_puerto_planta_promedio
+
             # Calcular tipo de cambio promedio solo para compras en USD
             compras_usd = [c for c in compras if c.moneda and c.moneda.upper() == 'USD']
             tipo_cambio_promedio = 0.0
@@ -921,6 +952,9 @@ class DatabaseService:
                 "proveedores_unicos": proveedores_unicos,
                 "promedio_por_proveedor": round(promedio_por_proveedor, 2),
                 "dias_credito_promedio": round(dias_credito_promedio, 0),
+                "dias_transporte_promedio": round(dias_transporte_promedio, 0),
+                "dias_puerto_planta_promedio": round(dias_puerto_planta_promedio, 0),
+                "dias_credito_neto": round(dias_credito_neto, 0),
                 "tipo_cambio_promedio": round(tipo_cambio_promedio, 2),
                 # Unit Economics
                 "precio_unitario_promedio": round(precio_unitario_promedio, 2),
@@ -1155,6 +1189,9 @@ class DatabaseService:
             "proveedores_unicos": 0,
             "promedio_por_proveedor": 0.0,
             "dias_credito_promedio": 0.0,
+            "dias_transporte_promedio": 0.0,
+            "dias_puerto_planta_promedio": 0.0,
+            "dias_credito_neto": 0.0,
             "tipo_cambio_promedio": 0.0,
             # Unit Economics defaults
             "precio_unitario_promedio": 0.0,

@@ -416,8 +416,9 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
         {/* Indicadores de Actividad Consolidados */}
         <ActivityIndicatorsCard
           diasCreditoPromedio={kpis.dias_credito_promedio}
-          rotacionInventario={kpis.rotacion_inventario}
-          cicloCompras={kpis.ciclo_compras}
+          diasTransportePromedio={kpis.dias_transporte_promedio}
+          diasPuertoPlantaPromedio={kpis.dias_puerto_planta_promedio}
+          diasCreditoNeto={kpis.dias_credito_neto}
         />
       </div>
 
