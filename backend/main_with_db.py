@@ -67,6 +67,19 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # PEDIDOS ENDPOINTS - Now Active
 
+# Endpoint OPTIONS genérico para CORS preflight
+@app.options("/{path:path}")
+async def options_handler(path: str):
+    """Maneja solicitudes OPTIONS para CORS preflight"""
+    return JSONResponse(
+        content={"message": "OK"},
+        headers={
+            "Access-Control-Allow-Origin": "https://edu-maass.github.io",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+            "Access-Control-Allow-Credentials": "true",
+        }
+    )
 
 # Fully commented out startup event
 
