@@ -795,17 +795,25 @@ class ComprasV2Service:
             
             query = """
                 SELECT 
-                    CASE 
-                        WHEN c2.fecha_vencimiento IS NULL THEN 'Sin fecha'
-                        WHEN c2.fecha_vencimiento < CURRENT_DATE THEN 'Vencido'
-                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '30 days' THEN '0-30 días'
-                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '60 days' THEN '31-60 días'
-                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '90 days' THEN '61-90 días'
-                        ELSE '90+ días'
-                    END as periodo,
-                    SUM(c2.total_con_iva_mxn) as monto
-                FROM compras_v2 c2
-                WHERE c2.fecha_pago_factura IS NULL
+                    periodo,
+                    SUM(monto) as monto
+                FROM (
+                    SELECT 
+                        CASE 
+                            WHEN c2.fecha_vencimiento IS NULL THEN 'Sin fecha'
+                            WHEN c2.fecha_vencimiento < CURRENT_DATE THEN 'Vencido'
+                            WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '30 days' THEN '0-30 días'
+                            WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '60 days' THEN '31-60 días'
+                            WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '90 days' THEN '61-90 días'
+                            ELSE '90+ días'
+                        END as periodo,
+                        c2.total_con_iva_mxn as monto,
+                        c2.fecha_pedido,
+                        c2.proveedor
+                    FROM compras_v2 c2
+                    WHERE c2.fecha_pago_factura IS NULL
+                ) subquery
+                WHERE 1=1
             """
             
             params = []
@@ -813,35 +821,27 @@ class ComprasV2Service:
             # Aplicar filtros
             if filtros:
                 if filtros.get('mes'):
-                    query += " AND EXTRACT(MONTH FROM c2.fecha_pedido) = %s"
+                    query += " AND EXTRACT(MONTH FROM subquery.fecha_pedido) = %s"
                     params.append(filtros['mes'])
                 
                 if filtros.get('año'):
-                    query += " AND EXTRACT(YEAR FROM c2.fecha_pedido) = %s"
+                    query += " AND EXTRACT(YEAR FROM subquery.fecha_pedido) = %s"
                     params.append(filtros['año'])
                 
                 if filtros.get('proveedor'):
-                    query += " AND c2.proveedor ILIKE %s"
+                    query += " AND subquery.proveedor ILIKE %s"
                     params.append(f"%{filtros['proveedor']}%")
             
             query += """
-                GROUP BY 
-                    CASE 
-                        WHEN c2.fecha_vencimiento IS NULL THEN 'Sin fecha'
-                        WHEN c2.fecha_vencimiento < CURRENT_DATE THEN 'Vencido'
-                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '30 days' THEN '0-30 días'
-                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '60 days' THEN '31-60 días'
-                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '90 days' THEN '61-90 días'
-                        ELSE '90+ días'
-                    END
+                GROUP BY periodo
                 ORDER BY 
-                    CASE 
-                        WHEN c2.fecha_vencimiento IS NULL THEN 6
-                        WHEN c2.fecha_vencimiento < CURRENT_DATE THEN 1
-                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '30 days' THEN 2
-                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '60 days' THEN 3
-                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '90 days' THEN 4
-                        ELSE 5
+                    CASE periodo
+                        WHEN 'Vencido' THEN 1
+                        WHEN '0-30 días' THEN 2
+                        WHEN '31-60 días' THEN 3
+                        WHEN '61-90 días' THEN 4
+                        WHEN '90+ días' THEN 5
+                        ELSE 6
                     END
             """
             
