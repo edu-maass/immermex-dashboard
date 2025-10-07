@@ -742,7 +742,7 @@ class ComprasV2Service:
                     MIN(c2m.{precio_field}) as precio_min,
                     MAX(c2m.{precio_field}) as precio_max
                 FROM compras_v2 c2
-                JOIN compras_v2_materiales c2m ON c2.id = c2m.compra_id
+                LEFT JOIN compras_v2_materiales c2m ON c2.id = c2m.compra_id
                 WHERE c2.fecha_pedido IS NOT NULL 
                 AND c2m.{precio_field} IS NOT NULL 
                 AND c2m.{precio_field} > 0
@@ -812,7 +812,7 @@ class ComprasV2Service:
             
             query = f"""
                 SELECT 
-                    DATE_TRUNC('week', c2.fecha_pago_factura) as semana,
+                    DATE_TRUNC('week', COALESCE(c2.fecha_pago_factura, c2.fecha_pedido)) as semana,
                     SUM(CASE WHEN c2.fecha_pago_factura IS NOT NULL THEN c2.{monto_field} ELSE 0 END) as pagos,
                     SUM(CASE WHEN c2.fecha_pago_factura IS NULL THEN c2.{monto_field} ELSE 0 END) as pendiente
                 FROM compras_v2 c2
