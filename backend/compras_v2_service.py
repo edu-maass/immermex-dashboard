@@ -566,7 +566,7 @@ class ComprasV2Service:
                 SELECT 
                     AVG(CASE 
                         WHEN c2.fecha_salida_estimada IS NOT NULL AND c2.fecha_arribo_estimada IS NOT NULL 
-                        THEN EXTRACT(DAYS FROM (c2.fecha_arribo_estimada - c2.fecha_salida_estimada))
+                        THEN (c2.fecha_arribo_estimada - c2.fecha_salida_estimada)
                         ELSE NULL 
                     END) as ciclo_compras_promedio,
                     AVG(c2m.pu_divisa) as precio_unitario_promedio_usd,
@@ -825,15 +825,23 @@ class ComprasV2Service:
                     params.append(f"%{filtros['proveedor']}%")
             
             query += """
-                GROUP BY periodo
+                GROUP BY 
+                    CASE 
+                        WHEN c2.fecha_vencimiento IS NULL THEN 'Sin fecha'
+                        WHEN c2.fecha_vencimiento < CURRENT_DATE THEN 'Vencido'
+                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '30 days' THEN '0-30 días'
+                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '60 days' THEN '31-60 días'
+                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '90 days' THEN '61-90 días'
+                        ELSE '90+ días'
+                    END
                 ORDER BY 
-                    CASE periodo
-                        WHEN 'Vencido' THEN 1
-                        WHEN '0-30 días' THEN 2
-                        WHEN '31-60 días' THEN 3
-                        WHEN '61-90 días' THEN 4
-                        WHEN '90+ días' THEN 5
-                        ELSE 6
+                    CASE 
+                        WHEN c2.fecha_vencimiento IS NULL THEN 6
+                        WHEN c2.fecha_vencimiento < CURRENT_DATE THEN 1
+                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '30 days' THEN 2
+                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '60 days' THEN 3
+                        WHEN c2.fecha_vencimiento <= CURRENT_DATE + INTERVAL '90 days' THEN 4
+                        ELSE 5
                     END
             """
             

@@ -1109,8 +1109,8 @@ async def get_compras_v2_proveedores():
         logger.error(f"Error obteniendo proveedores de compras_v2: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/compras-v2/años-disponibles")
-async def get_compras_v2_años_disponibles():
+@app.get("/api/compras-v2/anios-disponibles")
+async def get_compras_v2_anios_disponibles():
     """Obtiene lista de años disponibles en compras_v2"""
     try:
         from compras_v2_service import ComprasV2Service

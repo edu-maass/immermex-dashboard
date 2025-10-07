@@ -337,7 +337,7 @@ class ApiService {
   }
 
   async getComprasV2AñosDisponibles(): Promise<number[]> {
-    return this.request('/compras-v2/años-disponibles');
+    return this.request('/compras-v2/anios-disponibles');
   }
 
   async updateComprasV2FechasEstimadas(): Promise<any> {
