@@ -419,6 +419,48 @@ class ComprasV2Service:
                 'total_procesados': 0
             }
     
+    def get_compras_simple(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Método simple que replica exactamente el patrón de KPIs"""
+        conn = self.get_connection()
+        if not conn:
+            return []
+        
+        try:
+            cursor = conn.cursor()
+            
+            # Usar exactamente el mismo patrón que KPIs
+            query = """
+                SELECT 
+                    c2.id, c2.imi, c2.proveedor, c2.fecha_pedido
+                FROM compras_v2 c2
+                LEFT JOIN compras_v2_materiales c2m ON c2.id = c2m.compra_id
+                WHERE 1=1
+                GROUP BY c2.id, c2.imi, c2.proveedor, c2.fecha_pedido
+                ORDER BY c2.fecha_pedido DESC
+                LIMIT %s
+            """
+            
+            cursor.execute(query, [limit])
+            compras_raw = cursor.fetchall()
+            
+            # Convertir a diccionarios
+            compras = []
+            for row in compras_raw:
+                compra = {
+                    'id': row[0],
+                    'imi': row[1],
+                    'proveedor': row[2],
+                    'fecha_pedido': row[3].isoformat() if row[3] else None
+                }
+                compras.append(compra)
+            
+            cursor.close()
+            return compras
+            
+        except Exception as e:
+            logger.error(f"Error en get_compras_simple: {str(e)}")
+            return []
+
     def get_compras_by_filtros(self, filtros: Dict[str, Any], limit: int = 100) -> List[Dict[str, Any]]:
         """Obtiene compras filtradas de compras_v2"""
         conn = self.get_connection()
