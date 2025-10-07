@@ -470,8 +470,13 @@ class ComprasV2Service:
                 query += " LIMIT %s"
                 params.append(filtros['limit'])
             
+            logger.info(f"Ejecutando query: {query}")
+            logger.info(f"Con parámetros: {params}")
+            
             cursor.execute(query, params)
             compras_raw = cursor.fetchall()
+            
+            logger.info(f"Resultados obtenidos: {len(compras_raw)} registros")
             
             # Convertir a diccionarios
             compras = []
