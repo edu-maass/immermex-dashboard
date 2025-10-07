@@ -52,7 +52,7 @@ class AdvancedDataValidator:
         self.validation_rules['facturacion'] = [
             ColumnValidationRule('fecha_factura', required=True, data_type=datetime),
             ColumnValidationRule('serie_factura', required=True, min_length=1, max_length=20),
-            ColumnValidationRule('folio_factura', required=True, data_type=int, min_value=1),
+            ColumnValidationRule('folio_factura', required=True, data_type=int, min_value=0),
             ColumnValidationRule('cliente', required=True, min_length=1, max_length=255),
             ColumnValidationRule('monto_total', required=True, data_type=float, min_value=0),
             ColumnValidationRule('monto_neto', required=False, data_type=float, min_value=0),
@@ -74,7 +74,7 @@ class AdvancedDataValidator:
         
         # Reglas para pedidos
         self.validation_rules['pedidos'] = [
-            ColumnValidationRule('folio_factura', required=True, data_type=int, min_value=1),
+            ColumnValidationRule('folio_factura', required=True, data_type=int, min_value=0),
             ColumnValidationRule('pedido', required=True, min_length=1, max_length=50),
             ColumnValidationRule('material', required=True, min_length=1, max_length=255),
             ColumnValidationRule('kg', required=True, data_type=float, min_value=0),

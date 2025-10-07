@@ -878,11 +878,11 @@ class ComprasV2Service:
                         WHEN c2.tipo_cambio_real > 0 THEN (c2.total_con_iva_mxn - COALESCE(c2.anticipo_monto, 0)) / c2.tipo_cambio_real
                         ELSE 0
                     END as liquidaciones,
-                    -- Gastos de importación: gastos_importacion + gastos_importacion_estimado
+                    -- Gastos de importación: solo gastos_importacion (sin estimado por ahora)
                     CASE 
-                        WHEN %s = 'MXN' THEN COALESCE(c2.gastos_importacion_mxn, 0) + COALESCE(c2.gastos_importacion_estimado, 0)
-                        WHEN c2.moneda = 'USD' THEN (COALESCE(c2.gastos_importacion_divisa, 0) + COALESCE(c2.gastos_importacion_estimado, 0)) * COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado, 1.0)
-                        WHEN c2.tipo_cambio_real > 0 THEN (COALESCE(c2.gastos_importacion_mxn, 0) + COALESCE(c2.gastos_importacion_estimado, 0)) / c2.tipo_cambio_real
+                        WHEN %s = 'MXN' THEN COALESCE(c2.gastos_importacion_mxn, 0)
+                        WHEN c2.moneda = 'USD' THEN COALESCE(c2.gastos_importacion_divisa, 0) * COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado, 1.0)
+                        WHEN c2.tipo_cambio_real > 0 THEN COALESCE(c2.gastos_importacion_mxn, 0) / c2.tipo_cambio_real
                         ELSE 0
                     END as gastos_importacion,
                     -- Anticipo

@@ -948,7 +948,7 @@ class DatabaseService:
                 
                 for compra in compras:
                     # Gastos de importación por compra
-                    gastos_compra = (compra.gastos_importacion_mxn or 0) + (compra.gastos_importacion_estimado or 0)
+                    gastos_compra = (compra.gastos_importacion_mxn or 0)
                     gastos_importacion_total += gastos_compra
                     
                     # Costo base por compra (sin gastos de importación)
@@ -1164,7 +1164,7 @@ class DatabaseService:
                 ComprasV2.proveedor,
                 func.sum(ComprasV2Materiales.kg).label('total_kg'),
                 func.sum(ComprasV2Materiales.costo_total_con_iva).label('total_compras'),
-                func.avg(ComprasV2Materiales.precio_por_kg_mxn).label('precio_unitario')
+                func.avg(ComprasV2Materiales.pu_mxn).label('precio_unitario')
             ).join(
                 ComprasV2Materiales, ComprasV2.imi == ComprasV2Materiales.compra_imi
             ).filter(
