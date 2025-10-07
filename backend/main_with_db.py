@@ -916,8 +916,8 @@ async def test_compras_v2_data():
         
         cursor.close()
         
-        # Prueba con el método
-        compras = service.get_compras_by_filtros({}, limit=5)
+        # Prueba con el método simple que funciona
+        compras = service.get_compras_simple(limit=5)
         
         return {
             "success": True,
