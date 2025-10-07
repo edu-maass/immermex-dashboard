@@ -428,11 +428,12 @@ class ComprasV2Service:
         try:
             cursor = conn.cursor()
             
-            # Construir query base ultra simplificada - solo campos básicos
+            # Construir query base usando el mismo patrón que KPIs (que funciona)
             query = """
                 SELECT 
                     c2.id, c2.imi, c2.proveedor, c2.fecha_pedido
                 FROM compras_v2 c2
+                LEFT JOIN compras_v2_materiales c2m ON c2.id = c2m.compra_id
                 WHERE 1=1
             """
             
@@ -467,8 +468,8 @@ class ComprasV2Service:
                 query += " AND c2.moneda = %s"
                 params.append(filtros['moneda'])
             
-            # Ordenar
-            query += " ORDER BY c2.fecha_pedido DESC"
+            # Agrupar y ordenar (necesario por el LEFT JOIN)
+            query += " GROUP BY c2.id, c2.imi, c2.proveedor, c2.fecha_pedido ORDER BY c2.fecha_pedido DESC"
             
             # Aplicar límite
             if limit:
