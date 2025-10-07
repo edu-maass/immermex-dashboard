@@ -5,6 +5,8 @@ import { TrendingUp, DollarSign, Calculator, Percent } from 'lucide-react';
 interface UnitEconomicsCardProps {
   precioUnitarioPromedio?: number;
   costoUnitarioPromedio?: number;
+  costoBasePorKg?: number;
+  gastosImportacionPorKg?: number;
   utilidadPorKg?: number;
   margenPorKg?: number;
 }
@@ -12,6 +14,8 @@ interface UnitEconomicsCardProps {
 export const UnitEconomicsCard: React.FC<UnitEconomicsCardProps> = ({
   precioUnitarioPromedio = 0,
   costoUnitarioPromedio = 0,
+  costoBasePorKg = 0,
+  gastosImportacionPorKg = 0,
   utilidadPorKg = 0,
   margenPorKg = 0,
 }) => {
@@ -72,6 +76,11 @@ export const UnitEconomicsCard: React.FC<UnitEconomicsCardProps> = ({
                 <p className="text-xl font-bold text-red-900">
                   {formatCurrency(costoUnitarioPromedio)}
                 </p>
+                {/* Breakdown del costo */}
+                <div className="text-xs text-red-600 mt-1 space-y-0.5">
+                  <div>Base: {formatCurrency(costoBasePorKg)}</div>
+                  <div>Importación: {formatCurrency(gastosImportacionPorKg)}</div>
+                </div>
               </div>
             </div>
           </div>

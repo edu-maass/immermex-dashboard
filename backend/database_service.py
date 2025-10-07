@@ -935,11 +935,80 @@ class DatabaseService:
                 if tipos_cambio:
                     tipo_cambio_promedio = sum(tipos_cambio) / len(tipos_cambio)
 
-            # Calcular Unit Economics
-            # Para Unit Economics necesitamos obtener datos de ventas para calcular precio promedio
-            # Por ahora usaremos datos de compras como base
-            precio_unitario_promedio = costo_promedio_kg * 1.2  # Asumiendo 20% de margen sobre costo
-            costo_unitario_promedio = costo_promedio_kg
+            # Calcular Unit Economics correctamente
+            # 1. Costo por kg: promedio ponderado incluyendo gastos de importación
+            costo_unitario_promedio = 0.0
+            gastos_importacion_por_kg = 0.0
+            costo_base_por_kg = 0.0
+            
+            if total_kg > 0:
+                # Calcular gastos de importación totales
+                gastos_importacion_total = 0.0
+                costo_base_total = 0.0
+                
+                for compra in compras:
+                    # Gastos de importación por compra
+                    gastos_compra = (compra.gastos_importacion_mxn or 0) + (compra.gastos_importacion_estimado or 0)
+                    gastos_importacion_total += gastos_compra
+                    
+                    # Costo base por compra (sin gastos de importación)
+                    materiales = self.db.query(ComprasV2Materiales).filter(
+                        ComprasV2Materiales.compra_imi == compra.imi
+                    ).all()
+                    
+                    for material in materiales:
+                        costo_base_total += material.costo_total_con_iva or 0
+                
+                # Calcular promedios por kg
+                costo_base_por_kg = costo_base_total / total_kg
+                gastos_importacion_por_kg = gastos_importacion_total / total_kg
+                costo_unitario_promedio = costo_base_por_kg + gastos_importacion_por_kg
+            
+            # 2. Precio por kg: consultar tabla pedidos_compras y facturas relacionadas
+            precio_unitario_promedio = 0.0
+            
+            try:
+                # Obtener IMI de las compras filtradas
+                imi_list = [c.imi for c in compras if c.imi]
+                
+                if imi_list:
+                    # Consultar pedidos_compras para obtener facturas relacionadas
+                    from sqlalchemy import text
+                    
+                    # Query para obtener precios de facturas relacionadas a las compras
+                    query_precios = text("""
+                        SELECT 
+                            fc.precio_unitario_kg,
+                            fc.kg,
+                            fc.total_con_iva
+                        FROM facturas_compras fc
+                        JOIN pedidos_compras pc ON fc.pedido_id = pc.id
+                        WHERE pc.compra_imi = ANY(:imi_list)
+                        AND fc.precio_unitario_kg > 0
+                        AND fc.kg > 0
+                    """)
+                    
+                    result_precios = self.db.execute(query_precios, {"imi_list": imi_list}).fetchall()
+                    
+                    if result_precios:
+                        # Calcular promedio ponderado por kg
+                        total_precio_ponderado = 0.0
+                        total_kg_precios = 0.0
+                        
+                        for row in result_precios:
+                            precio_kg = float(row[0])
+                            kg = float(row[1])
+                            total_precio_ponderado += precio_kg * kg
+                            total_kg_precios += kg
+                        
+                        if total_kg_precios > 0:
+                            precio_unitario_promedio = total_precio_ponderado / total_kg_precios
+                            
+            except Exception as e:
+                logger.error(f"Error calculando precio unitario: {str(e)}")
+                precio_unitario_promedio = 0.0
+            
+            # 3. Calcular utilidad y margen
             utilidad_por_kg = precio_unitario_promedio - costo_unitario_promedio
             margen_por_kg = (utilidad_por_kg / precio_unitario_promedio * 100) if precio_unitario_promedio > 0 else 0
 
@@ -959,6 +1028,8 @@ class DatabaseService:
                 # Unit Economics
                 "precio_unitario_promedio": round(precio_unitario_promedio, 2),
                 "costo_unitario_promedio": round(costo_unitario_promedio, 2),
+                "costo_base_por_kg": round(costo_base_por_kg, 2),
+                "gastos_importacion_por_kg": round(gastos_importacion_por_kg, 2),
                 "utilidad_por_kg": round(utilidad_por_kg, 2),
                 "margen_por_kg": round(margen_por_kg, 1)
             }
@@ -1196,6 +1267,8 @@ class DatabaseService:
             # Unit Economics defaults
             "precio_unitario_promedio": 0.0,
             "costo_unitario_promedio": 0.0,
+            "costo_base_por_kg": 0.0,
+            "gastos_importacion_por_kg": 0.0,
             "utilidad_por_kg": 0.0,
             "margen_por_kg": 0.0
         }

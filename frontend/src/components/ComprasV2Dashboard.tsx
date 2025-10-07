@@ -427,6 +427,8 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
         <UnitEconomicsCard
           precioUnitarioPromedio={kpis.precio_unitario_promedio}
           costoUnitarioPromedio={kpis.costo_unitario_promedio}
+          costoBasePorKg={kpis.costo_base_por_kg}
+          gastosImportacionPorKg={kpis.gastos_importacion_por_kg}
           utilidadPorKg={kpis.utilidad_por_kg}
           margenPorKg={kpis.margen_por_kg}
         />
