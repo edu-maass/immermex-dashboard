@@ -1391,6 +1391,7 @@ async def update_fechas_estimadas():
         conn = service.get_connection()
         
         if not conn:
+            logger.error("No se pudo conectar a la base de datos")
             raise HTTPException(status_code=500, detail="No se pudo conectar a la base de datos")
         
         cursor = conn.cursor()
@@ -1538,7 +1539,10 @@ async def update_fechas_estimadas():
         
     except Exception as e:
         logger.error(f"Error actualizando fechas estimadas: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Tipo de error: {type(e).__name__}")
+        import traceback
+        logger.error(f"Traceback completo: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Error actualizando fechas estimadas: {str(e)}")
 
 @app.get("/api/compras-v2/download-layout")
 async def download_compras_layout():
