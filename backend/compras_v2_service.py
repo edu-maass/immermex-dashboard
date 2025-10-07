@@ -443,6 +443,10 @@ class ComprasV2Service:
             cursor.execute(query, [limit])
             compras_raw = cursor.fetchall()
             
+            logger.info(f"Query ejecutada: {query}")
+            logger.info(f"Parámetros: {[limit]}")
+            logger.info(f"Resultados obtenidos: {len(compras_raw)} registros")
+            
             # Convertir a diccionarios
             compras = []
             for row in compras_raw:
