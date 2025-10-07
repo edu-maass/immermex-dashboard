@@ -536,10 +536,10 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
                       Fecha Pedido
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Salida Estimada
+                      Fecha Salida
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Arribo Estimado
+                      Fecha Arribo
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Materiales
@@ -562,10 +562,20 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
                         {compra.fecha_pedido ? new Date(compra.fecha_pedido).toLocaleDateString('es') : 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {compra.fecha_salida_estimada ? new Date(compra.fecha_salida_estimada).toLocaleDateString('es') : 'N/A'}
+                        {compra.fecha_salida_real ? 
+                          new Date(compra.fecha_salida_real).toLocaleDateString('es') : 
+                          compra.fecha_salida_estimada ? 
+                            new Date(compra.fecha_salida_estimada).toLocaleDateString('es') : 
+                            'N/A'
+                        }
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {compra.fecha_arribo_estimada ? new Date(compra.fecha_arribo_estimada).toLocaleDateString('es') : 'N/A'}
+                        {compra.fecha_arribo_real ? 
+                          new Date(compra.fecha_arribo_real).toLocaleDateString('es') : 
+                          compra.fecha_arribo_estimada ? 
+                            new Date(compra.fecha_arribo_estimada).toLocaleDateString('es') : 
+                            'N/A'
+                        }
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {compra.materiales_count || 0}

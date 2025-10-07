@@ -420,7 +420,7 @@ class ComprasV2Service:
             }
     
     def get_compras_simple(self, limit: int = 100) -> List[Dict[str, Any]]:
-        """Método simple que replica exactamente el patrón de KPIs"""
+        """Obtiene datos básicos de compras con todos los campos necesarios para el dashboard"""
         conn = self.get_connection()
         if not conn:
             return []
@@ -428,14 +428,24 @@ class ComprasV2Service:
         try:
             cursor = conn.cursor()
             
-            # Usar exactamente el mismo patrón que KPIs
+            # Query que incluye todos los campos necesarios para el dashboard
             query = """
                 SELECT 
-                    c2.imi, c2.proveedor, c2.fecha_pedido
+                    c2.imi,
+                    c2.proveedor,
+                    c2.puerto_origen,
+                    c2.fecha_pedido,
+                    c2.fecha_salida_estimada,
+                    c2.fecha_arribo_estimada,
+                    c2.fecha_salida_real,
+                    c2.fecha_arribo_real,
+                    COUNT(c2m.material_codigo) as materiales_count
                 FROM compras_v2 c2
                 LEFT JOIN compras_v2_materiales c2m ON c2.imi = c2m.compra_id
-                WHERE 1=1
-                GROUP BY c2.imi, c2.proveedor, c2.fecha_pedido
+                WHERE c2.fecha_pedido IS NOT NULL
+                GROUP BY c2.imi, c2.proveedor, c2.puerto_origen, c2.fecha_pedido, 
+                         c2.fecha_salida_estimada, c2.fecha_arribo_estimada, 
+                         c2.fecha_salida_real, c2.fecha_arribo_real
                 ORDER BY c2.fecha_pedido DESC
                 LIMIT %s
             """
@@ -460,7 +470,13 @@ class ComprasV2Service:
                     compra = {
                         'imi': str(row['imi']) if row['imi'] is not None else None,
                         'proveedor': str(row['proveedor']) if row['proveedor'] is not None else None,
-                        'fecha_pedido': row['fecha_pedido'].isoformat() if row['fecha_pedido'] is not None else None
+                        'puerto_origen': str(row['puerto_origen']) if row['puerto_origen'] is not None else None,
+                        'fecha_pedido': row['fecha_pedido'].isoformat() if row['fecha_pedido'] is not None else None,
+                        'fecha_salida_estimada': row['fecha_salida_estimada'].isoformat() if row['fecha_salida_estimada'] is not None else None,
+                        'fecha_arribo_estimada': row['fecha_arribo_estimada'].isoformat() if row['fecha_arribo_estimada'] is not None else None,
+                        'fecha_salida_real': row['fecha_salida_real'].isoformat() if row['fecha_salida_real'] is not None else None,
+                        'fecha_arribo_real': row['fecha_arribo_real'].isoformat() if row['fecha_arribo_real'] is not None else None,
+                        'materiales_count': int(row['materiales_count']) if row['materiales_count'] is not None else 0
                     }
                     compras.append(compra)
                     logger.info(f"Fila {i} convertida exitosamente: {compra}")
