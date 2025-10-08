@@ -224,8 +224,12 @@ class ImmermexDataProcessor:
                     return False
                 # Convertir a string y limpiar
                 folio_clean = str(folio_str).strip()
-                # Verificar si es completamente numérico y mayor que 0
-                return folio_clean.isdigit() and int(folio_clean) > 0
+                # Verificar si es numérico (positivo o negativo)
+                try:
+                    folio_int = int(folio_clean)
+                    return folio_int != 0  # Aceptar cualquier número excepto 0
+                except ValueError:
+                    return False
             
             # Aplicar filtro
             numeric_mask = folio_col.apply(is_numeric_folio)
@@ -1360,7 +1364,11 @@ def _map_facturacion_columns(df: pd.DataFrame) -> pd.DataFrame:
     if 'serie_factura' not in df_mapped.columns and len(columns) >= 2:
         df_mapped['serie_factura'] = df_mapped.iloc[:, 1]
     if 'folio_factura' not in df_mapped.columns and len(columns) >= 3:
-        df_mapped['folio_factura'] = pd.to_numeric(df_mapped.iloc[:, 2], errors='coerce').fillna(0).astype(int)
+        folio_series = pd.to_numeric(df_mapped.iloc[:, 2], errors='coerce')
+        # Generar folios únicos negativos para valores faltantes
+        mask_na = folio_series.isna()
+        folio_series.loc[mask_na] = range(-1, -mask_na.sum() - 1, -1)
+        df_mapped['folio_factura'] = folio_series.astype(int)
     if 'cliente' not in df_mapped.columns and len(columns) >= 4:
         df_mapped['cliente'] = df_mapped.iloc[:, 3]
     if 'monto_neto' not in df_mapped.columns and len(columns) >= 5:
@@ -1815,7 +1823,11 @@ def _map_pedidos_columns(df: pd.DataFrame) -> pd.DataFrame:
     
     # Mapeo por posición según la estructura real de Excel
     if 'folio_factura' not in df_mapped.columns and len(columns) >= 1:
-        df_mapped['folio_factura'] = pd.to_numeric(df_mapped.iloc[:, 0], errors='coerce').fillna(0).astype(int)  # A6: "No de factura"
+        folio_series = pd.to_numeric(df_mapped.iloc[:, 0], errors='coerce')  # A6: "No de factura"
+        # Generar folios únicos negativos para valores faltantes
+        mask_na = folio_series.isna()
+        folio_series.loc[mask_na] = range(-1, -mask_na.sum() - 1, -1)
+        df_mapped['folio_factura'] = folio_series.astype(int)
     if 'pedido' not in df_mapped.columns and len(columns) >= 3:
         df_mapped['pedido'] = df_mapped.iloc[:, 2]         # C6: "Pedido"
     if 'kg' not in df_mapped.columns and len(columns) >= 4:
@@ -1835,7 +1847,8 @@ def _map_pedidos_columns(df: pd.DataFrame) -> pd.DataFrame:
     
     # Valores por defecto para campos no encontrados
     if 'folio_factura' not in df_mapped.columns:
-        df_mapped['folio_factura'] = 0
+        # Generar folios únicos negativos para evitar conflictos con facturas reales
+        df_mapped['folio_factura'] = range(-1, -len(df_mapped) - 1, -1)
     if 'pedido' not in df_mapped.columns:
         df_mapped['pedido'] = ''
     if 'kg' not in df_mapped.columns:
