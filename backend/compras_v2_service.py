@@ -84,6 +84,36 @@ class ComprasV2Service:
         except:
             return Decimal(str(default))
     
+    def calculate_pu_usd(self, pu_divisa, moneda, tipo_cambio_real=None, tipo_cambio_estimado=None):
+        """Calcula pu_usd basado en la moneda y tipo de cambio"""
+        try:
+            pu_divisa_decimal = self.safe_decimal(pu_divisa)
+            
+            if moneda == 'USD':
+                # Si es USD, usar el mismo valor
+                return pu_divisa_decimal
+            elif moneda == 'MXN':
+                # Si es MXN, convertir a USD
+                # Priorizar tipo_cambio_real, luego tipo_cambio_estimado como fallback
+                tipo_cambio = None
+                if tipo_cambio_real is not None and tipo_cambio_real > 0:
+                    tipo_cambio = self.safe_decimal(tipo_cambio_real)
+                elif tipo_cambio_estimado is not None and tipo_cambio_estimado > 0:
+                    tipo_cambio = self.safe_decimal(tipo_cambio_estimado)
+                
+                if tipo_cambio and tipo_cambio > 0:
+                    return pu_divisa_decimal / tipo_cambio
+                else:
+                    # Si no hay tipo de cambio, devolver el valor original
+                    return pu_divisa_decimal
+            else:
+                # Para otras monedas, devolver el valor original
+                return pu_divisa_decimal
+                
+        except Exception as e:
+            logger.warning(f"Error calculando pu_usd: {str(e)}, usando pu_divisa")
+            return self.safe_decimal(pu_divisa)
+    
     def safe_int(self, value, default=0):
         """Convierte un valor a int de forma segura"""
         if value is None:
@@ -305,6 +335,22 @@ class ComprasV2Service:
             
             for material in materiales:
                 try:
+                    # Obtener información de la compra para calcular pu_usd
+                    cursor.execute("""
+                        SELECT moneda, tipo_cambio_real, tipo_cambio_estimado 
+                        FROM compras_v2 
+                        WHERE id = %s
+                    """, (material['compra_id'],))
+                    compra_info = cursor.fetchone()
+                    
+                    # Calcular pu_usd
+                    pu_usd = self.calculate_pu_usd(
+                        material['pu_divisa'],
+                        compra_info[0] if compra_info else 'USD',  # moneda
+                        compra_info[1] if compra_info else None,   # tipo_cambio_real
+                        compra_info[2] if compra_info else None    # tipo_cambio_estimado
+                    )
+                    
                     # Verificar si ya existe
                     cursor.execute("""
                         SELECT id FROM compras_v2_materiales 
@@ -321,6 +367,7 @@ class ComprasV2Service:
                                 kg = %s,
                                 pu_divisa = %s,
                                 pu_mxn = %s,
+                                pu_usd = %s,
                                 costo_total_divisa = %s,
                                 costo_total_mxn = %s,
                                 pu_mxn_importacion = %s,
@@ -334,6 +381,7 @@ class ComprasV2Service:
                             self.safe_decimal(material['kg']),
                             self.safe_decimal(material['pu_divisa']),
                             self.safe_decimal(material['pu_mxn']),
+                            pu_usd,
                             self.safe_decimal(material['costo_total_divisa']),
                             self.safe_decimal(material['costo_total_mxn']),
                             self.safe_decimal(material['pu_mxn_importacion']),
@@ -349,13 +397,13 @@ class ComprasV2Service:
                         # Insertar nuevo registro
                         cursor.execute("""
                             INSERT INTO compras_v2_materiales (
-                                compra_id, material_codigo, kg, pu_divisa, pu_mxn,
+                                compra_id, material_codigo, kg, pu_divisa, pu_mxn, pu_usd,
                                 costo_total_divisa, costo_total_mxn, pu_mxn_importacion,
                                 costo_total_mxn_imporacion, iva, costo_total_con_iva,
                                 compra_imi, created_at, updated_at
                             )
                             VALUES (
-                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                             )
                         """, (
                             material['compra_id'],
@@ -363,6 +411,7 @@ class ComprasV2Service:
                             self.safe_decimal(material['kg']),
                             self.safe_decimal(material['pu_divisa']),
                             self.safe_decimal(material['pu_mxn']),
+                            pu_usd,
                             self.safe_decimal(material['costo_total_divisa']),
                             self.safe_decimal(material['costo_total_mxn']),
                             self.safe_decimal(material['pu_mxn_importacion']),

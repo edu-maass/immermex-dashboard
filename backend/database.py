@@ -324,6 +324,7 @@ class ComprasV2Materiales(Base):
     kg = Column(Float, default=0.0)
     pu_divisa = Column(Float, default=0.0)
     pu_mxn = Column(Float, default=0.0)
+    pu_usd = Column(Float, default=0.0)
     costo_total_divisa = Column(Float, default=0.0)
     costo_total_mxn = Column(Float, default=0.0)
     pu_mxn_importacion = Column(Float, default=0.0)
