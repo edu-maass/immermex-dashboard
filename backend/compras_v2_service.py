@@ -994,24 +994,68 @@ class ComprasV2Service:
                     semanas_data[semana_key]['gastos_importacion'] += gastos_importacion
             
             # Ordenar semanas y preparar datos
-            semanas_ordenadas = sorted(semanas_data.keys(), key=lambda x: int(x.split()[1]))
-            
-            # Filtrar solo semanas con datos significativos (desde semana actual)
             from datetime import datetime, timedelta
-            semana_actual = datetime.now().isocalendar()[1]
-            semanas_filtradas = [semana for semana in semanas_ordenadas if int(semana.split()[1]) >= semana_actual]
+            import locale
             
-            if not semanas_filtradas:
-                semanas_filtradas = semanas_ordenadas[-4:]  # Últimas 4 semanas si no hay datos futuros
+            # Configurar locale para español
+            try:
+                locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+            except:
+                try:
+                    locale.setlocale(locale.LC_TIME, 'Spanish_Spain.1252')
+                except:
+                    pass  # Usar locale por defecto
             
-            liquidaciones_data = [semanas_data[semana]['liquidaciones'] for semana in semanas_filtradas]
-            gastos_data = [semanas_data[semana]['gastos_importacion'] for semana in semanas_filtradas]
-            anticipos_data = [semanas_data[semana]['anticipo'] for semana in semanas_filtradas]
+            # Obtener semana actual
+            hoy = datetime.now()
+            semana_actual = hoy.isocalendar()[1]
+            año_actual = hoy.year
+            
+            # Generar semanas futuras (desde la semana actual hacia adelante)
+            semanas_futuras = []
+            for i in range(12):  # Mostrar próximas 12 semanas
+                semana_num = semana_actual + i
+                año_semana = año_actual
+                
+                # Si la semana excede 52, ajustar al año siguiente
+                if semana_num > 52:
+                    semana_num = semana_num - 52
+                    año_semana = año_actual + 1
+                
+                # Calcular fecha de inicio de la semana
+                # isocalendar() retorna (año, semana, día)
+                fecha_inicio_semana = datetime.strptime(f"{año_semana}-W{semana_num:02d}-1", "%Y-W%W-%w")
+                
+                # Si no funciona el formato anterior, usar una aproximación
+                if fecha_inicio_semana.year != año_semana:
+                    # Calcular manualmente el lunes de la semana
+                    fecha_inicio_semana = datetime.strptime(f"{año_semana}-W{semana_num:02d}-1", "%Y-W%U-%w")
+                
+                # Formatear como S## dd-mmm
+                dia_mes = fecha_inicio_semana.strftime("%d")
+                mes_abr = fecha_inicio_semana.strftime("%b")
+                etiqueta_semana = f"S{semana_num:02d} {dia_mes}-{mes_abr}"
+                
+                semanas_futuras.append({
+                    'etiqueta': etiqueta_semana,
+                    'semana_num': semana_num,
+                    'fecha_inicio': fecha_inicio_semana,
+                    'datos': semanas_data.get(f"Semana {semana_num}", {'liquidaciones': 0, 'gastos_importacion': 0, 'anticipo': 0})
+                })
+            
+            # Ordenar por número de semana
+            semanas_futuras.sort(key=lambda x: x['semana_num'])
+            
+            # Extraer datos para el gráfico
+            etiquetas = [semana['etiqueta'] for semana in semanas_futuras]
+            liquidaciones_data = [semana['datos']['liquidaciones'] for semana in semanas_futuras]
+            gastos_data = [semana['datos']['gastos_importacion'] for semana in semanas_futuras]
+            anticipos_data = [semana['datos']['anticipo'] for semana in semanas_futuras]
             
             titulo = f"Flujo de Pagos Semanal ({moneda}) - Columnas Apiladas"
             
             return {
-                'labels': semanas_filtradas,
+                'labels': etiquetas,
                 'datasets': [
                     {
                         'label': 'Liquidaciones',
