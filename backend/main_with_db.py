@@ -47,15 +47,26 @@ app = FastAPI(
 def get_cors_origins():
     """Obtiene los orígenes CORS según el entorno"""
     env = os.getenv("ENVIRONMENT", "development")
+    
+    # Primero intentar usar ALLOWED_ORIGINS si está definido
+    allowed_origins = os.getenv("ALLOWED_ORIGINS", "")
+    if allowed_origins:
+        origins = [origin.strip() for origin in allowed_origins.split(",") if origin.strip()]
+        logger.info(f"Usando orígenes CORS desde ALLOWED_ORIGINS: {origins}")
+        return origins
+    
+    # Fallback a configuración hardcodeada
     if env == "production":
         return [
-            "https://edu-maass.github.io"
+            "https://edu-maass.github.io",
+            "https://immermex-dashboard.vercel.app"
         ]
     else:
         return [
             "http://localhost:3000",
             "http://127.0.0.1:3000",
-            "https://edu-maass.github.io"
+            "https://edu-maass.github.io",
+            "https://immermex-dashboard.vercel.app"
         ]
 
 app.add_middleware(
@@ -75,15 +86,32 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 @app.options("/{path:path}")
 async def options_handler(path: str):
     """Maneja solicitudes OPTIONS para CORS preflight"""
+    origins = get_cors_origins()
     return JSONResponse(
-        content={"message": "OK"},
+        content={"message": "OK", "allowed_origins": origins},
         headers={
-            "Access-Control-Allow-Origin": "https://edu-maass.github.io",
+            "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
             "Access-Control-Allow-Credentials": "true",
         }
     )
+
+# Endpoint de prueba para verificar CORS
+@app.get("/api/cors-test")
+async def cors_test():
+    """Endpoint de prueba para verificar configuración CORS"""
+    origins = get_cors_origins()
+    env = os.getenv("ENVIRONMENT", "development")
+    allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "not_set")
+    
+    return {
+        "message": "CORS test successful",
+        "environment": env,
+        "allowed_origins": origins,
+        "allowed_origins_env": allowed_origins_env,
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
 # Fully commented out startup event
 
