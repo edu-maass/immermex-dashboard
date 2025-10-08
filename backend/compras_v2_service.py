@@ -916,12 +916,12 @@ class ComprasV2Service:
         try:
             cursor = conn.cursor()
             
-            # Query para obtener datos de flujo de pagos con campos correctos
+            # Query simplificada para obtener datos de flujo de pagos
+            # Usar fecha_pedido como base para agrupar por semana
             query = """
                 SELECT 
-                    DATE_TRUNC('week', COALESCE(c2.fecha_pago_factura, c2.fecha_pedido)) as semana_vencimiento,
-                    DATE_TRUNC('week', COALESCE(c2.fecha_arribo_estimada, c2.fecha_pedido)) as semana_arribo,
-                    -- Liquidaciones: costo_total_mxn - anticipo_monto
+                    DATE_TRUNC('week', c2.fecha_pedido) as semana_pedido,
+                    -- Liquidaciones: costo_total_mxn - anticipo_monto (convertido a la moneda solicitada)
                     CASE 
                         WHEN %s = 'MXN' THEN COALESCE(c2.total_con_iva_mxn, 0) - COALESCE(c2.anticipo_monto, 0)
                         WHEN c2.moneda = 'USD' THEN 
@@ -930,7 +930,7 @@ class ComprasV2Service:
                             NULLIF(NULLIF(COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado), 0), 1.0)
                         ELSE 0
                     END as liquidaciones,
-                    -- Gastos de importación
+                    -- Gastos de importación (convertido a la moneda solicitada)
                     CASE 
                         WHEN %s = 'MXN' THEN COALESCE(c2.gastos_importacion_mxn, 0)
                         WHEN c2.moneda = 'USD' THEN 
@@ -941,7 +941,7 @@ class ComprasV2Service:
                             COALESCE(c2.gastos_importacion_mxn, 0) / 
                             NULLIF(NULLIF(COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado), 0), 1.0)
                     END as gastos_importacion,
-                    -- Anticipo
+                    -- Anticipo (convertido a la moneda solicitada)
                     CASE 
                         WHEN %s = 'MXN' THEN COALESCE(c2.anticipo_monto, 0)
                         WHEN c2.moneda = 'USD' THEN 
@@ -979,30 +979,24 @@ class ComprasV2Service:
             if not resultados:
                 return {'labels': [], 'datasets': [], 'titulo': 'Sin datos'}
             
-            # Procesar resultados por semana
+            # Procesar resultados por semana (simplificado)
             semanas_data = {}
             
             for row in resultados:
-                semana_vencimiento = row['semana_vencimiento']
-                semana_arribo = row['semana_arribo']
-                liquidaciones = float(row['liquidaciones']) if row['liquidaciones'] else 0
-                gastos_importacion = float(row['gastos_importacion']) if row['gastos_importacion'] else 0
-                anticipo = float(row['anticipo']) if row['anticipo'] else 0
+                semana_pedido = row[0]  # semana_pedido
+                liquidaciones = float(row[1]) if row[1] else 0  # liquidaciones
+                gastos_importacion = float(row[2]) if row[2] else 0  # gastos_importacion
+                anticipo = float(row[3]) if row[3] else 0  # anticipo
                 
-                # Usar semana de vencimiento para liquidaciones y anticipos
-                if semana_vencimiento:
-                    semana_key = f"Semana {semana_vencimiento.isocalendar()[1]}"
+                # Usar semana de pedido para todos los montos
+                if semana_pedido:
+                    semana_key = f"Semana {semana_pedido.isocalendar()[1]}"
                     if semana_key not in semanas_data:
                         semanas_data[semana_key] = {'liquidaciones': 0, 'gastos_importacion': 0, 'anticipo': 0}
+                    
                     semanas_data[semana_key]['liquidaciones'] += liquidaciones
-                    semanas_data[semana_key]['anticipo'] += anticipo
-                
-                # Usar semana de arribo para gastos de importación
-                if semana_arribo:
-                    semana_key = f"Semana {semana_arribo.isocalendar()[1]}"
-                    if semana_key not in semanas_data:
-                        semanas_data[semana_key] = {'liquidaciones': 0, 'gastos_importacion': 0, 'anticipo': 0}
                     semanas_data[semana_key]['gastos_importacion'] += gastos_importacion
+                    semanas_data[semana_key]['anticipo'] += anticipo
             
             # Ordenar semanas y preparar datos
             from datetime import datetime, timedelta
@@ -1063,7 +1057,7 @@ class ComprasV2Service:
             gastos_data = [semana['datos']['gastos_importacion'] for semana in semanas_futuras]
             anticipos_data = [semana['datos']['anticipo'] for semana in semanas_futuras]
             
-            titulo = f"Flujo de Pagos Semanal ({moneda}) - Columnas Apiladas"
+            titulo = "Flujo de Pagos Semanal"
             
             return {
                 'labels': etiquetas,
