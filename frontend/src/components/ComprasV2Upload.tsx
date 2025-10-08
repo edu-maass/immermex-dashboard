@@ -104,14 +104,23 @@ export const ComprasV2Upload: React.FC<ComprasV2UploadProps> = ({
     maxSize: 10 * 1024 * 1024 // 10MB
   });
 
-  const excelInstructions = `Instrucciones para el archivo Excel:
+  const excelInstructions = `📋 Instrucciones para Carga de Archivos
 
-• Use el botón "Descargar Layout Excel" para obtener la plantilla correcta
-• El archivo debe tener 3 hojas: "Compras Generales", "Materiales Detalle" e "Instrucciones"
-• Complete los datos en las hojas correspondientes siguiendo el formato de ejemplo
-• Los campos obligatorios están marcados en la hoja "Instrucciones"
-• Las fechas deben estar en formato YYYY-MM-DD
-• Los proveedores deben existir en la base de datos para cálculos automáticos`;
+📥 Paso 1: Descargar Plantilla
+   • Haga clic en "Descargar Layout Excel"
+   • Obtendrá un archivo con 3 hojas pre-configuradas
+
+📝 Paso 2: Completar Datos
+   • Hoja "Compras Generales": Información de la compra
+   • Hoja "Materiales Detalle": Desglose de materiales
+   • Hoja "Instrucciones": Campos obligatorios y ejemplos
+
+⚠️ Requisitos Importantes:
+   • Fechas en formato: YYYY-MM-DD (ej: 2025-10-08)
+   • Proveedores deben existir previamente en el sistema
+   • Respete el formato de las columnas
+
+✅ Los cálculos automáticos se realizarán al subir el archivo`;
 
   return (
     <>
