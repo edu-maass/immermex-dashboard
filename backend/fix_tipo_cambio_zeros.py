@@ -5,6 +5,8 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import logging
 
+# Configurar logging para mostrar salida
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Configuración de base de datos
@@ -78,6 +80,16 @@ def fix_tipo_cambio_zeros():
             
             logger.info(f"   Registros con tipo_cambio_real = 1.0: {count_real_ones.count}")
             
+            # 3b. Verificar cuántos registros tienen tipo_cambio_estimado = 1.0
+            logger.info("3b. Verificando registros con tipo_cambio_estimado = 1.0...")
+            count_estimado_ones = connection.execute(text("""
+                SELECT COUNT(*) as count
+                FROM compras_v2 
+                WHERE tipo_cambio_estimado = 1.0
+            """)).fetchone()
+            
+            logger.info(f"   Registros con tipo_cambio_estimado = 1.0: {count_estimado_ones.count}")
+            
             # 4. Actualizar tipo_cambio_real = 0 a NULL
             if count_real_zeros.count > 0:
                 logger.info("4. Actualizando tipo_cambio_real = 0 a NULL...")
@@ -117,8 +129,21 @@ def fix_tipo_cambio_zeros():
             else:
                 logger.info("6. No hay registros con tipo_cambio_real = 1.0 para actualizar")
             
-            # 7. Verificar estadísticas después de la corrección
-            logger.info("7. Estadísticas después de la corrección:")
+            # 7. Actualizar tipo_cambio_estimado = 1.0 a NULL (también problemático)
+            if count_estimado_ones.count > 0:
+                logger.info("7. Actualizando tipo_cambio_estimado = 1.0 a NULL...")
+                result_estimado_ones = connection.execute(text("""
+                    UPDATE compras_v2 
+                    SET tipo_cambio_estimado = NULL 
+                    WHERE tipo_cambio_estimado = 1.0
+                """))
+                connection.commit()
+                logger.info(f"   ✅ Actualizados {result_estimado_ones.rowcount} registros de tipo_cambio_estimado = 1.0")
+            else:
+                logger.info("7. No hay registros con tipo_cambio_estimado = 1.0 para actualizar")
+            
+            # 8. Verificar estadísticas después de la corrección
+            logger.info("8. Estadísticas después de la corrección:")
             
             stats_after = connection.execute(text("""
                 SELECT 
@@ -141,8 +166,8 @@ def fix_tipo_cambio_zeros():
             logger.info(f"   Min tipo_cambio_real: {stats_after.min_tipo_cambio_real:.4f}")
             logger.info(f"   Max tipo_cambio_real: {stats_after.max_tipo_cambio_real:.4f}")
             
-            # 8. Mostrar algunos ejemplos de tipos de cambio válidos
-            logger.info("8. Ejemplos de tipos de cambio válidos:")
+            # 9. Mostrar algunos ejemplos de tipos de cambio válidos
+            logger.info("9. Ejemplos de tipos de cambio válidos:")
             examples = connection.execute(text("""
                 SELECT 
                     imi,

@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "backend/main_with_db.py",
+      "src": "main_with_db.py",
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "50mb"
@@ -12,7 +12,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "backend/main_with_db.py"
+      "dest": "main_with_db.py"
     }
   ],
   "headers": [
