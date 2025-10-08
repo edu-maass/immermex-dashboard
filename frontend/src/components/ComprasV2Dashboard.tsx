@@ -187,7 +187,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
   };
 
   const handleUpdateFechasEstimadas = async () => {
-    if (!confirm('¿Está seguro de que desea recalcular todas las fechas estimadas basándose en los datos de fecha de compra y proveedores? Esta operación puede tardar unos momentos.')) {
+    if (!confirm('¿Está seguro de que desea recalcular fechas estimadas y columnas automáticas basándose en los datos de fecha de compra, proveedores y tipos de cambio? Esta operación puede tardar unos momentos.')) {
       return;
     }
 
@@ -331,7 +331,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
             </Button>
 
             <Tooltip 
-              content="Recalcular todas las fechas estimadas (salida, arribo y planta) basándose en la fecha de compra y los datos de proveedores"
+              content="Recalcular fechas estimadas y columnas automáticas (pu_usd) basándose en la fecha de compra, datos de proveedores y tipos de cambio"
               position="left"
             >
               <Button 
@@ -342,7 +342,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
                 className="flex items-center gap-2"
               >
                 <Calendar className={`h-4 w-4 ${updatingFechas ? 'animate-pulse' : ''}`} />
-                {updatingFechas ? 'Actualizando...' : 'Actualizar Fechas'}
+                {updatingFechas ? 'Actualizando...' : 'Actualizar Datos'}
               </Button>
             </Tooltip>
 

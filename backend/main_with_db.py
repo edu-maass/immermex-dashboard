@@ -1441,10 +1441,10 @@ async def update_fechas_estimadas():
         # Obtener datos de proveedores para cálculos
         cursor.execute("""
             SELECT 
-                "Nombre",
+                nombre,
                 promedio_dias_produccion,
                 promedio_dias_transporte_maritimo
-            FROM "Proveedores"
+            FROM proveedores
         """)
         
         proveedores_data = {}
@@ -1526,15 +1526,74 @@ async def update_fechas_estimadas():
         
         logger.info(f"Actualización completada: {updated_count} actualizados, {skipped_count} sin cambios")
         
+        # Actualizar columnas automáticas en materiales (pu_usd)
+        logger.info("Iniciando actualización de columnas automáticas en materiales...")
+        materiales_updated = 0
+        
+        try:
+            # Obtener todos los materiales que necesitan recalcular pu_usd
+            cursor.execute("""
+                SELECT 
+                    c2m.id as material_id,
+                    c2m.pu_divisa,
+                    c2.moneda,
+                    c2.tipo_cambio_real,
+                    c2.tipo_cambio_estimado
+                FROM compras_v2_materiales c2m
+                JOIN compras_v2 c2 ON c2m.compra_id = c2.id
+                WHERE c2m.pu_divisa > 0
+            """)
+            
+            materiales = cursor.fetchall()
+            logger.info(f"Encontrados {len(materiales)} materiales para recalcular pu_usd")
+            
+            for material in materiales:
+                material_id = material[0]
+                pu_divisa = float(material[1])
+                moneda = material[2]
+                tipo_cambio_real = material[3]
+                tipo_cambio_estimado = material[4]
+                
+                # Calcular pu_usd
+                pu_usd_calculated = 0.0
+                if moneda == 'USD':
+                    pu_usd_calculated = pu_divisa
+                elif moneda == 'MXN':
+                    tipo_cambio = tipo_cambio_real if tipo_cambio_real and tipo_cambio_real > 0 else tipo_cambio_estimado
+                    if tipo_cambio and tipo_cambio > 0:
+                        pu_usd_calculated = pu_divisa / tipo_cambio
+                    else:
+                        pu_usd_calculated = pu_divisa  # Fallback si no hay tipo de cambio
+                else:
+                    pu_usd_calculated = pu_divisa  # Para otras monedas, usar el valor original
+                
+                # Actualizar pu_usd
+                cursor.execute("""
+                    UPDATE compras_v2_materiales
+                    SET pu_usd = %s, updated_at = %s
+                    WHERE id = %s
+                """, (pu_usd_calculated, datetime.utcnow(), material_id))
+                
+                materiales_updated += 1
+            
+            # Commit los cambios de materiales
+            conn.commit()
+            logger.info(f"Actualizados {materiales_updated} materiales con nuevos valores de pu_usd")
+            
+        except Exception as e:
+            logger.error(f"Error actualizando columnas automáticas: {str(e)}")
+            conn.rollback()
+        
         cursor.close()
         conn.close()
         
         return {
-            "message": "Actualización de fechas estimadas completada",
+            "message": "Actualización de fechas estimadas y columnas automáticas completada",
             "total_records": len(records),
             "updated": updated_count,
             "skipped": skipped_count,
-            "proveedores_loaded": len(proveedores_data)
+            "proveedores_loaded": len(proveedores_data),
+            "materiales_updated": materiales_updated
         }
         
     except Exception as e:
