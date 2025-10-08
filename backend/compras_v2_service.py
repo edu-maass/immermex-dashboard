@@ -95,10 +95,11 @@ class ComprasV2Service:
             elif moneda == 'MXN':
                 # Si es MXN, convertir a USD
                 # Priorizar tipo_cambio_real, luego tipo_cambio_estimado como fallback
+                # Tratar 0 como NULL para evitar cálculos incorrectos
                 tipo_cambio = None
-                if tipo_cambio_real is not None and tipo_cambio_real > 0:
+                if tipo_cambio_real is not None and tipo_cambio_real > 0 and tipo_cambio_real != 1.0:
                     tipo_cambio = self.safe_decimal(tipo_cambio_real)
-                elif tipo_cambio_estimado is not None and tipo_cambio_estimado > 0:
+                elif tipo_cambio_estimado is not None and tipo_cambio_estimado > 0 and tipo_cambio_estimado != 1.0:
                     tipo_cambio = self.safe_decimal(tipo_cambio_estimado)
                 
                 if tipo_cambio and tipo_cambio > 0:
@@ -915,31 +916,41 @@ class ComprasV2Service:
         try:
             cursor = conn.cursor()
             
-            # Query para obtener datos de flujo de pagos con las nuevas series
+            # Query para obtener datos de flujo de pagos con campos correctos
             query = """
                 SELECT 
-                    DATE_TRUNC('week', COALESCE(c2.fecha_vencimiento, c2.fecha_pago_factura, c2.fecha_pedido)) as semana_vencimiento,
-                    DATE_TRUNC('week', COALESCE(c2.fecha_arribo_real, c2.fecha_arribo_estimada, c2.fecha_pedido)) as semana_arribo,
-                    -- Liquidaciones: costo_total - anticipo
+                    DATE_TRUNC('week', COALESCE(c2.fecha_pago_factura, c2.fecha_pedido)) as semana_vencimiento,
+                    DATE_TRUNC('week', COALESCE(c2.fecha_arribo_estimada, c2.fecha_pedido)) as semana_arribo,
+                    -- Liquidaciones: costo_total_mxn - anticipo_monto
                     CASE 
-                        WHEN %s = 'MXN' THEN c2.total_con_iva_mxn - COALESCE(c2.anticipo_monto, 0)
-                        WHEN c2.moneda = 'USD' THEN (c2.total_con_iva_divisa - COALESCE(c2.anticipo_monto, 0)) * COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado, 1.0)
-                        WHEN c2.tipo_cambio_real > 0 THEN (c2.total_con_iva_mxn - COALESCE(c2.anticipo_monto, 0)) / c2.tipo_cambio_real
+                        WHEN %s = 'MXN' THEN COALESCE(c2.total_con_iva_mxn, 0) - COALESCE(c2.anticipo_monto, 0)
+                        WHEN c2.moneda = 'USD' THEN 
+                            -- Para USD, convertir total_con_iva_mxn a USD restando anticipo
+                            (COALESCE(c2.total_con_iva_mxn, 0) - COALESCE(c2.anticipo_monto, 0)) / 
+                            NULLIF(NULLIF(COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado), 0), 1.0)
                         ELSE 0
                     END as liquidaciones,
-                    -- Gastos de importación: solo gastos_importacion (sin estimado por ahora)
+                    -- Gastos de importación
                     CASE 
                         WHEN %s = 'MXN' THEN COALESCE(c2.gastos_importacion_mxn, 0)
-                        WHEN c2.moneda = 'USD' THEN COALESCE(c2.gastos_importacion_divisa, 0) * COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado, 1.0)
-                        WHEN c2.tipo_cambio_real > 0 THEN COALESCE(c2.gastos_importacion_mxn, 0) / c2.tipo_cambio_real
-                        ELSE 0
+                        WHEN c2.moneda = 'USD' THEN 
+                            COALESCE(c2.gastos_importacion_divisa, 0) * 
+                            NULLIF(NULLIF(COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado), 0), 1.0)
+                        ELSE 
+                            -- Para otras monedas, convertir gastos_importacion_mxn a USD
+                            COALESCE(c2.gastos_importacion_mxn, 0) / 
+                            NULLIF(NULLIF(COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado), 0), 1.0)
                     END as gastos_importacion,
                     -- Anticipo
                     CASE 
                         WHEN %s = 'MXN' THEN COALESCE(c2.anticipo_monto, 0)
-                        WHEN c2.moneda = 'USD' THEN COALESCE(c2.anticipo_monto, 0) * COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado, 1.0)
-                        WHEN c2.tipo_cambio_real > 0 THEN COALESCE(c2.anticipo_monto, 0) / c2.tipo_cambio_real
-                        ELSE 0
+                        WHEN c2.moneda = 'USD' THEN 
+                            COALESCE(c2.anticipo_monto, 0) * 
+                            NULLIF(NULLIF(COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado), 0), 1.0)
+                        ELSE 
+                            -- Para otras monedas, convertir anticipo_monto a USD
+                            COALESCE(c2.anticipo_monto, 0) / 
+                            NULLIF(NULLIF(COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado), 0), 1.0)
                     END as anticipo
                 FROM compras_v2 c2
                 WHERE c2.fecha_pedido IS NOT NULL
