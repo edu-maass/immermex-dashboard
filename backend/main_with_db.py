@@ -1441,10 +1441,10 @@ async def update_fechas_estimadas():
         # Obtener datos de proveedores para cálculos
         cursor.execute("""
             SELECT 
-                nombre,
+                "Nombre",
                 promedio_dias_produccion,
                 promedio_dias_transporte_maritimo
-            FROM proveedores
+            FROM "Proveedores"
         """)
         
         proveedores_data = {}
