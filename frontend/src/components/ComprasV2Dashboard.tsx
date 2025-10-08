@@ -334,18 +334,18 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
               content={`🔄 Actualización Automática de Datos
 
 📅 Fechas Estimadas:
-   • Fecha de salida
-   • Fecha de arribo
-   • Fecha en planta
+• Fecha de salida
+• Fecha de arribo
+• Fecha en planta
 
 💰 Columnas Automáticas:
-   • pu_usd (Precio Unitario en USD)
-   • Conversión basada en tipo de cambio real/estimado
+• pu_usd (Precio Unitario en USD)
+• Conversión basada en tipo de cambio
 
 📊 Basado en:
-   • Datos de proveedores (tiempos de producción y transporte)
-   • Tipos de cambio registrados
-   • Fecha de pedido
+• Datos de proveedores (producción y transporte)
+• Tipos de cambio registrados
+• Fecha de pedido
 
 ⏱️ Esta operación puede tardar unos momentos`}
               position="left"
@@ -366,17 +366,17 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
               content={`📂 Carga de Archivos de Compras
 
 📋 Pasos a seguir:
-   1. Ir a la pestaña "Carga de Archivos"
-   2. Ubicar la sección "Compras"
-   3. Descargar el layout Excel
-   4. Completar con sus datos
-   5. Subir el archivo completado
+1. Ir a la pestaña "Carga de Archivos"
+2. Ubicar la sección "Compras"
+3. Descargar el layout Excel
+4. Completar con sus datos
+5. Subir el archivo completado
 
 💡 El sistema procesará automáticamente:
-   • Validación de datos
-   • Cálculos de costos
-   • Fechas estimadas
-   • Conversiones de moneda`}
+• Validación de datos
+• Cálculos de costos
+• Fechas estimadas
+• Conversiones de moneda`}
               position="left"
             >
               <Button 

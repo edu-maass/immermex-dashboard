@@ -53,7 +53,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       
       {isVisible && (
         <div className={`absolute z-50 ${getPositionClasses()}`}>
-          <div className="bg-gray-800 text-white text-sm rounded-lg px-3 py-2 max-w-xs whitespace-pre-line">
+          <div className="bg-gray-800 text-white text-sm rounded-lg px-4 py-3 max-w-md whitespace-pre-line shadow-lg">
             {content}
           </div>
           <div className={`absolute w-0 h-0 border-4 ${getArrowClasses()}`}></div>
