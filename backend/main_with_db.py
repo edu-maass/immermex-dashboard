@@ -1449,9 +1449,9 @@ async def update_fechas_estimadas():
         
         proveedores_data = {}
         for row in cursor.fetchall():
-            proveedores_data[row[0]] = {
-                'promedio_dias_produccion': float(row[1] or 0.0),
-                'promedio_dias_transporte_maritimo': float(row[2] or 0.0)
+            proveedores_data[row['Nombre']] = {
+                'promedio_dias_produccion': float(row['promedio_dias_produccion'] or 0.0),
+                'promedio_dias_transporte_maritimo': float(row['promedio_dias_transporte_maritimo'] or 0.0)
             }
         
         logger.info(f"Datos de {len(proveedores_data)} proveedores cargados")
