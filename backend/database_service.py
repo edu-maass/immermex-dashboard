@@ -99,6 +99,9 @@ class DatabaseService:
             logger.info("Guardando pedidos...")
             pedidos_count = self.pedidos_service.save_pedidos(processed_data_dict.get("pedidos_clean", []), archivo_id)
             
+            # Compras no se procesan en este endpoint (solo para ComprasV2)
+            compras_count = 0
+            
             # Actualizar registro de archivo y hacer commit final
             total_registros = facturas_count + cobranzas_count + anticipos_count + pedidos_count
             
