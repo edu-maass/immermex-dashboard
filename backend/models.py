@@ -28,7 +28,7 @@ class KPIsResponse(BaseModel):
     expectativa_cobranza: Dict[str, Dict[str, float]]  # Cobranza futura esperada
 
 class FacturacionResponse(BaseModel):
-    id: int
+    folio_factura: int
     folio: Optional[str]
     fecha_factura: Optional[datetime]
     cliente: Optional[str]
