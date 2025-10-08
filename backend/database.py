@@ -99,9 +99,8 @@ Base = declarative_base()
 class Facturacion(Base):
     __tablename__ = "facturacion"
     
-    id = Column(Integer, primary_key=True, index=True)
+    folio_factura = Column(Integer, primary_key=True, index=True)
     serie_factura = Column(String, index=True)
-    folio_factura = Column(Integer, index=True)
     fecha_factura = Column(DateTime, index=True)
     cliente = Column(String, index=True)
     agente = Column(String)
