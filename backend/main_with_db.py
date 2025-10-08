@@ -1290,12 +1290,13 @@ async def get_compras_v2_por_material(
     limite: int = Query(10, description="Número máximo de materiales a retornar"),
     mes: Optional[int] = Query(None, description="Filtrar por mes"),
     año: Optional[int] = Query(None, description="Filtrar por año"),
-    proveedor: Optional[str] = Query(None, description="Filtrar por proveedor"),
-    db: Session = Depends(get_db)
+    proveedor: Optional[str] = Query(None, description="Filtrar por proveedor")
 ):
     """Obtiene compras agrupadas por material en compras_v2"""
     try:
-        db_service = DatabaseService(db)
+        from compras_v2_service import ComprasV2Service
+        
+        service = ComprasV2Service()
 
         filtros = {}
         if mes:
@@ -1305,7 +1306,7 @@ async def get_compras_v2_por_material(
         if proveedor:
             filtros['proveedor'] = proveedor
 
-        result = db_service.get_compras_por_material_v2(limite, filtros)
+        result = service.get_compras_por_material(limite, filtros)
         return result
 
     except Exception as e:

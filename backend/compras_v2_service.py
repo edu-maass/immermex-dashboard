@@ -1272,6 +1272,90 @@ class ComprasV2Service:
             logger.error(traceback.format_exc())
             return []
     
+    def get_compras_por_material(self, limite: int = 10, filtros: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Obtiene compras agrupadas por material"""
+        conn = self.get_connection()
+        if not conn:
+            return {'labels': [], 'data': [], 'titulo': 'Sin datos'}
+        
+        try:
+            cursor = conn.cursor()
+            
+            # Query para obtener materiales con más compras
+            query = """
+                SELECT 
+                    c2m.material_codigo,
+                    c2m.material_descripcion,
+                    SUM(c2m.kg) as total_kg,
+                    SUM(c2m.costo_total_con_iva) as total_costo,
+                    COUNT(DISTINCT c2.imi) as total_compras,
+                    AVG(c2m.pu_mxn) as precio_promedio_kg
+                FROM compras_v2_materiales c2m
+                JOIN compras_v2 c2 ON c2m.compra_imi = c2.imi
+                WHERE c2.fecha_pedido IS NOT NULL
+            """
+            
+            params = []
+            
+            # Aplicar filtros
+            if filtros:
+                if filtros.get('mes'):
+                    query += " AND EXTRACT(MONTH FROM c2.fecha_pedido) = %s"
+                    params.append(filtros['mes'])
+                
+                if filtros.get('año'):
+                    query += " AND EXTRACT(YEAR FROM c2.fecha_pedido) = %s"
+                    params.append(filtros['año'])
+                
+                if filtros.get('proveedor'):
+                    query += " AND c2.proveedor ILIKE %s"
+                    params.append(f"%{filtros['proveedor']}%")
+            
+            query += """
+                GROUP BY c2m.material_codigo, c2m.material_descripcion
+                ORDER BY total_costo DESC
+                LIMIT %s
+            """
+            params.append(limite)
+            
+            cursor.execute(query, params)
+            resultados = cursor.fetchall()
+            cursor.close()
+            
+            if not resultados:
+                return {'labels': [], 'data': [], 'titulo': 'Sin datos'}
+            
+            # Procesar resultados
+            labels = []
+            data = []
+            
+            for row in resultados:
+                material_codigo = row[0]
+                material_descripcion = row[1]
+                total_costo = float(row[3]) if row[3] else 0
+                
+                # Crear etiqueta con código y descripción
+                etiqueta = f"{material_codigo}"
+                if material_descripcion and len(material_descripcion) > 20:
+                    etiqueta += f"\n{material_descripcion[:20]}..."
+                elif material_descripcion:
+                    etiqueta += f"\n{material_descripcion}"
+                
+                labels.append(etiqueta)
+                data.append(total_costo)
+            
+            return {
+                'labels': labels,
+                'data': data,
+                'titulo': f'Top {len(labels)} Materiales por Costo Total'
+            }
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo compras por material: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return {'labels': [], 'data': [], 'titulo': 'Sin datos'}
+    
     def __del__(self):
         """Destructor para cerrar conexión"""
         self.close_connection()
