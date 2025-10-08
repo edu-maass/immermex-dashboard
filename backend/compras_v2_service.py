@@ -733,7 +733,7 @@ class ComprasV2Service:
                     SUM(c2.total_con_iva_mxn) as total_costo_mxn,
                     SUM(CASE WHEN c2.anticipo_monto > 0 THEN 1 ELSE 0 END) as compras_con_anticipo,
                     SUM(CASE WHEN c2.fecha_pago_factura IS NOT NULL THEN 1 ELSE 0 END) as compras_pagadas,
-                    AVG(c2.tipo_cambio_estimado) as tipo_cambio_promedio,
+                    AVG(c2.tipo_cambio_real) as tipo_cambio_promedio,
                     AVG(c2.dias_credito) as dias_credito_promedio,
                     SUM(CASE WHEN c2.fecha_pago_factura IS NULL THEN c2.total_con_iva_mxn ELSE 0 END) as compras_pendientes,
                     SUM(CASE WHEN c2.fecha_pago_factura IS NULL THEN 1 ELSE 0 END) as compras_pendientes_count,
