@@ -1051,11 +1051,8 @@ class DatabaseService:
             query = self.db.query(
                 extract('year', ComprasV2.fecha_pedido).label('año'),
                 extract('month', ComprasV2.fecha_pedido).label('mes'),
-                ComprasV2Materiales.pu_divisa.label('precio_divisa'),
-                ComprasV2Materiales.pu_mxn_importacion.label('precio_mxn'),
-                ComprasV2.moneda,
-                ComprasV2.tipo_cambio_real,
-                ComprasV2.tipo_cambio_estimado
+                ComprasV2Materiales.pu_usd.label('precio_usd'),
+                ComprasV2Materiales.pu_mxn_importacion.label('precio_mxn')
             ).join(
                 ComprasV2Materiales, ComprasV2.imi == ComprasV2Materiales.compra_imi
             ).filter(
@@ -1082,19 +1079,7 @@ class DatabaseService:
                 if moneda == 'MXN':
                     precio = row.precio_mxn or 0
                 else:  # USD
-                    # Si la compra está en USD, usar precio_divisa directamente
-                    if row.moneda and row.moneda.upper() == 'USD':
-                        precio = row.precio_divisa or 0
-                    else:
-                        # Si la compra está en MXN, convertir a USD usando solo tipo_cambio_real
-                        precio_mxn = row.precio_mxn or 0
-                        tipo_cambio = row.tipo_cambio_real or 0
-                        # Solo convertir si hay tipo_cambio_real válido
-                        if tipo_cambio > 0:
-                            precio = precio_mxn / tipo_cambio
-                        else:
-                            # Si no hay tipo_cambio_real, no incluir esta compra en el promedio
-                            precio = 0
+                    precio = row.precio_usd or 0
 
                 if mes_key not in precios_por_mes:
                     precios_por_mes[mes_key] = []

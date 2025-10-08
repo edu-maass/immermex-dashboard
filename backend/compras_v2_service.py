@@ -841,7 +841,7 @@ class ComprasV2Service:
             cursor = conn.cursor()
             
             # Determinar campo de precio según moneda
-            precio_field = 'pu_divisa' if moneda == 'USD' else 'pu_mxn'
+            precio_field = 'pu_usd' if moneda == 'USD' else 'pu_mxn'
             
             query = f"""
                 SELECT 
