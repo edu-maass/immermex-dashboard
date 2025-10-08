@@ -57,16 +57,16 @@ def add_pu_usd_column():
                 connection.execute(text("""
                     UPDATE compras_v2_materiales 
                     SET pu_usd = CASE 
-                        WHEN c2.moneda = 'USD' THEN c2m.pu_divisa
+                        WHEN c2.moneda = 'USD' THEN compras_v2_materiales.pu_divisa
                         WHEN c2.moneda = 'MXN' THEN 
                             CASE 
                                 WHEN c2.tipo_cambio_real IS NOT NULL AND c2.tipo_cambio_real > 0 
-                                THEN c2m.pu_divisa / c2.tipo_cambio_real
+                                THEN compras_v2_materiales.pu_divisa / c2.tipo_cambio_real
                                 WHEN c2.tipo_cambio_estimado IS NOT NULL AND c2.tipo_cambio_estimado > 0 
-                                THEN c2m.pu_divisa / c2.tipo_cambio_estimado
-                                ELSE c2m.pu_divisa
+                                THEN compras_v2_materiales.pu_divisa / c2.tipo_cambio_estimado
+                                ELSE compras_v2_materiales.pu_divisa
                             END
-                        ELSE c2m.pu_divisa
+                        ELSE compras_v2_materiales.pu_divisa
                     END
                     FROM compras_v2 c2
                     WHERE compras_v2_materiales.compra_imi = c2.imi
@@ -84,16 +84,16 @@ def add_pu_usd_column():
                     connection.execute(text("""
                         UPDATE compras_v2_materiales 
                         SET pu_usd = CASE 
-                            WHEN c2.moneda = 'USD' THEN c2m.pu_divisa
+                            WHEN c2.moneda = 'USD' THEN compras_v2_materiales.pu_divisa
                             WHEN c2.moneda = 'MXN' THEN 
                                 CASE 
                                     WHEN c2.tipo_cambio_real IS NOT NULL AND c2.tipo_cambio_real > 0 
-                                    THEN c2m.pu_divisa / c2.tipo_cambio_real
+                                    THEN compras_v2_materiales.pu_divisa / c2.tipo_cambio_real
                                     WHEN c2.tipo_cambio_estimado IS NOT NULL AND c2.tipo_cambio_estimado > 0 
-                                    THEN c2m.pu_divisa / c2.tipo_cambio_estimado
-                                    ELSE c2m.pu_divisa
+                                    THEN compras_v2_materiales.pu_divisa / c2.tipo_cambio_estimado
+                                    ELSE compras_v2_materiales.pu_divisa
                                 END
-                            ELSE c2m.pu_divisa
+                            ELSE compras_v2_materiales.pu_divisa
                         END
                         FROM compras_v2 c2
                         WHERE compras_v2_materiales.compra_imi = c2.imi
