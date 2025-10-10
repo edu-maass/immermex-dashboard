@@ -38,7 +38,7 @@ logger = setup_logging()
 app = FastAPI(
     title="Immermex Dashboard API (Con Base de Datos)",
     description="API REST para dashboard de indicadores financieros con persistencia en base de datos",
-    version="2.0.0"
+    version="2.0.1"
 )
 
 # Pedidos endpoints will be added after middleware setup
