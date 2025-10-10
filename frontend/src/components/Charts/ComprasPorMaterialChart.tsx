@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import { FC, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
@@ -9,14 +9,34 @@ interface ComprasPorMaterialChartProps {
 
 export const ComprasPorMaterialChart: FC<ComprasPorMaterialChartProps> = ({ 
   data, 
-  titulo = "Compras por Material"
+  titulo = "Compras por Materiales"
 }) => {
+  const [viewMode, setViewMode] = useState<'cost' | 'kg'>('cost');
+
   // Safety check for data
   if (!data || !Array.isArray(data) || data.length === 0) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>{titulo}</CardTitle>
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={() => setViewMode('cost')}
+              className={`px-3 py-1 text-xs rounded ${
+                viewMode === 'cost' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+              }`}
+            >
+              $
+            </button>
+            <button
+              onClick={() => setViewMode('kg')}
+              className={`px-3 py-1 text-xs rounded ${
+                viewMode === 'kg' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+              }`}
+            >
+              KG
+            </button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="h-80 flex items-center justify-center text-gray-500">
@@ -36,6 +56,12 @@ export const ComprasPorMaterialChart: FC<ComprasPorMaterialChartProps> = ({
     return `$${value.toFixed(0)}`;
   };
 
+  const formatKG = (value: number) => {
+    if (value >= 1000000) return `${Math.round(value / 1000000)}M kg`;
+    if (value >= 1000) return `${Math.round(value / 1000)}K kg`;
+    return `${value.toFixed(0)} kg`;
+  };
+
   // Define colors for the pie chart
   const COLORS = [
     '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
@@ -50,6 +76,9 @@ export const ComprasPorMaterialChart: FC<ComprasPorMaterialChartProps> = ({
     fullName: item.material, // Keep full name for tooltip
     color: COLORS[index % COLORS.length]
   }));
+
+  // Get the data key based on view mode
+  const dataKey = viewMode === 'cost' ? 'total_compras' : 'total_kg';
 
   // Custom label that only shows percentage
   const renderLabel = (props: any) => {
@@ -81,6 +110,24 @@ export const ComprasPorMaterialChart: FC<ComprasPorMaterialChartProps> = ({
     <Card>
       <CardHeader>
         <CardTitle>{titulo}</CardTitle>
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={() => setViewMode('cost')}
+            className={`px-3 py-1 text-xs rounded ${
+              viewMode === 'cost' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            $
+          </button>
+          <button
+            onClick={() => setViewMode('kg')}
+            className={`px-3 py-1 text-xs rounded ${
+              viewMode === 'kg' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            KG
+          </button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="h-[500px] w-full">
@@ -95,7 +142,7 @@ export const ComprasPorMaterialChart: FC<ComprasPorMaterialChartProps> = ({
                 innerRadius={80}
                 outerRadius={150}
                 fill="#8884d8"
-                dataKey="total_compras"
+                dataKey={dataKey}
                 paddingAngle={2}
               >
                 {chartData.map((entry, index) => (
@@ -103,10 +150,32 @@ export const ComprasPorMaterialChart: FC<ComprasPorMaterialChartProps> = ({
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value: number, _name, _props: any) => [
-                  formatCurrency(value),
-                  'Monto Total'
-                ]}
+                formatter={(value: number, _name, props: any) => {
+                  const payload = props.payload;
+                  if (viewMode === 'cost') {
+                    return [
+                      <div key="tooltip-content" className="space-y-1">
+                        <div className="font-semibold text-blue-600">
+                          {formatCurrency(value)}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {formatKG(payload.total_kg)}
+                        </div>
+                      </div>
+                    ];
+                  } else {
+                    return [
+                      <div key="tooltip-content" className="space-y-1">
+                        <div className="font-semibold text-blue-600">
+                          {formatKG(value)}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {formatCurrency(payload.total_compras)}
+                        </div>
+                      </div>
+                    ];
+                  }
+                }}
                 labelFormatter={(label, payload) => {
                   if (payload && payload[0] && payload[0].payload) {
                     return payload[0].payload.fullName;
@@ -126,11 +195,11 @@ export const ComprasPorMaterialChart: FC<ComprasPorMaterialChartProps> = ({
           </ResponsiveContainer>
         </div>
         {/* Leyenda manual debajo del gráfico */}
-        <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+        <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-1 text-xs">
           {chartData.slice(0, 6).map((item, index) => (
-            <div key={index} className="flex items-center gap-2">
+            <div key={index} className="flex items-center gap-1">
               <div 
-                className="w-3 h-3 rounded-full flex-shrink-0" 
+                className="w-2 h-2 rounded-full flex-shrink-0" 
                 style={{ backgroundColor: item.color }}
               />
               <span className="truncate" title={item.fullName}>

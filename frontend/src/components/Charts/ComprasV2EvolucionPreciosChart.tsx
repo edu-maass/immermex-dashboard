@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import { FC, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
@@ -12,35 +12,49 @@ interface ComprasV2EvolucionPreciosChartProps {
 export const ComprasV2EvolucionPreciosChart: FC<ComprasV2EvolucionPreciosChartProps> = ({ 
   data, 
   moneda, 
-  titulo = "Evolución de Precios por kg",
+  titulo = "Evolucion Precio Unitario",
   onMonedaChange 
 }) => {
+  const [periodo, setPeriodo] = useState<'todos' | 'ytd' | '3meses' | '1mes'>('todos');
+
   // Safety check for data
   if (!data || !Array.isArray(data) || data.length === 0) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>{titulo}</CardTitle>
-          {onMonedaChange && (
-            <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => onMonedaChange('USD')}
-                className={`px-3 py-1 text-xs rounded ${
-                  moneda === 'USD' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-                }`}
-              >
-                USD
-              </button>
-              <button
-                onClick={() => onMonedaChange('MXN')}
-                className={`px-3 py-1 text-xs rounded ${
-                  moneda === 'MXN' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-                }`}
-              >
-                MXN
-              </button>
-            </div>
-          )}
+          <div className="flex gap-2 mt-2">
+            {onMonedaChange && (
+              <>
+                <button
+                  onClick={() => onMonedaChange('USD')}
+                  className={`px-3 py-1 text-xs rounded ${
+                    moneda === 'USD' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  USD
+                </button>
+                <button
+                  onClick={() => onMonedaChange('MXN')}
+                  className={`px-3 py-1 text-xs rounded ${
+                    moneda === 'MXN' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  MXN
+                </button>
+              </>
+            )}
+            <select
+              value={periodo}
+              onChange={(e) => setPeriodo(e.target.value as any)}
+              className="px-2 py-1 text-xs rounded border border-gray-300 bg-white"
+            >
+              <option value="todos">Todos los datos</option>
+              <option value="ytd">YTD</option>
+              <option value="3meses">3 meses</option>
+              <option value="1mes">1 mes</option>
+            </select>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="h-80 flex items-center justify-center text-gray-500">
@@ -79,8 +93,39 @@ export const ComprasV2EvolucionPreciosChart: FC<ComprasV2EvolucionPreciosChartPr
     }
   };
 
+  // Filter data based on selected period
+  const filteredData = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    
+    const now = new Date();
+    let cutoffDate: Date;
+    
+    switch (periodo) {
+      case 'ytd':
+        cutoffDate = new Date(now.getFullYear(), 0, 1); // Start of current year
+        break;
+      case '3meses':
+        cutoffDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+        break;
+      case '1mes':
+        cutoffDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        break;
+      default:
+        return data; // Return all data for 'todos'
+    }
+    
+    return data.filter(item => {
+      try {
+        const itemDate = new Date(item.fecha);
+        return itemDate >= cutoffDate;
+      } catch {
+        return true; // Keep item if date parsing fails
+      }
+    });
+  }, [data, periodo]);
+
   // Format data for the chart
-  const chartData = data.map(item => ({
+  const chartData = filteredData.map(item => ({
     fecha: formatDate(item.fecha),
     precio_promedio: item.precio_promedio,
     precio_min: item.precio_min,
@@ -100,26 +145,38 @@ export const ComprasV2EvolucionPreciosChart: FC<ComprasV2EvolucionPreciosChartPr
     <Card>
       <CardHeader>
         <CardTitle>{titulo}</CardTitle>
-        {onMonedaChange && (
-          <div className="flex gap-2 mt-2">
-            <button
-              onClick={() => onMonedaChange('USD')}
-              className={`px-3 py-1 text-xs rounded ${
-                moneda === 'USD' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-              }`}
-            >
-              USD
-            </button>
-            <button
-              onClick={() => onMonedaChange('MXN')}
-              className={`px-3 py-1 text-xs rounded ${
-                moneda === 'MXN' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-              }`}
-            >
-              MXN
-            </button>
-          </div>
-        )}
+        <div className="flex gap-2 mt-2">
+          {onMonedaChange && (
+            <>
+              <button
+                onClick={() => onMonedaChange('USD')}
+                className={`px-3 py-1 text-xs rounded ${
+                  moneda === 'USD' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+                }`}
+              >
+                USD
+              </button>
+              <button
+                onClick={() => onMonedaChange('MXN')}
+                className={`px-3 py-1 text-xs rounded ${
+                  moneda === 'MXN' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+                }`}
+              >
+                MXN
+              </button>
+            </>
+          )}
+          <select
+            value={periodo}
+            onChange={(e) => setPeriodo(e.target.value as any)}
+            className="px-2 py-1 text-xs rounded border border-gray-300 bg-white"
+          >
+            <option value="todos">Todos los datos</option>
+            <option value="ytd">YTD</option>
+            <option value="3meses">3 meses</option>
+            <option value="1mes">1 mes</option>
+          </select>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="h-[500px] w-full">
@@ -166,7 +223,7 @@ export const ComprasV2EvolucionPreciosChart: FC<ComprasV2EvolucionPreciosChartPr
                 }}
               />
               <Legend 
-                wrapperStyle={{ paddingTop: '20px' }}
+                wrapperStyle={{ paddingTop: '10px' }}
               />
               <Line
                 type="monotone"

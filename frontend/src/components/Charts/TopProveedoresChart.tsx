@@ -9,7 +9,7 @@ interface TopProveedoresChartProps {
 
 export const TopProveedoresChart: FC<TopProveedoresChartProps> = ({ 
   data, 
-  titulo = "Top Proveedores por KG Comprados"
+  titulo = "Top Proveedores"
 }) => {
   // Safety check for data
   if (!data || !Array.isArray(data) || data.length === 0) {
@@ -32,8 +32,7 @@ export const TopProveedoresChart: FC<TopProveedoresChartProps> = ({
 
   const formatTons = (value: number) => {
     const tons = value / 1000;
-    if (tons >= 1000) return `${Math.round(tons / 1000)}K ton`;
-    return `${tons.toFixed(1)} ton`;
+    return `${tons.toLocaleString('es-MX', { maximumFractionDigits: 0 })} ton`;
   };
 
   const formatCurrency = (value: number) => {
@@ -104,7 +103,7 @@ export const TopProveedoresChart: FC<TopProveedoresChartProps> = ({
                       </div>
                       {payload.total_compras && (
                         <div className="text-sm text-gray-600">
-                          Monto: {formatCurrency(payload.total_compras)}
+                          Costo Total: {formatCurrency(payload.total_compras)}
                         </div>
                       )}
                       {payload.precio_unitario && (

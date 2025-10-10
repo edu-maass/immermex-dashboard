@@ -16,14 +16,12 @@ import { Pagination } from './Pagination';
 import { apiService } from '../services/api';
 import { 
   DollarSign, 
-  TrendingUp, 
   Package, 
   Truck,
   AlertCircle,
   CheckCircle,
   Upload,
   RefreshCw,
-  Clock,
   Calendar
 } from 'lucide-react';
 
@@ -55,6 +53,12 @@ interface ComprasV2KPIs {
   costo_unitario_promedio?: number;
   utilidad_por_kg?: number;
   margen_por_kg?: number;
+  // Activity indicators
+  dias_transporte_promedio?: number;
+  dias_puerto_planta_promedio?: number;
+  dias_credito_neto?: number;
+  costo_base_por_kg?: number;
+  gastos_importacion_por_kg?: number;
 }
 
 interface ComprasV2Data {
@@ -444,22 +448,22 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
         
         {/* Indicadores de Actividad Consolidados */}
         <ActivityIndicatorsCard
-          diasCreditoPromedio={kpis.dias_credito_promedio}
-          diasTransportePromedio={kpis.dias_transporte_promedio}
-          diasPuertoPlantaPromedio={kpis.dias_puerto_planta_promedio}
-          diasCreditoNeto={kpis.dias_credito_neto}
+          diasCreditoPromedio={kpis.dias_credito_promedio || 0}
+          diasTransportePromedio={kpis.dias_transporte_promedio || 0}
+          diasPuertoPlantaPromedio={kpis.dias_puerto_planta_promedio || 0}
+          diasCreditoNeto={kpis.dias_credito_neto || 0}
         />
       </div>
 
       {/* Unit Economics KPI */}
       <div className="mb-8">
         <UnitEconomicsCard
-          precioUnitarioPromedio={kpis.precio_unitario_promedio}
-          costoUnitarioPromedio={kpis.costo_unitario_promedio}
-          costoBasePorKg={kpis.costo_base_por_kg}
-          gastosImportacionPorKg={kpis.gastos_importacion_por_kg}
-          utilidadPorKg={kpis.utilidad_por_kg}
-          margenPorKg={kpis.margen_por_kg}
+          precioUnitarioPromedio={kpis.precio_unitario_promedio || 0}
+          costoUnitarioPromedio={kpis.costo_unitario_promedio || 0}
+          costoBasePorKg={kpis.costo_base_por_kg || 0}
+          gastosImportacionPorKg={kpis.gastos_importacion_por_kg || 0}
+          utilidadPorKg={kpis.utilidad_por_kg || 0}
+          margenPorKg={kpis.margen_por_kg || 0}
         />
       </div>
 
@@ -523,7 +527,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
             proveedor,
             total_kg: total_kg as number
           }))) : []}
-          titulo="Top Proveedores por KG Comprados"
+          titulo="Top Proveedores"
         />
 
         {/* Compras por Material */}
@@ -531,9 +535,9 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
           data={comprasPorMaterial && comprasPorMaterial.labels ? comprasPorMaterial.labels.map((label: string, index: number) => ({
             material: label,
             total_compras: comprasPorMaterial.data[index] || 0,
-            total_kg: 0 // El backend devuelve el costo total, no kg separado
+            total_kg: comprasPorMaterial.data_kg ? comprasPorMaterial.data_kg[index] || 0 : 0
           })) : []}
-          titulo={comprasPorMaterial?.titulo || "Compras por Material"}
+          titulo={comprasPorMaterial?.titulo || "Compras por Materiales"}
         />
       </div>
 
