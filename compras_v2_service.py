@@ -45,14 +45,17 @@ class ComprasV2Service:
             return self.conn
         
         try:
-            config = self.load_production_config()
-            if not config:
-                return None
-            
-            database_url = config.get("DATABASE_URL")
+            # En producción (Vercel), usar variables de entorno directamente
+            database_url = os.getenv("DATABASE_URL")
             
             if not database_url:
-                logger.error("DATABASE_URL no encontrada en production.env")
+                # Fallback: intentar cargar desde archivo
+                config = self.load_production_config()
+                if config:
+                    database_url = config.get("DATABASE_URL")
+            
+            if not database_url:
+                logger.error("DATABASE_URL no encontrada en variables de entorno ni en production.env")
                 return None
             
             self.conn = psycopg2.connect(
