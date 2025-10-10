@@ -51,6 +51,32 @@ export const ComprasPorMaterialChart: FC<ComprasPorMaterialChartProps> = ({
     color: COLORS[index % COLORS.length]
   }));
 
+  // Custom label that only shows percentage
+  const renderLabel = (props: any) => {
+    const { cx, cy, midAngle, innerRadius, outerRadius, percent } = props;
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    // Only show label if percentage is significant (more than 3%)
+    if (percent < 0.03) return null;
+
+    return (
+      <text 
+        x={x} 
+        y={y} 
+        fill="white" 
+        textAnchor={x > cx ? 'start' : 'end'} 
+        dominantBaseline="central"
+        fontSize="14"
+        fontWeight="600"
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -63,20 +89,21 @@ export const ComprasPorMaterialChart: FC<ComprasPorMaterialChartProps> = ({
               <Pie
                 data={chartData}
                 cx="50%"
-                cy="45%"
-                labelLine={true}
-                label={({ material, percent }) => `${material} ${((percent as number) * 100).toFixed(0)}%`}
-                innerRadius={70}
-                outerRadius={140}
+                cy="40%"
+                labelLine={false}
+                label={renderLabel}
+                innerRadius={80}
+                outerRadius={150}
                 fill="#8884d8"
                 dataKey="total_compras"
+                paddingAngle={2}
               >
                 {chartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value: number) => [
+                formatter={(value: number, _name, _props: any) => [
                   formatCurrency(value),
                   'Monto Total'
                 ]}
@@ -97,6 +124,20 @@ export const ComprasPorMaterialChart: FC<ComprasPorMaterialChartProps> = ({
               />
             </PieChart>
           </ResponsiveContainer>
+        </div>
+        {/* Leyenda manual debajo del gráfico */}
+        <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+          {chartData.slice(0, 6).map((item, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <div 
+                className="w-3 h-3 rounded-full flex-shrink-0" 
+                style={{ backgroundColor: item.color }}
+              />
+              <span className="truncate" title={item.fullName}>
+                {item.material}
+              </span>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>
