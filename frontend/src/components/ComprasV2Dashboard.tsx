@@ -528,12 +528,12 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
 
         {/* Compras por Material */}
         <ComprasPorMaterialChart
-          data={comprasPorMaterial ? Object.entries(comprasPorMaterial).map(([material, data]) => ({
-            material,
-            total_compras: (data as any).total_compras,
-            total_kg: (data as any).total_kg
+          data={comprasPorMaterial && comprasPorMaterial.labels ? comprasPorMaterial.labels.map((label: string, index: number) => ({
+            material: label,
+            total_compras: comprasPorMaterial.data[index] || 0,
+            total_kg: 0 // El backend devuelve el costo total, no kg separado
           })) : []}
-          titulo="Compras por Material"
+          titulo={comprasPorMaterial?.titulo || "Compras por Material"}
         />
       </div>
 
