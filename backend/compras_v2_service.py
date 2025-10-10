@@ -911,7 +911,7 @@ class ComprasV2Service:
             return {'labels': [], 'data': [], 'titulo': 'Error'}
     
     def get_flujo_pagos(self, filtros: Dict[str, Any] = None, moneda: str = 'USD') -> Dict[str, Any]:
-        """Obtiene flujo de pagos por semana con columnas apiladas"""
+        """Obtiene flujo de pagos por semana con columnas apiladas - Versión corregida"""
         conn = self.get_connection()
         if not conn:
             return {'labels': [], 'datasets': [], 'titulo': 'Sin datos'}
@@ -1276,7 +1276,7 @@ class ComprasV2Service:
             return []
     
     def get_compras_por_material(self, limite: int = 10, filtros: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Obtiene compras agrupadas por material"""
+        """Obtiene compras agrupadas por material - Versión corregida"""
         conn = self.get_connection()
         if not conn:
             return {'labels': [], 'data': [], 'titulo': 'Sin datos'}
