@@ -2,8 +2,8 @@
 API REST para Immermex Dashboard con persistencia en base de datos
 Integra el procesador avanzado con almacenamiento persistente
 
-VERCEL DEPLOYMENT VERIFICATION - 2025-10-03 21:05
-UPDATED CODE RUNNING - SUPABASE POSTGRESQL CONFIGURED
+RENDER DEPLOYMENT - 2025-10-10
+Backend deployado en Render con Supabase PostgreSQL
 """
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Query
@@ -58,15 +58,14 @@ def get_cors_origins():
     # Fallback a configuración hardcodeada
     if env == "production":
         return [
-            "https://edu-maass.github.io",
-            "https://immermex-dashboard.vercel.app"
+            "https://edu-maass.github.io"
         ]
     else:
         return [
+            "http://localhost:5173",
             "http://localhost:3000",
             "http://127.0.0.1:3000",
-            "https://edu-maass.github.io",
-            "https://immermex-dashboard.vercel.app"
+            "https://edu-maass.github.io"
         ]
 
 app.add_middleware(
