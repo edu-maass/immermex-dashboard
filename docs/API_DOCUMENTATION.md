@@ -498,7 +498,7 @@ Rate limit headers are included in responses:
 
 ## Deployment
 
-The API is deployed on Vercel with the following configuration:
+The API is deployed on Render with the following configuration:
 
 - **Runtime**: Python 3.12
 - **Framework**: FastAPI

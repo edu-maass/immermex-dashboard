@@ -297,7 +297,7 @@ async def upload_file(
         if len(contents) > 10 * 1024 * 1024:
             raise FileProcessingError("El archivo es demasiado grande. Máximo 10MB permitido.")
         
-        # Procesar archivo directamente desde memoria (compatible con Vercel)
+        # Procesar archivo directamente desde memoria (compatible con entornos serverless)
         try:
             import io
             from data_processor import process_excel_from_bytes

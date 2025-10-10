@@ -14,16 +14,16 @@
    ```
 
 2. **Environment Variables**:
-   - Verify all required environment variables are set in Vercel
+   - Verify all required environment variables are set in Render dashboard
    - Check `DATABASE_URL` is correct
-   - Ensure `SECRET_KEY` is configured
+   - Ensure all Supabase keys are configured
 
 3. **Dependencies**:
    - Check if all Python dependencies are installed
    - Verify `requirements.txt` is up to date
 
 4. **Logs**:
-   - Check Vercel function logs for detailed error messages
+   - Check Render logs for detailed error messages
    - Look for import errors or missing modules
 
 #### Q: API returns 422 Unprocessable Entity
@@ -73,9 +73,9 @@
    ```
 
 2. **Network Access**:
-   - Ensure database allows connections from Vercel IPs
-   - Check firewall settings
-   - Verify SSL configuration
+   - Ensure database allows connections from Render (Supabase is open by default)
+   - Check firewall settings if using custom database
+   - Verify SSL configuration (sslmode=require)
 
 3. **Credentials**:
    - Verify username and password are correct
@@ -214,13 +214,13 @@
 
 ### 5. Deployment Issues
 
-#### Q: Vercel deployment fails
+#### Q: Render deployment fails
 **A:** Check the following:
 
 1. **Build Errors**:
-   - Check build logs in Vercel dashboard
+   - Check build logs in Render dashboard
    - Verify all dependencies are in requirements.txt
-   - Ensure Python version is compatible
+   - Ensure Python version matches runtime.txt (3.11.0)
 
 2. **Environment Variables**:
    - Verify all required environment variables are set
@@ -517,7 +517,7 @@ When reporting issues, include:
 #### System Down
 1. Check health endpoint: `/api/health`
 2. Verify database connectivity
-3. Check Vercel deployment status
+3. Check Render service status and logs
 4. Review recent changes and rollback if necessary
 
 #### Data Corruption
