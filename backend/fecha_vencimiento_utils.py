@@ -199,3 +199,6 @@ def print_fecha_vencimiento_stats(stats):
     print(f"Con fecha salida estimada: {stats.get('con_fecha_salida_estimada', 0)}")
     print("=" * 50)
 
+
+
+
