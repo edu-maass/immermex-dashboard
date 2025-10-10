@@ -152,7 +152,9 @@ async def health_check(db: Session = Depends(get_db)):
             "timestamp": datetime.now().isoformat(),
             "database": "connected",
             "data_available": data_summary.get("has_data", False),
-            "data_summary": data_summary
+            "data_summary": data_summary,
+            "version": "2.0.0",
+            "deployment": "forced_with_corrections"
         }
     except Exception as e:
         logger.error(f"Error en health check: {str(e)}")
