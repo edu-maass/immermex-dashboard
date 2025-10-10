@@ -23,7 +23,7 @@ services:
       - key: SUPABASE_PASSWORD
         sync: false
       - key: ALLOWED_ORIGINS
-        value: https://edu-maass.github.io,https://immermex-dashboard.vercel.app
+        value: https://edu-maass.github.io,http://localhost:5173
       - key: PYTHON_VERSION
         value: 3.11.0
     healthCheckPath: /health

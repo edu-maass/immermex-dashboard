@@ -6,7 +6,7 @@ The Immermex Dashboard API is a RESTful service built with FastAPI that provides
 
 ## Base URL
 
-- **Production**: `https://immermex-dashboard-api.vercel.app`
+- **Production**: `https://immermex-backend.onrender.com`
 - **Development**: `http://localhost:8000`
 
 ## Authentication
@@ -86,7 +86,7 @@ Upload and process an Excel file containing financial data.
 
 **Request:**
 ```bash
-curl -X POST "https://immermex-dashboard-api.vercel.app/api/upload" \
+curl -X POST "https://immermex-backend.onrender.com/api/upload" \
   -F "file=@data.xlsx" \
   -F "reemplazar_datos=true"
 ```
@@ -129,7 +129,7 @@ Retrieve key performance indicators with optional filtering.
 
 **Request:**
 ```bash
-curl -X GET "https://immermex-dashboard-api.vercel.app/api/kpis?mes=9&año=2025"
+curl -X GET "https://immermex-backend.onrender.com/api/kpis?mes=9&año=2025"
 ```
 
 **Response:**
@@ -170,7 +170,7 @@ Get a summary of available data in the system.
 
 **Request:**
 ```bash
-curl -X GET "https://immermex-dashboard-api.vercel.app/api/data/summary"
+curl -X GET "https://immermex-backend.onrender.com/api/data/summary"
 ```
 
 **Response:**
@@ -198,7 +198,7 @@ Get a list of available pedidos for filtering.
 
 **Request:**
 ```bash
-curl -X GET "https://immermex-dashboard-api.vercel.app/api/filtros/pedidos"
+curl -X GET "https://immermex-backend.onrender.com/api/filtros/pedidos"
 ```
 
 **Response:**
@@ -254,7 +254,7 @@ Get data for the aging chart showing invoice aging.
 
 **Request:**
 ```bash
-curl -X GET "https://immermex-dashboard-api.vercel.app/api/graficos/aging"
+curl -X GET "https://immermex-backend.onrender.com/api/graficos/aging"
 ```
 
 **Response:**
@@ -278,7 +278,7 @@ Get data for the top clients chart.
 
 **Request:**
 ```bash
-curl -X GET "https://immermex-dashboard-api.vercel.app/api/graficos/top-clientes?limit=5"
+curl -X GET "https://immermex-backend.onrender.com/api/graficos/top-clientes?limit=5"
 ```
 
 **Response:**
@@ -302,7 +302,7 @@ Get data for the material consumption chart.
 
 **Request:**
 ```bash
-curl -X GET "https://immermex-dashboard-api.vercel.app/api/graficos/consumo-material?limit=5"
+curl -X GET "https://immermex-backend.onrender.com/api/graficos/consumo-material?limit=5"
 ```
 
 **Response:**
@@ -325,7 +325,7 @@ Check the health status of the API.
 
 **Request:**
 ```bash
-curl -X GET "https://immermex-dashboard-api.vercel.app/api/health"
+curl -X GET "https://immermex-backend.onrender.com/api/health"
 ```
 
 **Response:**
@@ -345,7 +345,7 @@ Get system performance metrics.
 
 **Request:**
 ```bash
-curl -X GET "https://immermex-dashboard-api.vercel.app/api/system/performance"
+curl -X GET "https://immermex-backend.onrender.com/api/system/performance"
 ```
 
 **Response:**
@@ -377,7 +377,7 @@ Delete a processed file and its associated data.
 
 **Request:**
 ```bash
-curl -X DELETE "https://immermex-dashboard-api.vercel.app/api/data/archivo/19"
+curl -X DELETE "https://immermex-backend.onrender.com/api/data/archivo/19"
 ```
 
 **Response:**

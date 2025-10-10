@@ -10,7 +10,7 @@
 1. **Database Connection**:
    ```bash
    # Check if database is accessible
-   curl -X GET https://immermex-dashboard-api.vercel.app/api/health
+   curl -X GET https://immermex-backend.onrender.com/api/health
    ```
 
 2. **Environment Variables**:
