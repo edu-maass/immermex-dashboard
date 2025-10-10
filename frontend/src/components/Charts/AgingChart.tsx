@@ -41,6 +41,14 @@ export const AgingChart: FC<AgingChartProps> = ({ data }) => {
   // Si todos los valores son 0, mostrar mensaje
   const allZero = data.every(item => item.value === 0);
 
+  // Calcular el dominio del eje Y para mostrar un rango relevante
+  const maxValue = Math.max(...data.map(item => item.value));
+  const minValue = Math.min(...data.map(item => item.value));
+  const yAxisDomain = [
+    Math.max(0, minValue - (maxValue - minValue) * 0.1), // 10% padding inferior
+    maxValue + (maxValue - minValue) * 0.15 // 15% padding superior
+  ];
+
   return (
     <Card>
       <CardHeader>
@@ -48,41 +56,52 @@ export const AgingChart: FC<AgingChartProps> = ({ data }) => {
       </CardHeader>
       <CardContent>
         {allZero ? (
-          <div className="h-80 flex items-center justify-center text-gray-500">
+          <div className="h-[500px] flex items-center justify-center text-gray-500">
             <div className="text-center">
               <p className="text-lg font-medium">Sin saldos pendientes</p>
               <p className="text-sm">Todas las facturas están completamente cobradas</p>
             </div>
           </div>
         ) : (
-          <div className="h-80">
+          <div className="h-[500px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
+              <BarChart data={chartData} margin={{ top: 30, right: 40, left: 30, bottom: 80 }}>
+                <CartesianGrid 
+                  strokeDasharray="3 3" 
+                  stroke="#e5e7eb"
+                  strokeOpacity={0.7}
+                  verticalFill={['#f9fafb', '#ffffff']}
+                />
                 <XAxis 
                   dataKey="name" 
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 13 }}
                   angle={-45}
                   textAnchor="end"
                   height={80}
+                  stroke="#6b7280"
                 />
                 <YAxis 
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 13 }}
                   tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`}
+                  domain={yAxisDomain}
+                  stroke="#6b7280"
+                  tickCount={8}
                 />
                 <Tooltip 
                   formatter={(value: number) => [`$${value.toLocaleString('es-MX', { maximumFractionDigits: 0 })}`, 'Monto']}
-                  labelStyle={{ color: '#374151' }}
+                  labelStyle={{ color: '#374151', fontWeight: 600 }}
                   contentStyle={{ 
                     backgroundColor: '#fff', 
                     border: '1px solid #e5e7eb',
-                    borderRadius: '6px'
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    padding: '12px'
                   }}
                 />
                 <Bar 
                   dataKey="value" 
                   fill="#3b82f6"
-                  radius={[4, 4, 0, 0]}
+                  radius={[6, 6, 0, 0]}
                 />
               </BarChart>
             </ResponsiveContainer>

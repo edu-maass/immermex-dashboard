@@ -204,14 +204,14 @@ backend/
 │   ├── validators.py
 │   ├── error_handlers.py
 │   ├── logging_config.py
-│   └── vercel_performance_monitor.py
+│   └── performance_monitor.py  # Performance monitoring
 ├── database.py             # Database models and connection
-├── database_service_refactored.py  # Main database service
+├── database_service.py     # Main database service
 ├── data_processor.py       # Excel processing logic
 ├── main_with_db.py         # FastAPI application
 ├── models.py               # Pydantic models
 ├── requirements.txt        # Python dependencies
-└── vercel.json            # Vercel deployment config
+└── render.yaml            # Render deployment config
 ```
 
 ### Frontend Structure
@@ -621,54 +621,46 @@ describe('API Service', () => {
 
 ## Deployment
 
-### 1. Backend Deployment (Vercel)
+### 1. Backend Deployment (Render)
 
 #### Configuration
 
-```json
-// vercel.json
-{
-  "version": 2,
-  "builds": [
-    {
-      "src": "main_with_db.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "main_with_db.py"
-    }
-  ],
-  "env": {
-    "DATABASE_URL": "@database-url",
-    "SECRET_KEY": "@secret-key"
-  }
-}
+```yaml
+# render.yaml
+services:
+  - type: web
+    name: immermex-backend
+    env: python
+    runtime: python-3.11
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main_with_db:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
 ```
 
 #### Environment Variables
 
 ```bash
-# Set in Vercel dashboard
-DATABASE_URL=postgresql://user:password@host:port/database
-SECRET_KEY=your-secret-key
-VERCEL_ENV=production
+# Set in Render dashboard
+DATABASE_URL=postgresql://user:password@host:port/database?sslmode=require
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SUPABASE_PASSWORD=your_database_password
+ALLOWED_ORIGINS=https://edu-maass.github.io,http://localhost:5173
+ENVIRONMENT=production
+DEBUG=false
+LOG_LEVEL=info
+PYTHON_VERSION=3.11.0
 ```
 
-#### Deployment Commands
+#### Deployment Process
 
-```bash
-# Install Vercel CLI
-npm install -g vercel
+1. **Conectar repositorio GitHub en Render**
+2. **Configurar variables de entorno**
+3. **Deploy automático en cada push a main**
 
-# Login to Vercel
-vercel login
-
-# Deploy
-vercel --prod
-```
+Ver guía completa en `RENDER_DEPLOYMENT_GUIDE.md`
 
 ### 2. Frontend Deployment (GitHub Pages)
 

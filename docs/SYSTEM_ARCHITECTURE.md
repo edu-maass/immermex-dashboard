@@ -16,8 +16,8 @@ The Immermex Dashboard is a comprehensive financial data analysis platform built
          │                       │                       │
          ▼                       ▼                       ▼
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   GitHub Pages  │    │     Vercel      │    │   Supabase      │
-│   (Static Host) │    │   (Serverless)  │    │   (Managed DB)  │
+│   GitHub Pages  │    │     Render      │    │   Supabase      │
+│   (Static Host) │    │  (Web Service)  │    │   (Managed DB)  │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
@@ -42,7 +42,7 @@ The Immermex Dashboard is a comprehensive financial data analysis platform built
 - **Database Driver**: psycopg2-binary 2.9.9
 - **Data Processing**: Pandas 2.1.4, openpyxl 3.1.2
 - **Validation**: Pydantic 2.5.0
-- **Deployment**: Vercel
+- **Deployment**: Render
 
 ### Database
 - **Type**: PostgreSQL
@@ -227,22 +227,22 @@ Response Generation
 - Deploy to GitHub Pages
 ```
 
-### 2. Backend Deployment (Vercel)
+### 2. Backend Deployment (Render)
 
 #### Configuration
-- **Runtime**: Python 3.12
+- **Runtime**: Python 3.11
 - **Framework**: FastAPI
-- **Scaling**: Automatic serverless scaling
+- **Scaling**: Automatic scaling based on load
 - **Environment**: Production environment variables
-- **Monitoring**: Built-in Vercel analytics
+- **Monitoring**: Built-in Render metrics and logs
 
 #### Deployment Process
 ```bash
-# Vercel deployment
-- Install dependencies
-- Build application
-- Deploy to Vercel
+# Render deployment
+- Connect GitHub repository
 - Configure environment variables
+- Automatic deploy on push to main
+- Health checks and monitoring
 ```
 
 ### 3. Database (Supabase)
@@ -312,9 +312,10 @@ Response Generation
 
 ### 2. Infrastructure Monitoring
 
-#### Vercel Monitoring
-- **Function Execution**: Execution time and memory
-- **Error Tracking**: Function errors and exceptions
+#### Render Monitoring
+- **Service Health**: Uptime and response time
+- **Error Tracking**: Application errors and exceptions
+- **Resource Usage**: CPU, memory, and network metrics
 - **Usage Analytics**: Request patterns and volume
 - **Performance**: Response time distributions
 
@@ -342,9 +343,9 @@ Response Generation
 - **Caching**: Aggressive caching strategies
 
 #### Backend Scaling
-- **Serverless**: Automatic scaling with Vercel
-- **Stateless**: No server-side state
-- **Database Pooling**: Efficient connection management
+- **Web Service**: Persistent service on Render
+- **Auto-scaling**: Based on CPU and memory usage
+- **Database Pooling**: Efficient connection management with Supabase pooler
 
 ### 2. Vertical Scaling
 
@@ -472,7 +473,7 @@ Development → Testing → Code Review → Deployment → Monitoring
 
 #### Tools
 - **Version Control**: Git with GitHub
-- **CI/CD**: GitHub Actions and Vercel
+- **CI/CD**: GitHub Actions and Render auto-deploy
 - **Code Quality**: ESLint, Prettier
 - **Testing**: Unit and integration tests
 

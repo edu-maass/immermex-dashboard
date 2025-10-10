@@ -14,7 +14,7 @@ export default defineConfig({
         port: 3000,
         proxy: {
             '/api': {
-                target: 'https://immermex-dashboard.vercel.app',
+                target: 'https://immermex-backend.onrender.com',
                 changeOrigin: true,
             },
         },

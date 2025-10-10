@@ -16,34 +16,26 @@ export const ExpectativaCobranzaChart: FC<ExpectativaCobranzaChartProps> = ({ da
     }).format(value);
   };
 
-  // Función para formatear las etiquetas del eje X con información de cobranza
-  const formatXAxisLabel = (semana: string, data: any) => {
+  // Función para formatear las etiquetas del eje X
+  const formatXAxisLabel = (semana: string) => {
     // Formato: "Semana X (DD/MM - DD/MM)" -> extraer semana del año y fecha de inicio
     const match = semana.match(/Semana (\d+) \((\d{2}\/\d{2})/);
     if (match) {
       const semanaNum = match[1];
       const fechaInicio = match[2]; // "DD/MM"
-      
-      // Buscar los datos de esta semana para mostrar información de cobranza
-      const semanaData = data.find((item: any) => item.semana === semana);
-      if (semanaData) {
-        const cobranzaReal = semanaData.cobranza_real || 0;
-        const cobranzaEsperada = semanaData.cobranza_esperada || 0;
-        
-        // Formatear montos para mostrar en el eje X
-        const formatShortCurrency = (value: number) => {
-          if (value >= 1000000) return `${Math.round(value / 1000000)}M`;
-          if (value >= 1000) return `${Math.round(value / 1000)}K`;
-          return `${Math.round(value)}`;
-        };
-        
-        return `S${semanaNum}\n${fechaInicio}`;
-      }
-      
       return `S${semanaNum}\n${fechaInicio}`;
     }
     return semana;
   };
+
+  // Calcular el dominio del eje Y para mostrar un rango relevante
+  const allValues = data.flatMap(item => [item.cobranza_esperada, item.cobranza_real]);
+  const maxValue = Math.max(...allValues);
+  const minValue = Math.min(...allValues);
+  const yAxisDomain = [
+    Math.max(0, minValue - (maxValue - minValue) * 0.1), // 10% padding inferior
+    maxValue + (maxValue - minValue) * 0.15 // 15% padding superior
+  ];
 
   return (
     <Card>
@@ -51,24 +43,33 @@ export const ExpectativaCobranzaChart: FC<ExpectativaCobranzaChartProps> = ({ da
         <CardTitle>Expectativa de Cobranza por Semana</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-80">
+        <div className="h-[500px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart 
               data={data} 
-              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              margin={{ top: 30, right: 40, left: 50, bottom: 100 }}
             >
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                stroke="#e5e7eb"
+                strokeOpacity={0.7}
+                verticalFill={['#f9fafb', '#ffffff']}
+              />
               <XAxis 
                 dataKey="semana"
-                tick={{ fontSize: 10 }}
+                tick={{ fontSize: 11 }}
                 angle={-45}
                 textAnchor="end"
                 height={100}
-                tickFormatter={(value) => formatXAxisLabel(value, data)}
+                tickFormatter={(value) => formatXAxisLabel(value)}
+                stroke="#6b7280"
               />
               <YAxis 
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 13 }}
                 tickFormatter={formatCurrency}
+                domain={yAxisDomain}
+                stroke="#6b7280"
+                tickCount={8}
               />
               <Tooltip 
                 formatter={(value: number, name: string) => [
@@ -82,11 +83,13 @@ export const ExpectativaCobranzaChart: FC<ExpectativaCobranzaChartProps> = ({ da
                   }
                   return label;
                 }}
-                labelStyle={{ color: '#374151' }}
+                labelStyle={{ color: '#374151', fontWeight: 600 }}
                 contentStyle={{ 
                   backgroundColor: '#fff', 
                   border: '1px solid #e5e7eb',
-                  borderRadius: '6px'
+                  borderRadius: '8px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  padding: '12px'
                 }}
               />
               <Bar 
@@ -101,7 +104,7 @@ export const ExpectativaCobranzaChart: FC<ExpectativaCobranzaChartProps> = ({ da
                 fill="#10b981"
                 name="Real"
                 stackId="cobranza"
-                radius={[4, 4, 0, 0]}
+                radius={[6, 6, 0, 0]}
               />
             </BarChart>
           </ResponsiveContainer>

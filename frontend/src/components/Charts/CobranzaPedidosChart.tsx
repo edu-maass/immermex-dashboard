@@ -28,41 +28,61 @@ export const CobranzaPedidosChart: FC<CobranzaPedidosChartProps> = ({ data }) =>
     return semana;
   };
 
+  // Calcular el dominio del eje Y para mostrar un rango relevante
+  const allValues = data.flatMap(item => [item.cobranza_esperada, item.cobranza_real]);
+  const maxValue = Math.max(...allValues);
+  const minValue = Math.min(...allValues);
+  const yAxisDomain = [
+    Math.max(0, minValue - (maxValue - minValue) * 0.1), // 10% padding inferior
+    maxValue + (maxValue - minValue) * 0.15 // 15% padding superior
+  ];
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Cobranza</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-80">
+        <div className="h-[500px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart 
               data={data} 
-              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              margin={{ top: 30, right: 40, left: 50, bottom: 90 }}
             >
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                stroke="#e5e7eb"
+                strokeOpacity={0.7}
+                verticalFill={['#f9fafb', '#ffffff']}
+              />
               <XAxis 
                 dataKey="semana"
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 13 }}
                 angle={-45}
                 textAnchor="end"
                 height={80}
                 tickFormatter={formatXAxisLabel}
+                stroke="#6b7280"
               />
               <YAxis 
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 13 }}
                 tickFormatter={formatCurrency}
+                domain={yAxisDomain}
+                stroke="#6b7280"
+                tickCount={8}
               />
               <Tooltip 
                 formatter={(value: number, name: string) => [
                   formatCurrency(value), 
                   name === 'cobranza_esperada' ? 'Esperada' : name === 'cobranza_real' ? 'Cobrado' : name
                 ]}
-                labelStyle={{ color: '#374151' }}
+                labelStyle={{ color: '#374151', fontWeight: 600 }}
                 contentStyle={{ 
                   backgroundColor: '#fff', 
                   border: '1px solid #e5e7eb',
-                  borderRadius: '6px'
+                  borderRadius: '8px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  padding: '12px'
                 }}
               />
               <Bar 
@@ -77,7 +97,7 @@ export const CobranzaPedidosChart: FC<CobranzaPedidosChartProps> = ({ data }) =>
                 fill="#10b981"
                 name="Cobrado"
                 stackId="cobranza"
-                radius={[4, 4, 0, 0]}
+                radius={[6, 6, 0, 0]}
               />
             </BarChart>
           </ResponsiveContainer>

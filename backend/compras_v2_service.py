@@ -45,7 +45,7 @@ class ComprasV2Service:
             return self.conn
         
         try:
-            # En producción (Vercel), usar variables de entorno directamente
+            # En producción (Render), usar variables de entorno directamente
             database_url = os.getenv("DATABASE_URL")
             
             if not database_url:

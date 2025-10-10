@@ -20,14 +20,11 @@ immermex-dashboard/
 │   ├── create_tables_supabase.sql         # Script de migración a Supabase
 │   ├── migrate_to_supabase.py            # Migración automática
 │   ├── migrate_production.py             # Migración para producción
-│   ├── verify_production.py               # Verificación de producción
 │   ├── requirements.txt                  # Dependencias Python
-│   ├── requirements_vercel.txt           # Dependencias para Vercel
-│   ├── vercel.json                       # Configuración de despliegue Vercel
-│   ├── vercel_with_db.json               # Configuración con base de datos
-│   ├── vercel.prod.json                  # Configuración de producción
+│   ├── render.yaml                       # Configuración de despliegue Render
+│   ├── runtime.txt                       # Versión de Python para Render
 │   ├── production.env                    # Variables de entorno producción
-│   ├── supabase_config.txt               # Configuración de Supabase
+│   ├── create_tables_supabase.sql        # Scripts de creación de tablas
 │   └── env_example.txt                   # Ejemplo de variables de entorno
 ├── 📁 frontend/                          # Aplicación React
 │   ├── 📁 src/
@@ -102,7 +99,8 @@ immermex-dashboard/
 ├── .gitignore                            # Archivos ignorados por Git
 ├── README.md                             # Documentación principal
 ├── requirements.txt                      # Dependencias Python (raíz)
-├── vercel.json                           # Configuración Vercel (raíz)
+├── render.yaml                           # Configuración Render (raíz)
+├── runtime.txt                           # Versión Python para Render
 ├── logging_config.py                     # Configuración logging (raíz)
 ├── main_with_db.py                       # Servidor principal (raíz)
 ├── database_service.py                   # Servicio BD (raíz)
@@ -139,10 +137,7 @@ immermex-dashboard/
 
 #### Archivos de Configuración Duplicados
 - `package.json` (raíz) - Duplicado del frontend
-- `package-lock.json` (raíz) - Duplicado del frontend
-- `requirements.txt` (raíz) - Duplicado del backend
-- `vercel.json` (raíz) - Duplicado del backend
-- `env.example` - Archivo de ejemplo no necesario
+- Los archivos en raíz (requirements.txt, render.yaml, etc.) son necesarios para Render deployment
 
 #### Archivos de Documentación Extraídos
 - `diccionario_extracto.txt` - Texto extraído del PDF
@@ -192,9 +187,9 @@ immermex-dashboard/
 - `models.py` - Modelos Pydantic para API
 - `logging_config.py` - Sistema de logging estructurado
 - `create_tables_supabase.sql` - Script de migración a Supabase
-- `migrate_to_supabase.py` - Migración automática
 - `requirements.txt` - Dependencias Python completas
-- `vercel.json` - Configuración de despliegue Vercel
+- `render.yaml` - Configuración de despliegue Render
+- `runtime.txt` - Versión de Python para Render
 
 ### Frontend (React Completo)
 - `MainDashboard.tsx` - Componente principal con sistema de tabs
@@ -228,7 +223,7 @@ El proyecto está ahora:
 - ✅ **Completamente Funcional** - Sistema completo con persistencia de datos
 - ✅ **Organizado** - Estructura clara y lógica con separación de responsabilidades
 - ✅ **Documentado** - Documentación técnica completa y actualizada
-- ✅ **Listo para Producción** - Desplegado en Vercel y GitHub Pages
+- ✅ **Listo para Producción** - Desplegado en Render y GitHub Pages
 - ✅ **Optimizado para Web** - Sin dependencias de desarrollo local
 - ✅ **Escalable** - Base de datos PostgreSQL con Supabase
 - ✅ **Mantenible** - Código modular y bien documentado
@@ -236,7 +231,7 @@ El proyecto está ahora:
 
 ## 📝 Notas Importantes
 
-1. **Sistema Completo en la Nube** - Frontend en GitHub Pages, Backend en Vercel, BD en Supabase
+1. **Sistema Completo en la Nube** - Frontend en GitHub Pages, Backend en Render, BD en Supabase
 2. **Persistencia de Datos** - Todos los datos se almacenan en PostgreSQL
 3. **Gestión de Archivos** - Historial completo de archivos procesados
 4. **Análisis Avanzado** - KPIs calculados automáticamente con filtros dinámicos

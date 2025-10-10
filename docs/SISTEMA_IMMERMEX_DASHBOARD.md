@@ -23,7 +23,7 @@ El **Immermex Dashboard** es un sistema web completo para el análisis financier
 - **ORM**: SQLAlchemy con modelos relacionales
 - **Authentication**: Python-JOSE para tokens
 - **CORS**: Configurado dinámicamente según entorno
-- **Deployment**: Vercel con configuración optimizada
+- **Deployment**: Render con auto-deploy desde GitHub
 - **Logging**: Sistema estructurado con diferentes niveles
 
 ### Base de Datos (PostgreSQL/Supabase)
@@ -208,21 +208,21 @@ aging_cartera = calcular_aging_por_dias(facturas_pendientes)
 https://edu-maass.github.io/immermex-dashboard/
 ```
 
-### **Backend (Vercel)**
+### **Backend (Render)**
 ```bash
 # URL de API
-https://immermex-dashboard.vercel.app
+https://immermex-backend.onrender.com
 # Documentación API
-https://immermex-dashboard.vercel.app/docs
+https://immermex-backend.onrender.com/docs
 ```
 
 ### **Variables de Entorno**
 ```env
 # Frontend
-VITE_API_URL=https://immermex-dashboard.vercel.app
+VITE_API_URL=https://immermex-backend.onrender.com
 
-# Backend (Vercel)
-DATABASE_URL=postgresql://postgres:[PASSWORD]@aws-1-us-west-1.pooler.supabase.com:6543/postgres
+# Backend (Render)
+DATABASE_URL=postgresql://postgres:[PASSWORD]@aws-1-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require
 ENVIRONMENT=production
 DEBUG=false
 LOG_LEVEL=info

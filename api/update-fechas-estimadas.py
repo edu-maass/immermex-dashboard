@@ -1,5 +1,5 @@
 """
-Función Vercel para actualizar fechas estimadas
+Función para actualizar fechas estimadas
 Archivo: api/update-fechas-estimadas.py
 """
 

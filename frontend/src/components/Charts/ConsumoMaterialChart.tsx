@@ -41,16 +41,16 @@ export const ConsumoMaterialChart: FC<ConsumoMaterialChartProps> = ({ data }) =>
         <CardTitle>Consumo por Material</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-80">
+        <div className="h-[500px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={data}
                 cx="50%"
-                cy="50%"
-                innerRadius={48}
-                outerRadius={88}
-                labelLine={false}
+                cy="45%"
+                innerRadius={70}
+                outerRadius={140}
+                labelLine={true}
                 label={(props: any) => {
                   const { name, percent } = props || {};
                   const pct = typeof percent === 'number' ? percent : 0;
@@ -65,14 +65,20 @@ export const ConsumoMaterialChart: FC<ConsumoMaterialChartProps> = ({ data }) =>
               </Pie>
               <Tooltip 
                 formatter={(value: number) => [formatWeight(value), 'Consumo']}
-                labelStyle={{ color: '#374151' }}
+                labelStyle={{ color: '#374151', fontWeight: 600 }}
                 contentStyle={{ 
                   backgroundColor: '#fff', 
                   border: '1px solid #e5e7eb',
-                  borderRadius: '6px'
+                  borderRadius: '8px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  padding: '12px'
                 }}
               />
-              <Legend />
+              <Legend 
+                verticalAlign="bottom" 
+                height={60}
+                wrapperStyle={{ paddingTop: '20px' }}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>

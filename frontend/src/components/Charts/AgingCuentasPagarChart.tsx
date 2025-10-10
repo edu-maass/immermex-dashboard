@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Clock } from 'lucide-react';
 
@@ -63,33 +63,65 @@ export const AgingCuentasPagarChart: FC<AgingCuentasPagarChartProps> = ({
     return value.toString();
   };
 
+  // Calcular el dominio del eje Y para mostrar un rango relevante
+  const maxValue = Math.max(...chartData.map(item => item.monto));
+  const minValue = Math.min(...chartData.map(item => item.monto));
+  const yAxisDomain = [
+    Math.max(0, minValue - (maxValue - minValue) * 0.1), // 10% padding inferior
+    maxValue + (maxValue - minValue) * 0.15 // 15% padding superior
+  ];
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>{titulo}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-80">
+        <div className="h-[500px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
+            <BarChart 
+              data={chartData}
+              margin={{ top: 30, right: 40, left: 30, bottom: 80 }}
+            >
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                stroke="#e5e7eb"
+                strokeOpacity={0.7}
+                verticalFill={['#f9fafb', '#ffffff']}
+              />
               <XAxis 
                 dataKey="periodo" 
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 13 }}
+                stroke="#6b7280"
               />
               <YAxis 
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 13 }}
                 tickFormatter={formatYAxisValue}
+                domain={yAxisDomain}
+                stroke="#6b7280"
+                tickCount={8}
               />
               <Tooltip 
                 formatter={(value: number) => [formatTooltipValue(value), 'Monto']}
                 labelFormatter={(label) => `Período: ${label}`}
+                labelStyle={{ color: '#374151', fontWeight: 600 }}
+                contentStyle={{ 
+                  backgroundColor: '#fff', 
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  padding: '12px'
+                }}
               />
               <Bar 
                 dataKey="monto" 
-                fill={(entry: any) => getBarColor(entry.periodo)}
                 name="Monto por Pagar"
-              />
+                radius={[6, 6, 0, 0]}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={getBarColor(entry.periodo)} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>

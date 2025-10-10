@@ -48,11 +48,11 @@ LOG_LEVEL=debug
 # DATABASE_URL=postgresql://postgres:mi_password123@aws-1-us-west-1.pooler.supabase.com:6543/postgres
 ```
 
-#### Para Vercel (Producción):
+#### Para Render (Producción):
 
-1. **En tu dashboard de Vercel**:
-   - Ve a tu proyecto
-   - Settings > Environment Variables
+1. **En tu dashboard de Render**:
+   - Ve a tu servicio web
+   - Environment > Environment Variables
    - Agrega las siguientes variables:
      - `DATABASE_URL` con tu cadena de conexión de Supabase (usar pooler)
      - `ENVIRONMENT=production`
@@ -101,27 +101,23 @@ El sistema creará automáticamente las siguientes tablas con relaciones optimiz
 - **Constraints**: Validaciones a nivel de base de datos
 - **Pooler de Conexiones**: Para alta concurrencia en producción
 
-## 🌐 Despliegue en Vercel
+## 🌐 Despliegue en Render
 
-### 1. Actualizar vercel.json
+### 1. Configurar render.yaml
 
-Reemplaza tu `vercel.json` actual con `vercel_with_db.json`:
+El archivo `render.yaml` ya está configurado en el proyecto raíz.
 
-```bash
-cp backend/vercel_with_db.json vercel.json
-```
+### 2. Configurar Variables en Render
 
-### 2. Configurar Variables en Vercel
+1. Ve a tu servicio en Render dashboard
+2. Environment > Environment Variables
+3. Agrega todas las variables necesarias (DATABASE_URL, SUPABASE_URL, etc.)
 
-1. Ve a tu proyecto en Vercel
-2. Settings > Environment Variables
-3. Agrega `DATABASE_URL` con tu conexión de Supabase
+### 3. Deploy Automático
 
-### 3. Redesplegar
+Render deploya automáticamente en cada push a `main`.
 
-```bash
-vercel --prod
-```
+Ver guía completa en `RENDER_DEPLOYMENT_GUIDE.md`
 
 ## ✅ Verificación
 

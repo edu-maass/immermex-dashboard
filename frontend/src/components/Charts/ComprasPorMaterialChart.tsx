@@ -57,16 +57,17 @@ export const ComprasPorMaterialChart: FC<ComprasPorMaterialChartProps> = ({
         <CardTitle>{titulo}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-80 w-full">
+        <div className="h-[500px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={chartData}
                 cx="50%"
-                cy="50%"
-                labelLine={false}
+                cy="45%"
+                labelLine={true}
                 label={({ material, percent }) => `${material} ${((percent as number) * 100).toFixed(0)}%`}
-                outerRadius={80}
+                innerRadius={70}
+                outerRadius={140}
                 fill="#8884d8"
                 dataKey="total_compras"
               >
@@ -85,10 +86,13 @@ export const ComprasPorMaterialChart: FC<ComprasPorMaterialChartProps> = ({
                   }
                   return label;
                 }}
+                labelStyle={{ color: '#374151', fontWeight: 600 }}
                 contentStyle={{
-                  backgroundColor: '#f9fafb',
+                  backgroundColor: '#fff',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  padding: '12px'
                 }}
               />
             </PieChart>

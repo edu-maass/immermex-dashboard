@@ -45,6 +45,15 @@ export const ComprasV2FlujoPagosChart: FC<ComprasV2FlujoPagosChartProps> = ({
     return `${formatted} ${moneda}`;
   };
 
+  // Calcular el dominio del eje Y para mostrar un rango relevante
+  const allValues = data.flatMap(item => [item.liquidaciones, item.gastos_importacion, item.anticipo]);
+  const maxValue = Math.max(...allValues);
+  const minValue = Math.min(...allValues);
+  const yAxisDomain = [
+    Math.max(0, minValue - (maxValue - minValue) * 0.1), // 10% padding inferior
+    maxValue + (maxValue - minValue) * 0.15 // 15% padding superior
+  ];
+
   return (
     <Card>
       <CardHeader>
@@ -75,37 +84,50 @@ export const ComprasV2FlujoPagosChart: FC<ComprasV2FlujoPagosChartProps> = ({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-80 w-full">
+        <div className="h-[500px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={data}
-              margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+              margin={{ top: 30, right: 40, left: 30, bottom: 100 }}
             >
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                stroke="#e5e7eb"
+                strokeOpacity={0.7}
+                verticalFill={['#f9fafb', '#ffffff']}
+              />
               <XAxis
                 dataKey="semana"
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 12 }}
                 angle={-45}
                 textAnchor="end"
-                height={80}
+                height={90}
+                stroke="#6b7280"
               />
               <YAxis
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 13 }}
                 tickFormatter={formatCurrency}
+                domain={yAxisDomain}
+                stroke="#6b7280"
+                tickCount={8}
               />
               <Tooltip
                 formatter={(value: number, name: string) => [
                   formatCurrencyWithSymbol(value),
                   name
                 ]}
-                labelStyle={{ color: '#374151' }}
+                labelStyle={{ color: '#374151', fontWeight: 600 }}
                 contentStyle={{
-                  backgroundColor: '#f9fafb',
+                  backgroundColor: '#fff',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  padding: '12px'
                 }}
               />
-              <Legend />
+              <Legend 
+                wrapperStyle={{ paddingTop: '20px' }}
+              />
               <Bar
                 dataKey="liquidaciones"
                 stackId="a"
@@ -125,7 +147,7 @@ export const ComprasV2FlujoPagosChart: FC<ComprasV2FlujoPagosChartProps> = ({
                 stackId="a"
                 fill="#3b82f6"
                 name="Anticipo"
-                radius={[4, 4, 0, 0]}
+                radius={[6, 6, 0, 0]}
               />
             </BarChart>
           </ResponsiveContainer>

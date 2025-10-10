@@ -123,8 +123,8 @@ class AdvancedLogger:
         console_handler.setFormatter(console_formatter)
         self.logger.addHandler(console_handler)
         
-        # Solo agregar handlers de archivo si no estamos en Vercel (sistema de solo lectura)
-        if not self._is_vercel_environment():
+        # Solo agregar handlers de archivo si no estamos en un entorno serverless (sistema de solo lectura)
+        if not self._is_serverless_environment():
             try:
                 # Handler para archivo general (JSON estructurado)
                 general_file = self.log_dir / f"{self.name}_general.log"
@@ -173,12 +173,12 @@ class AdvancedLogger:
                 # Si no se pueden crear archivos de log, solo usar consola
                 self.logger.warning(f"Could not create file handlers: {e}. Using console logging only.")
     
-    def _is_vercel_environment(self) -> bool:
-        """Verifica si estamos en un entorno Vercel"""
+    def _is_serverless_environment(self) -> bool:
+        """Verifica si estamos en un entorno serverless (Render, etc.)"""
         return (
-            os.environ.get('VERCEL') == '1' or 
-            os.environ.get('VERCEL_ENV') is not None or
-            os.environ.get('VCAP_APPLICATION') is not None  # También para otros PaaS
+            os.environ.get('RENDER') == 'true' or  # Render
+            os.environ.get('RENDER_SERVICE_NAME') is not None or  # Render
+            os.environ.get('VCAP_APPLICATION') is not None  # Otros PaaS
         )
     
     def log_with_context(

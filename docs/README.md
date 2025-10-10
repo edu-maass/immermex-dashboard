@@ -36,15 +36,15 @@ Esta carpeta contiene toda la documentación técnica completa del sistema Immer
 - Variables de entorno para desarrollo y producción
 - Migración automática con scripts SQL
 - Estructura avanzada de base de datos
-- Despliegue en Vercel con persistencia
+- Despliegue en Render con persistencia
 - Verificación y troubleshooting
 
-### [DEPLOYMENT_PRODUCTION.md](./DEPLOYMENT_PRODUCTION.md)
-**Guía de despliegue en producción**
-- Configuración completa de Supabase
-- Variables de entorno para Vercel
-- Migración de base de datos en producción
-- Despliegue del backend y frontend
+### Despliegue en Producción
+**Ver RENDER_DEPLOYMENT_GUIDE.md en raíz del proyecto**
+- Configuración completa de Render
+- Variables de entorno para producción
+- Migración de base de datos en Supabase
+- Despliegue automático del backend
 - Verificación post-despliegue
 - Monitoreo y troubleshooting
 
@@ -76,14 +76,14 @@ El **Immermex Dashboard v2.0.0** es un sistema web completo para el análisis fi
 
 ### 🌐 URLs del Sistema
 - **Dashboard**: https://edu-maass.github.io/immermex-dashboard/
-- **API Backend**: https://immermex-dashboard.vercel.app
-- **Documentación API**: https://immermex-dashboard.vercel.app/docs
+- **API Backend**: https://immermex-backend.onrender.com
+- **Documentación API**: https://immermex-backend.onrender.com/docs
 
 ### 🏗️ Arquitectura Avanzada
 - **Frontend**: React 19 + TypeScript + Tailwind CSS + Radix UI
 - **Backend**: FastAPI + Python + PostgreSQL + SQLAlchemy
 - **Base de Datos**: Supabase PostgreSQL con pooler de conexiones
-- **Deployment**: GitHub Pages + Vercel con configuración optimizada
+- **Deployment**: GitHub Pages + Render con auto-deploy
 
 ### 📊 Características Principales Avanzadas
 - Dashboard de KPIs financieros con análisis detallado

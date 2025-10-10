@@ -1163,7 +1163,7 @@ def process_immermex_file(file_path: str, output_path: str = None) -> Tuple[pd.D
 
 def process_excel_from_bytes(file_bytes: bytes, filename: str) -> Tuple[Dict[str, pd.DataFrame], Dict]:
     """
-    Procesa archivo Excel desde bytes en memoria (compatible con Vercel)
+    Procesa archivo Excel desde bytes en memoria (compatible con entornos serverless)
     Versión simplificada que evita errores de normalización
     """
     logger.info(f"Procesando archivo desde bytes: {filename}")

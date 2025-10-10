@@ -53,32 +53,49 @@ export const TopProveedoresChart: FC<TopProveedoresChartProps> = ({
     fullName: item.proveedor // Keep full name for tooltip
   }));
 
+  // Calcular el dominio del eje Y para mostrar un rango relevante
+  const maxValue = Math.max(...chartData.map(item => item.total_kg));
+  const minValue = Math.min(...chartData.map(item => item.total_kg));
+  const yAxisDomain = [
+    Math.max(0, minValue - (maxValue - minValue) * 0.1), // 10% padding inferior
+    maxValue + (maxValue - minValue) * 0.15 // 15% padding superior
+  ];
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>{titulo}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-80 w-full">
+        <div className="h-[500px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
-              margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              margin={{ top: 30, right: 40, left: 30, bottom: 90 }}
             >
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                stroke="#e5e7eb"
+                strokeOpacity={0.7}
+                verticalFill={['#f9fafb', '#ffffff']}
+              />
               <XAxis
                 dataKey="proveedor"
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 13 }}
                 angle={-45}
                 textAnchor="end"
-                height={60}
+                height={80}
+                stroke="#6b7280"
               />
               <YAxis
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 13 }}
                 tickFormatter={formatTons}
+                domain={yAxisDomain}
+                stroke="#6b7280"
+                tickCount={8}
               />
               <Tooltip
-                formatter={(value: number, name: string, props: any) => {
+                formatter={(_value: number, _name: string, props: any) => {
                   const payload = props.payload;
                   return [
                     <div key="tooltip-content" className="space-y-1">
@@ -104,11 +121,12 @@ export const TopProveedoresChart: FC<TopProveedoresChartProps> = ({
                   }
                   return label;
                 }}
-                labelStyle={{ color: '#374151', fontWeight: 'bold' }}
+                labelStyle={{ color: '#374151', fontWeight: 600 }}
                 contentStyle={{
-                  backgroundColor: '#f9fafb',
+                  backgroundColor: '#fff',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                   padding: '12px',
                 }}
               />
@@ -116,7 +134,7 @@ export const TopProveedoresChart: FC<TopProveedoresChartProps> = ({
                 dataKey="total_kg"
                 fill="#3b82f6"
                 name="KG Comprados"
-                radius={[4, 4, 0, 0]}
+                radius={[6, 6, 0, 0]}
               />
             </BarChart>
           </ResponsiveContainer>
