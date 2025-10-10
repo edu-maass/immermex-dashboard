@@ -40,7 +40,7 @@
   ],
   "env": {
     "ENVIRONMENT": "production",
-    "DEBUG": "true",
+    "DEBUG": "false",
     "LOG_LEVEL": "debug",
     "DATABASE_URL": "postgresql://postgres.ldxahcawfrvlmdiwapli:Database_Immermex@aws-1-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require",
     "ALLOWED_ORIGINS": "https://edu-maass.github.io,https://immermex-dashboard.vercel.app",
