@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: immermex-backend
+    env: python
+    runtime: python-3.11
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main_with_db:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_PASSWORD
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://edu-maass.github.io,https://immermex-dashboard.vercel.app
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    healthCheckPath: /health
+    autoDeploy: true
+
+

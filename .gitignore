@@ -59,6 +59,8 @@ tmp/
 !docs/*.txt
 !README.txt
 !LICENSE.txt
+!requirements.txt
+!runtime.txt
 
 # Backup files
 *.bak
