@@ -990,10 +990,10 @@ class ComprasV2Service:
             semanas_data = {}
             
             for row in resultados:
-                semana_pedido = row[0]  # semana_pedido
-                liquidaciones = float(row[1]) if row[1] else 0  # liquidaciones
-                gastos_importacion = float(row[2]) if row[2] else 0  # gastos_importacion
-                anticipo = float(row[3]) if row[3] else 0  # anticipo
+                semana_pedido = row['semana_pedido']
+                liquidaciones = float(row['liquidaciones']) if row['liquidaciones'] else 0
+                gastos_importacion = float(row['gastos_importacion']) if row['gastos_importacion'] else 0
+                anticipo = float(row['anticipo']) if row['anticipo'] else 0
                 
                 # Usar semana de pedido para todos los montos
                 if semana_pedido:
