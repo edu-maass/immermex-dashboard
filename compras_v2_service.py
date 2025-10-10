@@ -1285,6 +1285,7 @@ class ComprasV2Service:
             query = """
                 SELECT 
                     c2m.material_codigo,
+                    c2m.material_descripcion,
                     SUM(c2m.kg) as total_kg,
                     SUM(c2m.costo_total_con_iva) as total_costo,
                     COUNT(DISTINCT c2.imi) as total_compras,
@@ -1311,7 +1312,7 @@ class ComprasV2Service:
                     params.append(f"%{filtros['proveedor']}%")
             
             query += """
-                GROUP BY c2m.material_codigo
+                GROUP BY c2m.material_codigo, c2m.material_descripcion
                 ORDER BY total_costo DESC
                 LIMIT %s
             """
@@ -1330,10 +1331,15 @@ class ComprasV2Service:
             
             for row in resultados:
                 material_codigo = row[0]
-                total_costo = float(row[2]) if row[2] else 0  # total_costo ahora está en posición 2
+                material_descripcion = row[1]
+                total_costo = float(row[3]) if row[3] else 0
                 
-                # Crear etiqueta solo con código de material
+                # Crear etiqueta con código y descripción
                 etiqueta = f"{material_codigo}"
+                if material_descripcion and len(material_descripcion) > 20:
+                    etiqueta += f"\n{material_descripcion[:20]}..."
+                elif material_descripcion:
+                    etiqueta += f"\n{material_descripcion}"
                 
                 labels.append(etiqueta)
                 data.append(total_costo)
