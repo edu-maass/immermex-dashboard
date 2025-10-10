@@ -45,14 +45,17 @@ class ComprasV2Service:
             return self.conn
         
         try:
-            config = self.load_production_config()
-            if not config:
-                return None
-            
-            database_url = config.get("DATABASE_URL")
+            # En producción (Vercel), usar variables de entorno directamente
+            database_url = os.getenv("DATABASE_URL")
             
             if not database_url:
-                logger.error("DATABASE_URL no encontrada en production.env")
+                # Fallback: intentar cargar desde archivo
+                config = self.load_production_config()
+                if config:
+                    database_url = config.get("DATABASE_URL")
+            
+            if not database_url:
+                logger.error("DATABASE_URL no encontrada en variables de entorno ni en production.env")
                 return None
             
             self.conn = psycopg2.connect(
@@ -921,38 +924,38 @@ class ComprasV2Service:
             query = """
                 SELECT 
                     DATE_TRUNC('week', c2.fecha_pedido) as semana_pedido,
-                    -- Liquidaciones: costo_total_mxn - anticipo_monto_mxn (convertido a la moneda solicitada)
+                    -- Liquidaciones: total_con_iva_mxn - anticipo_monto (convertido a la moneda solicitada)
                     CASE 
                         WHEN %s = 'MXN' THEN 
-                            COALESCE(c2.costo_total_mxn, 0) - COALESCE(c2.anticipo_monto_mxn, 0)
+                            COALESCE(c2.total_con_iva_mxn, 0) - COALESCE(c2.anticipo_monto, 0)
                         WHEN c2.moneda = 'USD' THEN 
-                            -- Para USD, convertir costo_total_mxn a USD y restar anticipo_monto_mxn convertido
-                            (COALESCE(c2.costo_total_mxn, 0) - COALESCE(c2.anticipo_monto_mxn, 0)) / 
+                            -- Para USD, convertir total_con_iva_mxn a USD y restar anticipo_monto convertido
+                            (COALESCE(c2.total_con_iva_mxn, 0) - COALESCE(c2.anticipo_monto, 0)) / 
                             NULLIF(NULLIF(COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado), 0), 1.0)
                         ELSE 0
                     END as liquidaciones,
-                    -- Gastos de importación: calcular como porcentaje del costo_total_mxn
+                    -- Gastos de importación: calcular como porcentaje del total_con_iva_mxn
                     CASE 
                         WHEN %s = 'MXN' THEN 
                             CASE 
-                                WHEN c2.porcentaje_gastos_importacion > 0 THEN
-                                    COALESCE(c2.costo_total_mxn, 0) * (c2.porcentaje_gastos_importacion / 100.0)
+                                WHEN c2.porcentaje_gastos_importacion > 0 THEN 
+                                    COALESCE(c2.total_con_iva_mxn, 0) * (c2.porcentaje_gastos_importacion / 100.0)
                                 ELSE COALESCE(c2.gastos_importacion_mxn, 0)
                             END
                         WHEN c2.moneda = 'USD' THEN 
                             CASE 
-                                WHEN c2.porcentaje_gastos_importacion > 0 THEN
-                                    (COALESCE(c2.costo_total_mxn, 0) * (c2.porcentaje_gastos_importacion / 100.0)) / 
+                                WHEN c2.porcentaje_gastos_importacion > 0 THEN 
+                                    (COALESCE(c2.total_con_iva_mxn, 0) * (c2.porcentaje_gastos_importacion / 100.0)) / 
                                     NULLIF(NULLIF(COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado), 0), 1.0)
                                 ELSE COALESCE(c2.gastos_importacion_divisa, 0)
                             END
                         ELSE 0
                     END as gastos_importacion,
-                    -- Anticipo: usar anticipo_monto_mxn (ya convertido a MXN)
+                    -- Anticipo: usar anticipo_monto (convertido según moneda solicitada)
                     CASE 
-                        WHEN %s = 'MXN' THEN COALESCE(c2.anticipo_monto_mxn, 0)
+                        WHEN %s = 'MXN' THEN COALESCE(c2.anticipo_monto, 0)
                         WHEN c2.moneda = 'USD' THEN 
-                            COALESCE(c2.anticipo_monto_mxn, 0) / 
+                            COALESCE(c2.anticipo_monto, 0) / 
                             NULLIF(NULLIF(COALESCE(c2.tipo_cambio_real, c2.tipo_cambio_estimado), 0), 1.0)
                         ELSE 0
                     END as anticipo
@@ -1285,7 +1288,6 @@ class ComprasV2Service:
             query = """
                 SELECT 
                     c2m.material_codigo,
-                    c2m.material_descripcion,
                     SUM(c2m.kg) as total_kg,
                     SUM(c2m.costo_total_con_iva) as total_costo,
                     COUNT(DISTINCT c2.imi) as total_compras,
@@ -1312,7 +1314,7 @@ class ComprasV2Service:
                     params.append(f"%{filtros['proveedor']}%")
             
             query += """
-                GROUP BY c2m.material_codigo, c2m.material_descripcion
+                GROUP BY c2m.material_codigo
                 ORDER BY total_costo DESC
                 LIMIT %s
             """
@@ -1330,16 +1332,11 @@ class ComprasV2Service:
             data = []
             
             for row in resultados:
-                material_codigo = row[0]
-                material_descripcion = row[1]
-                total_costo = float(row[3]) if row[3] else 0
+                material_codigo = row['material_codigo']
+                total_costo = float(row['total_costo']) if row['total_costo'] else 0
                 
-                # Crear etiqueta con código y descripción
+                # Crear etiqueta solo con código de material
                 etiqueta = f"{material_codigo}"
-                if material_descripcion and len(material_descripcion) > 20:
-                    etiqueta += f"\n{material_descripcion[:20]}..."
-                elif material_descripcion:
-                    etiqueta += f"\n{material_descripcion}"
                 
                 labels.append(etiqueta)
                 data.append(total_costo)
