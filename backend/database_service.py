@@ -57,7 +57,10 @@ class DatabaseService:
         Guarda los datos procesados en la base de datos
         """
         try:
-            logger.info(f"🚀🚀🚀 VERSIÓN ACTUALIZADA V2 EJECUTÁNDOSE - INICIANDO save_processed_data 🚀🚀🚀")
+            logger.info(f"VERSIÓN ACTUALIZADA V2 EJECUTÁNDOSE - INICIANDO save_processed_data")
+            print(f"=== INICIANDO save_processed_data ===")
+            print(f"Archivo info: {archivo_info}")
+            print(f"Processed data keys: {list(processed_data_dict.keys()) if processed_data_dict else 'None'}")
             logger.info(f"TIMESTAMP: {datetime.now().isoformat()}")
             logger.info(f"Datos recibidos: {list(processed_data_dict.keys())}")
             logger.info(f"Archivo info: {archivo_info}")
