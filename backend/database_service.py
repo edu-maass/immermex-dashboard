@@ -97,7 +97,8 @@ class DatabaseService:
             logger.info("Guardando anticipos...")
             anticipos_count = self._save_anticipos(processed_data_dict.get("cfdi_clean", []), archivo_id)
             logger.info("Guardando pedidos...")
-            pedidos_count = self.pedidos_service.save_pedidos(processed_data_dict.get("pedidos_clean", []), archivo_id)
+            # FIX: Usar la clave correcta "pedidos_compras_clean" en lugar de "pedidos_clean"
+            pedidos_count = self.pedidos_service.save_pedidos(processed_data_dict.get("pedidos_compras_clean", []), archivo_id)
             
             # Compras no se procesan en este endpoint (solo para ComprasV2)
             compras_count = 0

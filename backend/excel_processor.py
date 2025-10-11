@@ -625,7 +625,7 @@ class ImmermexExcelProcessor:
             facturacion_clean = self.clean_facturacion(path)
             cobranza_clean = self.clean_cobranza(path)
             cfdi_clean = self.clean_cfdi(path)
-            pedidos_clean = self.clean_pedidos(path)
+            pedidos_compras_clean = self.clean_pedidos(path)
             
             # Calcular relaciones
             if not facturacion_clean.empty and not cobranza_clean.empty:
@@ -636,7 +636,7 @@ class ImmermexExcelProcessor:
                 "facturacion_clean": facturacion_clean,
                 "cobranza_clean": cobranza_clean,
                 "cfdi_clean": cfdi_clean,
-                "pedidos_clean": pedidos_clean
+                "pedidos_compras_clean": pedidos_compras_clean
             }
             
             # Log de resumen
@@ -652,7 +652,7 @@ class ImmermexExcelProcessor:
                 "facturacion_clean": pd.DataFrame(),
                 "cobranza_clean": pd.DataFrame(),
                 "cfdi_clean": pd.DataFrame(),
-                "pedidos_clean": pd.DataFrame()
+                "pedidos_compras_clean": pd.DataFrame()
             }
 
 
