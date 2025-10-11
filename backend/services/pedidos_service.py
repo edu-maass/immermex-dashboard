@@ -19,9 +19,9 @@ class PedidosService:
     
     def save_pedidos(self, pedidos_data: list, archivo_id: int) -> int:
         """Guarda datos de pedidos con asignación automática de fechas y días de crédito"""
-        print(f"🔥🔥🔥 === INICIANDO save_pedidos === 🔥🔥🔥")
-        print(f"🔥 Total de pedidos recibidos: {len(pedidos_data)}")
-        print(f"🔥 Archivo ID: {archivo_id}")
+        print(f"=== INICIANDO save_pedidos ===")
+        print(f"Total de pedidos recibidos: {len(pedidos_data)}")
+        print(f"Archivo ID: {archivo_id}")
         logger.info(f"=== INICIANDO save_pedidos ===")
         logger.info(f"Total de pedidos recibidos: {len(pedidos_data)}")
         logger.info(f"Archivo ID: {archivo_id}")
@@ -117,8 +117,8 @@ class PedidosService:
         
         # No hacer commit aquí - dejar que el método principal maneje la transacción
         
-        print(f"🔥🔥🔥 === FINALIZANDO save_pedidos === 🔥🔥🔥")
-        print(f"🔥 Total de pedidos guardados exitosamente: {count}")
+        print(f"=== FINALIZANDO save_pedidos ===")
+        print(f"Total de pedidos guardados exitosamente: {count}")
         logger.info(f"=== FINALIZANDO save_pedidos ===")
         logger.info(f"Total de pedidos guardados exitosamente: {count}")
         if fechas_asignadas > 0:

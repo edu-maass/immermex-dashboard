@@ -58,7 +58,7 @@ class DatabaseService:
         """
         try:
             logger.info(f"🚀🚀🚀 VERSIÓN ACTUALIZADA V2 EJECUTÁNDOSE - INICIANDO save_processed_data 🚀🚀🚀")
-            logger.info(f"🔥 TIMESTAMP: {datetime.now().isoformat()} 🔥")
+            logger.info(f"TIMESTAMP: {datetime.now().isoformat()}")
             logger.info(f"Datos recibidos: {list(processed_data_dict.keys())}")
             logger.info(f"Archivo info: {archivo_info}")
             
@@ -78,10 +78,10 @@ class DatabaseService:
                 raise
             
             # CRITICAL: No hacer commit intermedio - usar flush() para asegurar visibilidad
-            logger.info("🔥🔥🔥 NEW DEPLOYMENT CONFIRMATION - DATABASE SERVICE 🔥🔥🔥")
-            logger.info("🔥🔥🔥 FIXED TRANSACTION ISSUES - IMPROVED COMMIT HANDLING 🔥🔥🔥")
+            logger.info("NEW DEPLOYMENT CONFIRMATION - DATABASE SERVICE")
+            logger.info("FIXED TRANSACTION ISSUES - IMPROVED COMMIT HANDLING")
             logger.info("ArchivoProcesado ya fue committeado en _create_archivo_record")
-            logger.info("🔥🔥🔥 ARCHIVO YA COMMITTED - No need for additional commit 🔥🔥🔥")
+            logger.info("ARCHIVO YA COMMITTED - No need for additional commit")
             
             # Limpiar datos anteriores si es necesario
             if archivo_info.get("reemplazar_datos", False):
@@ -100,17 +100,17 @@ class DatabaseService:
             anticipos_count = self._save_anticipos(processed_data_dict.get("cfdi_clean", []), archivo_id)
             logger.info("Guardando pedidos...")
             # FIX: Usar la clave correcta "pedidos_compras_clean" en lugar de "pedidos_clean"
-            print(f"🔥🔥🔥 DEBUG: processed_data_dict type: {type(processed_data_dict)}")
-            print(f"🔥🔥🔥 DEBUG: processed_data_dict is None: {processed_data_dict is None}")
+            print(f"DEBUG: processed_data_dict type: {type(processed_data_dict)}")
+            print(f"DEBUG: processed_data_dict is None: {processed_data_dict is None}")
             if processed_data_dict is not None:
-                print(f"🔥🔥🔥 DEBUG: processed_data_dict keys: {list(processed_data_dict.keys())}")
+                print(f"DEBUG: processed_data_dict keys: {list(processed_data_dict.keys())}")
             else:
-                print(f"🔥🔥🔥 ERROR: processed_data_dict is None!")
+                print(f"ERROR: processed_data_dict is None!")
             pedidos_data_to_save = processed_data_dict.get("pedidos_compras_clean", [])
-            print(f"🔥🔥🔥 ANTES DE save_pedidos: Recibidos {len(pedidos_data_to_save)} pedidos para guardar")
-            print(f"🔥 Claves disponibles en processed_data_dict: {list(processed_data_dict.keys())}")
+            print(f"ANTES DE save_pedidos: Recibidos {len(pedidos_data_to_save)} pedidos para guardar")
+            print(f"Claves disponibles en processed_data_dict: {list(processed_data_dict.keys())}")
             pedidos_count = self.pedidos_service.save_pedidos(pedidos_data_to_save, archivo_id)
-            print(f"🔥🔥🔥 DESPUÉS DE save_pedidos: Guardados {pedidos_count} pedidos")
+            print(f"DESPUÉS DE save_pedidos: Guardados {pedidos_count} pedidos")
             
             # Compras no se procesan en este endpoint (solo para ComprasV2)
             compras_count = 0
