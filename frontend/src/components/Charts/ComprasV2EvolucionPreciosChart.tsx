@@ -15,7 +15,7 @@ export const ComprasV2EvolucionPreciosChart: FC<ComprasV2EvolucionPreciosChartPr
   titulo = "Evolucion Precio Unitario",
   onMonedaChange 
 }) => {
-  const [periodo, setPeriodo] = useState<'todos' | 'ytd' | '2años' | '3meses' | '1mes'>('todos');
+  const [periodo, setPeriodo] = useState<'todos' | '2años' | '1año' | '3meses' | '1mes' | 'ytd'>('todos');
 
   // Safety check for data
   if (!data || !Array.isArray(data) || data.length === 0) {
@@ -50,10 +50,11 @@ export const ComprasV2EvolucionPreciosChart: FC<ComprasV2EvolucionPreciosChartPr
               className="px-2 py-1 text-xs rounded border border-gray-300 bg-white"
             >
               <option value="todos">Todos los datos</option>
-              <option value="ytd">YTD</option>
               <option value="2años">2 años</option>
+              <option value="1año">1 año</option>
               <option value="3meses">3 meses</option>
               <option value="1mes">1 mes</option>
+              <option value="ytd">YTD</option>
             </select>
           </div>
         </CardHeader>
@@ -107,6 +108,9 @@ export const ComprasV2EvolucionPreciosChart: FC<ComprasV2EvolucionPreciosChartPr
         break;
       case '2años':
         cutoffDate = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate());
+        break;
+      case '1año':
+        cutoffDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
         break;
       case '3meses':
         cutoffDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
@@ -176,15 +180,16 @@ export const ComprasV2EvolucionPreciosChart: FC<ComprasV2EvolucionPreciosChartPr
             className="px-2 py-1 text-xs rounded border border-gray-300 bg-white"
           >
             <option value="todos">Todos los datos</option>
-            <option value="ytd">YTD</option>
             <option value="2años">2 años</option>
+            <option value="1año">1 año</option>
             <option value="3meses">3 meses</option>
             <option value="1mes">1 mes</option>
+            <option value="ytd">YTD</option>
           </select>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-[400px] w-full">
+        <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={chartData}

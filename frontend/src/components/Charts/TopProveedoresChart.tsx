@@ -66,11 +66,11 @@ export const TopProveedoresChart: FC<TopProveedoresChartProps> = ({
         <CardTitle>{titulo}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[400px] w-full">
+        <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
-              margin={{ top: 30, right: 40, left: 30, bottom: 90 }}
+              margin={{ top: 30, right: 40, left: 30, bottom: 50 }}
             >
               <CartesianGrid 
                 strokeDasharray="3 3" 
@@ -83,7 +83,7 @@ export const TopProveedoresChart: FC<TopProveedoresChartProps> = ({
                 tick={{ fontSize: 13 }}
                 angle={-45}
                 textAnchor="end"
-                height={80}
+                height={60}
                 stroke="#6b7280"
               />
               <YAxis

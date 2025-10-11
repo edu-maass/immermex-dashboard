@@ -57,38 +57,32 @@ export const ComprasV2FlujoPagosChart: FC<ComprasV2FlujoPagosChartProps> = ({
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle>{titulo}</CardTitle>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => onMonedaChange('USD')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                moneda === 'USD' 
-                  ? 'bg-blue-100 text-blue-800 border border-blue-300' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              USD
-            </button>
-            <button
-              onClick={() => onMonedaChange('MXN')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                moneda === 'MXN' 
-                  ? 'bg-blue-100 text-blue-800 border border-blue-300' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              MXN
-            </button>
-          </div>
+        <CardTitle>{titulo}</CardTitle>
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={() => onMonedaChange('USD')}
+            className={`px-3 py-1 text-xs rounded ${
+              moneda === 'USD' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            USD
+          </button>
+          <button
+            onClick={() => onMonedaChange('MXN')}
+            className={`px-3 py-1 text-xs rounded ${
+              moneda === 'MXN' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            MXN
+          </button>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-[500px] w-full">
+        <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={data}
-              margin={{ top: 30, right: 40, left: 30, bottom: 100 }}
+              margin={{ top: 30, right: 40, left: 30, bottom: 60 }}
             >
               <CartesianGrid 
                 strokeDasharray="3 3" 
@@ -101,7 +95,7 @@ export const ComprasV2FlujoPagosChart: FC<ComprasV2FlujoPagosChartProps> = ({
                 tick={{ fontSize: 12 }}
                 angle={-45}
                 textAnchor="end"
-                height={90}
+                height={60}
                 stroke="#6b7280"
               />
               <YAxis
