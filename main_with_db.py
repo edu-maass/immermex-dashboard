@@ -400,7 +400,7 @@ async def upload_compras_v2_file(
         logger.info(f"Archivo leído: {len(content)} bytes")
         
         # Usar el nuevo servicio especializado de compras_v2
-        from compras_v2_upload_service import ComprasV2UploadService
+        from backend.compras_v2_upload_service import ComprasV2UploadService
         
         service = ComprasV2UploadService()
         result = service.upload_compras_file(content, file.filename, reemplazar_datos)
@@ -847,7 +847,7 @@ async def get_compras_v2_kpis(
         
         logger.info(f"Iniciando cálculo de KPIs de compras_v2 - filtros: {mes}, {año}, {proveedor}, {material}")
         
-        from compras_v2_service import ComprasV2Service
+        from backend.compras_v2_service import ComprasV2Service
         
         service = ComprasV2Service()
         
@@ -879,7 +879,7 @@ async def get_compras_v2_kpis(
 async def debug_precios():
     """Endpoint de debug para verificar datos de precios"""
     try:
-        from compras_v2_service import ComprasV2Service
+        from backend.compras_v2_service import ComprasV2Service
         
         service = ComprasV2Service()
         conn = service.get_connection()
@@ -948,7 +948,7 @@ async def debug_precios():
 async def debug_pagos():
     """Endpoint de debug para verificar datos de pagos"""
     try:
-        from compras_v2_service import ComprasV2Service
+        from backend.compras_v2_service import ComprasV2Service
         
         service = ComprasV2Service()
         conn = service.get_connection()
@@ -1010,7 +1010,7 @@ async def debug_pagos():
 async def debug_relacion():
     """Endpoint de debug para verificar relación entre compras_v2 y materiales"""
     try:
-        from compras_v2_service import ComprasV2Service
+        from backend.compras_v2_service import ComprasV2Service
         
         service = ComprasV2Service()
         conn = service.get_connection()
@@ -1062,7 +1062,7 @@ async def debug_relacion():
 async def debug_compras_v2():
     """Endpoint de debug para verificar estructura de base de datos"""
     try:
-        from compras_v2_service import ComprasV2Service
+        from backend.compras_v2_service import ComprasV2Service
         
         service = ComprasV2Service()
         conn = service.get_connection()
@@ -1106,7 +1106,7 @@ async def debug_compras_v2():
 async def test_compras_v2_data():
     """Endpoint de prueba para verificar datos de compras_v2"""
     try:
-        from compras_v2_service import ComprasV2Service
+        from backend.compras_v2_service import ComprasV2Service
         
         service = ComprasV2Service()
         
@@ -1154,7 +1154,7 @@ async def get_compras_v2_data(
 ):
     """Obtiene datos de compras_v2 con filtros opcionales y paginación"""
     try:
-        from compras_v2_service import ComprasV2Service
+        from backend.compras_v2_service import ComprasV2Service
         
         service = ComprasV2Service()
         
@@ -1189,7 +1189,7 @@ async def get_compras_v2_data(
 async def get_materiales_by_compra(imi: int):
     """Obtiene materiales de una compra específica por IMI"""
     try:
-        from compras_v2_service import ComprasV2Service
+        from backend.compras_v2_service import ComprasV2Service
         
         service = ComprasV2Service()
         materiales = service.get_materiales_by_compra(imi)
@@ -1212,7 +1212,7 @@ async def get_compras_v2_evolucion_precios(
 ):
     """Obtiene evolución mensual de precios por kg para compras_v2"""
     try:
-        from compras_v2_service import ComprasV2Service
+        from backend.compras_v2_service import ComprasV2Service
         
         service = ComprasV2Service()
         
@@ -1237,7 +1237,7 @@ async def get_compras_v2_flujo_pagos(
 ):
     """Obtiene flujo de pagos de compras_v2 por semana"""
     try:
-        from compras_v2_service import ComprasV2Service
+        from backend.compras_v2_service import ComprasV2Service
         
         service = ComprasV2Service()
         
@@ -1295,7 +1295,7 @@ async def get_compras_v2_por_material(
 ):
     """Obtiene compras agrupadas por material en compras_v2"""
     try:
-        from compras_v2_service import ComprasV2Service
+        from backend.compras_v2_service import ComprasV2Service
         
         service = ComprasV2Service()
 
@@ -1347,7 +1347,7 @@ async def get_compras_v2_aging_cuentas_pagar(
 ):
     """Obtiene aging de cuentas por pagar para compras_v2"""
     try:
-        from compras_v2_service import ComprasV2Service
+        from backend.compras_v2_service import ComprasV2Service
         
         service = ComprasV2Service()
         
@@ -1372,7 +1372,7 @@ async def get_compras_v2_aging_cuentas_pagar(
 async def get_compras_v2_materiales():
     """Obtiene lista de materiales disponibles en compras_v2"""
     try:
-        from compras_v2_service import ComprasV2Service
+        from backend.compras_v2_service import ComprasV2Service
         
         service = ComprasV2Service()
         materiales = service.get_materiales()
@@ -1386,7 +1386,7 @@ async def get_compras_v2_materiales():
 async def get_compras_v2_proveedores():
     """Obtiene lista de proveedores únicos de compras_v2"""
     try:
-        from compras_v2_service import ComprasV2Service
+        from backend.compras_v2_service import ComprasV2Service
         
         service = ComprasV2Service()
         proveedores = service.get_proveedores()
@@ -1400,7 +1400,7 @@ async def get_compras_v2_proveedores():
 async def get_compras_v2_anios_disponibles():
     """Obtiene lista de años disponibles en compras_v2"""
     try:
-        from compras_v2_service import ComprasV2Service
+        from backend.compras_v2_service import ComprasV2Service
         
         service = ComprasV2Service()
         años = service.get_años_disponibles()
@@ -1414,7 +1414,7 @@ async def get_compras_v2_anios_disponibles():
 async def update_fechas_estimadas():
     """Actualiza las fechas estimadas para todos los registros existentes"""
     try:
-        from compras_v2_service import ComprasV2Service
+        from backend.compras_v2_service import ComprasV2Service
         from datetime import timedelta
         
         service = ComprasV2Service()
