@@ -304,7 +304,9 @@ async def upload_file(
             logger.info(f"Tamaño del archivo: {len(contents)} bytes")
             
             # Procesar usando la nueva función desde bytes
+            logger.info(f"🔥 ANTES de process_excel_from_bytes - Timestamp: {datetime.now().isoformat()}")
             processed_data_dict, kpis = process_excel_from_bytes(contents, file.filename)
+            logger.info(f"🔥 DESPUÉS de process_excel_from_bytes - Timestamp: {datetime.now().isoformat()}")
             logger.info(f"Datos procesados exitosamente. Claves: {list(processed_data_dict.keys())}")
             
             # Verificar estructura de datos procesados

@@ -57,7 +57,8 @@ class DatabaseService:
         Guarda los datos procesados en la base de datos
         """
         try:
-            logger.info(f"🚀🚀🚀 VERSIÓN ACTUALIZADA EJECUTÁNDOSE - INICIANDO save_processed_data 🚀🚀🚀")
+            logger.info(f"🚀🚀🚀 VERSIÓN ACTUALIZADA V2 EJECUTÁNDOSE - INICIANDO save_processed_data 🚀🚀🚀")
+            logger.info(f"🔥 TIMESTAMP: {datetime.now().isoformat()} 🔥")
             logger.info(f"Datos recibidos: {list(processed_data_dict.keys())}")
             logger.info(f"Archivo info: {archivo_info}")
             
@@ -960,35 +961,40 @@ class DatabaseService:
                     tipo_cambio_promedio = sum(tipos_cambio) / len(tipos_cambio)
 
             # Calcular Unit Economics correctamente
-            # 1. Costo por kg: promedio ponderado incluyendo gastos de importación
+            # 1. Costo por kg: Promedio ponderado por kg de (pu_mxn_importacion + pu_mxn)
             costo_unitario_promedio = 0.0
-            gastos_importacion_por_kg = 0.0
-            costo_base_por_kg = 0.0
             
-            if total_kg > 0:
-                # Calcular gastos de importación totales
-                gastos_importacion_total = 0.0
-                costo_base_total = 0.0
+            try:
+                # Obtener IMI de las compras filtradas
+                imi_list = [c.imi for c in compras if c.imi]
                 
-                for compra in compras:
-                    # Gastos de importación por compra
-                    gastos_compra = (compra.gastos_importacion_mxn or 0)
-                    gastos_importacion_total += gastos_compra
-                    
-                    # Costo base por compra (sin gastos de importación)
-                    materiales = self.db.query(ComprasV2Materiales).filter(
-                        ComprasV2Materiales.compra_imi == compra.imi
+                if imi_list and total_kg > 0:
+                    # Consultar materiales de las compras filtradas
+                    materiales_filtrados = self.db.query(ComprasV2Materiales).filter(
+                        ComprasV2Materiales.compra_imi.in_(imi_list)
                     ).all()
                     
-                    for material in materiales:
-                        costo_base_total += material.costo_total_con_iva or 0
-                
-                # Calcular promedios por kg
-                costo_base_por_kg = costo_base_total / total_kg
-                gastos_importacion_por_kg = gastos_importacion_total / total_kg
-                costo_unitario_promedio = costo_base_por_kg + gastos_importacion_por_kg
+                    # Calcular promedio ponderado por kg de (pu_mxn_importacion + pu_mxn)
+                    total_costo_ponderado = 0.0
+                    total_kg_costo = 0.0
+                    
+                    for material in materiales_filtrados:
+                        if material.kg and material.kg > 0:
+                            # Costo por kg = pu_mxn_importacion + pu_mxn
+                            costo_kg = (material.pu_mxn_importacion or 0) + (material.pu_mxn or 0)
+                            kg = material.kg
+                            
+                            total_costo_ponderado += costo_kg * kg
+                            total_kg_costo += kg
+                    
+                    if total_kg_costo > 0:
+                        costo_unitario_promedio = total_costo_ponderado / total_kg_costo
+                        
+            except Exception as e:
+                logger.error(f"Error calculando costo unitario: {str(e)}")
+                costo_unitario_promedio = 0.0
             
-            # 2. Precio por kg: consultar tabla pedidos_compras y facturas relacionadas
+            # 2. Precio por kg: Promedio ponderado por kg de precio_unitario de pedidos_compras
             precio_unitario_promedio = 0.0
             
             try:
@@ -996,32 +1002,23 @@ class DatabaseService:
                 imi_list = [c.imi for c in compras if c.imi]
                 
                 if imi_list:
-                    # Consultar pedidos_compras para obtener facturas relacionadas
-                    from sqlalchemy import text
+                    # Consultar pedidos_compras para obtener precios
+                    from database import PedidosCompras
                     
-                    # Query para obtener precios de facturas relacionadas a las compras
-                    query_precios = text("""
-                        SELECT 
-                            fc.precio_unitario_kg,
-                            fc.kg,
-                            fc.total_con_iva
-                        FROM facturas_compras fc
-                        JOIN pedidos_compras pc ON fc.pedido_id = pc.id
-                        WHERE pc.compra_imi = ANY(:imi_list)
-                        AND fc.precio_unitario_kg > 0
-                        AND fc.kg > 0
-                    """)
+                    pedidos_filtrados = self.db.query(PedidosCompras).filter(
+                        PedidosCompras.compra_imi.in_(imi_list),
+                        PedidosCompras.precio_unitario > 0,
+                        PedidosCompras.kg > 0
+                    ).all()
                     
-                    result_precios = self.db.execute(query_precios, {"imi_list": imi_list}).fetchall()
-                    
-                    if result_precios:
+                    if pedidos_filtrados:
                         # Calcular promedio ponderado por kg
                         total_precio_ponderado = 0.0
                         total_kg_precios = 0.0
                         
-                        for row in result_precios:
-                            precio_kg = float(row[0])
-                            kg = float(row[1])
+                        for pedido in pedidos_filtrados:
+                            precio_kg = pedido.precio_unitario
+                            kg = pedido.kg
                             total_precio_ponderado += precio_kg * kg
                             total_kg_precios += kg
                         
@@ -1052,8 +1049,6 @@ class DatabaseService:
                 # Unit Economics
                 "precio_unitario_promedio": round(precio_unitario_promedio, 2),
                 "costo_unitario_promedio": round(costo_unitario_promedio, 2),
-                "costo_base_por_kg": round(costo_base_por_kg, 2),
-                "gastos_importacion_por_kg": round(gastos_importacion_por_kg, 2),
                 "utilidad_por_kg": round(utilidad_por_kg, 2),
                 "margen_por_kg": round(margen_por_kg, 1)
             }
@@ -1276,8 +1271,6 @@ class DatabaseService:
             # Unit Economics defaults
             "precio_unitario_promedio": 0.0,
             "costo_unitario_promedio": 0.0,
-            "costo_base_por_kg": 0.0,
-            "gastos_importacion_por_kg": 0.0,
             "utilidad_por_kg": 0.0,
             "margen_por_kg": 0.0
         }
