@@ -445,11 +445,13 @@ class ComprasV2UploadService:
                 return {}
             
             cursor = conn.cursor()
-            cursor.execute("SELECT imi, id FROM compras_v2")
+            # En compras_v2, imi ES la clave primaria, no hay columna id separada
+            cursor.execute("SELECT imi FROM compras_v2")
             results = cursor.fetchall()
             cursor.close()
             
-            return {row['imi']: row['id'] for row in results}
+            # Mapear imi a sí mismo ya que es la clave primaria
+            return {row['imi']: row['imi'] for row in results}
             
         except Exception as e:
             logger.warning(f"[COMPRAS_V2_PROCESSOR] No se pudo obtener mapeo de IDs: {str(e)}")

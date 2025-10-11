@@ -231,7 +231,7 @@ class ComprasV2Service:
                 try:
                     cursor = conn.cursor()
                     # Verificar si ya existe
-                    cursor.execute("SELECT id FROM compras_v2 WHERE imi = %s", (compra['imi'],))
+                    cursor.execute("SELECT imi FROM compras_v2 WHERE imi = %s", (compra['imi'],))
                     existing = cursor.fetchone()
                     
                     if existing:
@@ -421,7 +421,7 @@ class ComprasV2Service:
                     cursor.execute("""
                         SELECT moneda, tipo_cambio_real, tipo_cambio_estimado 
                         FROM compras_v2 
-                        WHERE id = %s
+                        WHERE imi = %s
                     """, (material['compra_id'],))
                     compra_info = cursor.fetchone()
                     
