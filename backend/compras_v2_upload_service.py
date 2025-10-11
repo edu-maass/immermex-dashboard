@@ -414,14 +414,37 @@ class ComprasV2UploadService:
                 # Tipo de cambio estimado: por defecto 20, o lo que venga en Excel
                 tipo_cambio_estimado = float(row['tipo_cambio_estimado']) if 'tipo_cambio_estimado' in row and pd.notna(row['tipo_cambio_estimado']) else 20.0
                 
+                # Calcular fechas estimadas usando datos del proveedor
+                fecha_pedido = safe_date(row.get('fecha_pedido'))
+                fecha_salida_estimada = safe_date(row.get('fecha_salida_estimada'))
+                fecha_arribo_estimada = safe_date(row.get('fecha_arribo_estimada'))
+                fecha_planta_estimada = safe_date(row.get('fecha_planta_estimada'))
+                
+                # Solo calcular si no vienen en Excel y tenemos fecha_pedido y datos del proveedor
+                if fecha_pedido and proveedor_info and not fecha_salida_estimada:
+                    from datetime import timedelta
+                    dias_produccion = proveedor_info.get('dias_produccion', 0)
+                    if dias_produccion > 0:
+                        fecha_salida_estimada = fecha_pedido + timedelta(days=int(dias_produccion))
+                        
+                        # Calcular fecha_arribo_estimada
+                        if not fecha_arribo_estimada:
+                            dias_transporte = proveedor_info.get('dias_transporte', 0)
+                            if dias_transporte > 0:
+                                fecha_arribo_estimada = fecha_salida_estimada + timedelta(days=int(dias_transporte))
+                                
+                                # Calcular fecha_planta_estimada (arribo + 15 días)
+                                if not fecha_planta_estimada:
+                                    fecha_planta_estimada = fecha_arribo_estimada + timedelta(days=15)
+                
                 compra = {
                     'imi': int(row['imi']) if 'imi' in row and pd.notna(row['imi']) else 0,
                     'proveedor': proveedor_nombre,
-                    'fecha_pedido': safe_date(row.get('fecha_pedido')),
+                    'fecha_pedido': fecha_pedido,
                     'puerto_origen': puerto_origen,
-                    'fecha_salida_estimada': safe_date(row.get('fecha_salida_estimada')),
-                    'fecha_arribo_estimada': safe_date(row.get('fecha_arribo_estimada')),
-                    'fecha_planta_estimada': safe_date(row.get('fecha_planta_estimada')),
+                    'fecha_salida_estimada': fecha_salida_estimada,
+                    'fecha_arribo_estimada': fecha_arribo_estimada,
+                    'fecha_planta_estimada': fecha_planta_estimada,
                     'fecha_salida_real': fecha_salida_real,
                     'fecha_arribo_real': fecha_arribo_real,
                     'fecha_planta_real': fecha_planta_real,
@@ -545,9 +568,9 @@ class ComprasV2UploadService:
             
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT puerto_origen, dias_produccion_promedio, dias_transporte_promedio
-                FROM proveedores
-                WHERE nombre = %s
+                SELECT "Puerto", promedio_dias_produccion, promedio_dias_transporte_maritimo
+                FROM "Proveedores"
+                WHERE "Nombre" = %s
             """, (nombre_proveedor,))
             
             result = cursor.fetchone()
@@ -555,12 +578,12 @@ class ComprasV2UploadService:
             
             if result:
                 return {
-                    'puerto_origen': result['puerto_origen'],
-                    'dias_produccion': result['dias_produccion_promedio'],
-                    'dias_transporte': result['dias_transporte_promedio']
+                    'puerto_origen': result['Puerto'],
+                    'dias_produccion': result['promedio_dias_produccion'],
+                    'dias_transporte': result['promedio_dias_transporte_maritimo']
                 }
             else:
-                logger.warning(f"[COMPRAS_V2_PROCESSOR] Proveedor '{nombre_proveedor}' no encontrado en tabla proveedores")
+                logger.warning(f"[COMPRAS_V2_PROCESSOR] Proveedor '{nombre_proveedor}' no encontrado en tabla Proveedores")
                 return {}
                 
         except Exception as e:
