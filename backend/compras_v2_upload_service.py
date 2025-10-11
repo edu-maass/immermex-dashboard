@@ -387,6 +387,21 @@ class ComprasV2UploadService:
                     except:
                         return None
                 
+                # Obtener fechas
+                fecha_salida_real = safe_date(row.get('fecha_salida_real'))
+                fecha_arribo_real = safe_date(row.get('fecha_arribo_real'))
+                fecha_planta_real = safe_date(row.get('fecha_planta_real'))
+                
+                # Calcular días automáticamente
+                dias_transporte = None
+                dias_puerto_planta = None
+                
+                if fecha_salida_real and fecha_arribo_real:
+                    dias_transporte = (fecha_arribo_real - fecha_salida_real).days
+                
+                if fecha_arribo_real and fecha_planta_real:
+                    dias_puerto_planta = (fecha_planta_real - fecha_arribo_real).days
+                
                 compra = {
                     'imi': int(row['imi']) if 'imi' in row and pd.notna(row['imi']) else 0,
                     'proveedor': str(row['proveedor']) if 'proveedor' in row and pd.notna(row['proveedor']) else '',
@@ -395,9 +410,9 @@ class ComprasV2UploadService:
                     'fecha_salida_estimada': safe_date(row.get('fecha_salida_estimada')),
                     'fecha_arribo_estimada': safe_date(row.get('fecha_arribo_estimada')),
                     'fecha_planta_estimada': safe_date(row.get('fecha_planta_estimada')),
-                    'fecha_salida_real': safe_date(row.get('fecha_salida_real')),
-                    'fecha_arribo_real': safe_date(row.get('fecha_arribo_real')),
-                    'fecha_planta_real': safe_date(row.get('fecha_planta_real')),
+                    'fecha_salida_real': fecha_salida_real,
+                    'fecha_arribo_real': fecha_arribo_real,
+                    'fecha_planta_real': fecha_planta_real,
                     'moneda': str(row['moneda']) if 'moneda' in row and pd.notna(row['moneda']) else 'USD',
                     'dias_credito': int(row['dias_credito']) if 'dias_credito' in row and pd.notna(row['dias_credito']) else None,
                     'anticipo_pct': float(row['anticipo_pct']) if 'anticipo_pct' in row and pd.notna(row['anticipo_pct']) else 0,
@@ -411,6 +426,8 @@ class ComprasV2UploadService:
                     'porcentaje_gastos_importacion': float(row['porcentaje_gastos_importacion']) if 'porcentaje_gastos_importacion' in row and pd.notna(row['porcentaje_gastos_importacion']) else 0,
                     'iva_monto_mxn': float(row['iva_monto_mxn']) if 'iva_monto_mxn' in row and pd.notna(row['iva_monto_mxn']) else 0,
                     'total_con_iva_mxn': float(row['total_con_iva_mxn']) if 'total_con_iva_mxn' in row and pd.notna(row['total_con_iva_mxn']) else 0,
+                    'dias_transporte': dias_transporte,
+                    'dias_puerto_planta': dias_puerto_planta,
                 }
                 
                 compras.append(compra)
@@ -439,19 +456,32 @@ class ComprasV2UploadService:
                 imi = int(row['imi'])
                 compra_id = compras_map.get(imi, imi)  # Usar el ID de compra_v2 si existe, sino usar IMI
                 
+                # Obtener datos básicos del Excel
+                kg = float(row['kg']) if 'kg' in row and pd.notna(row['kg']) else 0
+                pu_divisa = float(row['pu_divisa']) if 'pu_divisa' in row and pd.notna(row['pu_divisa']) else 0
+                
+                # Calcular campos automáticamente
+                pu_mxn = float(row['pu_mxn']) if 'pu_mxn' in row and pd.notna(row['pu_mxn']) else 0
+                costo_total_divisa = float(row['costo_total_divisa']) if 'costo_total_divisa' in row and pd.notna(row['costo_total_divisa']) else (kg * pu_divisa)
+                costo_total_mxn = float(row['costo_total_mxn']) if 'costo_total_mxn' in row and pd.notna(row['costo_total_mxn']) else (kg * pu_mxn) if pu_mxn > 0 else 0
+                pu_mxn_importacion = float(row['pu_mxn_importacion']) if 'pu_mxn_importacion' in row and pd.notna(row['pu_mxn_importacion']) else pu_mxn
+                costo_total_mxn_imporacion = float(row['costo_total_mxn_importacion']) if 'costo_total_mxn_importacion' in row and pd.notna(row['costo_total_mxn_importacion']) else (kg * pu_mxn_importacion)
+                iva = float(row['iva']) if 'iva' in row and pd.notna(row['iva']) else 0
+                costo_total_con_iva = float(row['costo_total_con_iva']) if 'costo_total_con_iva' in row and pd.notna(row['costo_total_con_iva']) else (costo_total_mxn_imporacion + iva)
+                
                 material = {
                     'compra_id': compra_id,
                     'compra_imi': imi,
                     'material_codigo': str(row['material_codigo']),
-                    'kg': float(row['kg']) if 'kg' in row and pd.notna(row['kg']) else 0,
-                    'pu_divisa': float(row['pu_divisa']) if 'pu_divisa' in row and pd.notna(row['pu_divisa']) else 0,
-                    'pu_mxn': float(row['pu_mxn']) if 'pu_mxn' in row and pd.notna(row['pu_mxn']) else 0,
-                    'costo_total_divisa': float(row['costo_total_divisa']) if 'costo_total_divisa' in row and pd.notna(row['costo_total_divisa']) else 0,
-                    'costo_total_mxn': float(row['costo_total_mxn']) if 'costo_total_mxn' in row and pd.notna(row['costo_total_mxn']) else 0,
-                    'pu_mxn_importacion': float(row['pu_mxn_importacion']) if 'pu_mxn_importacion' in row and pd.notna(row['pu_mxn_importacion']) else 0,
-                    'costo_total_mxn_imporacion': float(row['costo_total_mxn_importacion']) if 'costo_total_mxn_importacion' in row and pd.notna(row['costo_total_mxn_importacion']) else 0,
-                    'iva': float(row['iva']) if 'iva' in row and pd.notna(row['iva']) else 0,
-                    'costo_total_con_iva': float(row['costo_total_con_iva']) if 'costo_total_con_iva' in row and pd.notna(row['costo_total_con_iva']) else 0,
+                    'kg': kg,
+                    'pu_divisa': pu_divisa,
+                    'pu_mxn': pu_mxn,
+                    'costo_total_divisa': costo_total_divisa,
+                    'costo_total_mxn': costo_total_mxn,
+                    'pu_mxn_importacion': pu_mxn_importacion,
+                    'costo_total_mxn_imporacion': costo_total_mxn_imporacion,
+                    'iva': iva,
+                    'costo_total_con_iva': costo_total_con_iva,
                 }
                 
                 materiales.append(material)
