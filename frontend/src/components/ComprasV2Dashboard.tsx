@@ -533,11 +533,23 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
 
         {/* Compras por Material */}
         <ComprasPorMaterialChart
-          data={comprasPorMaterial && comprasPorMaterial.labels ? comprasPorMaterial.labels.map((label: string, index: number) => ({
-            material: label,
-            total_compras: comprasPorMaterial.data[index] || 0,
-            total_kg: comprasPorMaterial.data_kg ? comprasPorMaterial.data_kg[index] || 0 : 0
-          })) : []}
+          data={(() => {
+            if (!comprasPorMaterial || !comprasPorMaterial.labels) return [];
+            
+            console.log('🔍 DEBUG ComprasPorMaterial:', {
+              hasDataKg: 'data_kg' in comprasPorMaterial,
+              dataKg: comprasPorMaterial.data_kg,
+              dataKgType: typeof comprasPorMaterial.data_kg,
+              dataKgIsArray: Array.isArray(comprasPorMaterial.data_kg),
+              fullObject: comprasPorMaterial
+            });
+            
+            return comprasPorMaterial.labels.map((label: string, index: number) => ({
+              material: label,
+              total_compras: comprasPorMaterial.data[index] || 0,
+              total_kg: comprasPorMaterial.data_kg ? comprasPorMaterial.data_kg[index] || 0 : 0
+            }));
+          })()}
           titulo="Compras por material"
         />
       </div>

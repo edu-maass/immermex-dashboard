@@ -411,20 +411,66 @@ def clear_data_by_archivo(db, archivo_id: int):
         return False
 
 def get_latest_data_summary(db):
-    """Obtiene resumen de los datos más recientes"""
+    """Obtiene resumen de los datos más recientes - Compatible con sistema legacy y compras_v2"""
     try:
+        import logging
+        logger = logging.getLogger(__name__)
+        
         # Obtener el archivo más reciente
         latest_archivo = db.query(ArchivoProcesado).filter(
             ArchivoProcesado.estado == "procesado"
         ).order_by(ArchivoProcesado.fecha_procesamiento.desc()).first()
         
+        # Verificar datos en compras_v2 (sistema nuevo)
+        try:
+            from compras_v2_service import ComprasV2Service
+            compras_v2_service = ComprasV2Service()
+            conn = compras_v2_service.get_connection()
+            
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM compras_v2")
+                result = cursor.fetchone()
+                compras_v2_count = result[0] if result else 0
+                
+                cursor.execute("SELECT COUNT(*) FROM compras_v2_materiales")
+                result = cursor.fetchone()
+                materiales_v2_count = result[0] if result else 0
+                
+                cursor.close()
+                compras_v2_service.close_connection()
+                
+                # Si hay datos en compras_v2, retornar esos datos
+                if compras_v2_count > 0:
+                    logger.info(f"Datos de compras_v2 encontrados: {compras_v2_count} compras, {materiales_v2_count} materiales")
+                    return {
+                        "has_data": True,
+                        "sistema": "compras_v2",
+                        "archivo": {
+                            "id": latest_archivo.id if latest_archivo else 0,
+                            "nombre": latest_archivo.nombre_archivo if latest_archivo else "Datos de compras_v2",
+                            "fecha_procesamiento": latest_archivo.fecha_procesamiento if latest_archivo else None,
+                            "registros_procesados": compras_v2_count + materiales_v2_count
+                        },
+                        "conteos": {
+                            "compras_v2": compras_v2_count,
+                            "materiales_v2": materiales_v2_count,
+                            "facturas": 0,
+                            "cobranzas": 0,
+                            "pedidos": 0
+                        }
+                    }
+        except Exception as e:
+            logger.warning(f"Error verificando datos de compras_v2: {str(e)}")
+        
+        # Si no hay archivo procesado ni datos en compras_v2
         if not latest_archivo:
             return {
                 "has_data": False,
                 "message": "No hay datos disponibles"
             }
         
-        # Contar registros
+        # Contar registros del sistema legacy
         facturas_count = db.query(Facturacion).filter(
             Facturacion.archivo_id == latest_archivo.id
         ).count()
@@ -439,6 +485,7 @@ def get_latest_data_summary(db):
         
         return {
             "has_data": True,
+            "sistema": "legacy",
             "archivo": {
                 "id": latest_archivo.id,
                 "nombre": latest_archivo.nombre_archivo,
@@ -448,7 +495,9 @@ def get_latest_data_summary(db):
             "conteos": {
                 "facturas": facturas_count,
                 "cobranzas": cobranzas_count,
-                "pedidos": pedidos_count
+                "pedidos": pedidos_count,
+                "compras_v2": 0,
+                "materiales_v2": 0
             }
         }
     except Exception as e:

@@ -383,28 +383,43 @@ async def upload_compras_v2_file(
 ):
     """Endpoint específico para subir archivos Excel de compras_v2 - SISTEMA COMPRAS_V2"""
     try:
-        logger.info("🚀🚀🚀 SISTEMA COMPRAS_V2 ACTIVADO 🚀🚀🚀")
-        logger.info(f"Procesando archivo: {file.filename}")
+        logger.info("="*60)
+        logger.info("🚀 SISTEMA COMPRAS_V2 - INICIO DE UPLOAD")
+        logger.info("="*60)
+        logger.info(f"Archivo: {file.filename}")
+        logger.info(f"Reemplazar datos: {reemplazar_datos}")
         
         # Validación básica del archivo
         if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
+            logger.error(f"❌ Archivo rechazado: extensión inválida ({file.filename})")
             raise HTTPException(status_code=400, detail="Solo se permiten archivos Excel (.xlsx, .xls)")
         
         # Leer contenido para validar tamaño
+        logger.info("📖 Leyendo contenido del archivo...")
         content = await file.read()
+        logger.info(f"✓ Archivo leído: {len(content)} bytes ({len(content)/1024:.2f} KB)")
+        
         if len(content) > 10 * 1024 * 1024:  # 10MB
+            logger.error(f"❌ Archivo demasiado grande: {len(content)/1024/1024:.2f} MB")
             raise HTTPException(status_code=400, detail="El archivo es demasiado grande. Máximo 10MB permitido.")
         
-        logger.info(f"Archivo leído: {len(content)} bytes")
-        
         # Usar el nuevo servicio especializado de compras_v2
+        logger.info("🔧 Importando ComprasV2UploadService...")
         from compras_v2_upload_service import ComprasV2UploadService
         
+        logger.info("🔧 Creando instancia del servicio...")
         service = ComprasV2UploadService()
+        
+        logger.info("🚀 Iniciando procesamiento del archivo...")
         result = service.upload_compras_file(content, file.filename, reemplazar_datos)
         
         if result.get("success"):
-            logger.info(f"✅ Upload exitoso: {result['compras_guardadas']} compras, {result['materiales_guardados']} materiales")
+            logger.info("="*60)
+            logger.info("✅ UPLOAD COMPLETADO EXITOSAMENTE")
+            logger.info(f"  Compras guardadas: {result['compras_guardadas']}")
+            logger.info(f"  Materiales guardados: {result['materiales_guardados']}")
+            logger.info(f"  Total procesados: {result['total_procesados']}")
+            logger.info("="*60)
             return {
                 "mensaje": "Archivo de compras procesado y guardado exitosamente con sistema compras_v2",
                 "nombre_archivo": file.filename,
@@ -418,16 +433,25 @@ async def upload_compras_v2_file(
                 "sistema": "compras_v2"
             }
         else:
-            logger.error(f"ERROR: Upload falló: {result.get('error', 'Error desconocido')}")
+            logger.error("="*60)
+            logger.error("❌ UPLOAD FALLÓ")
+            logger.error(f"  Error: {result.get('error', 'Error desconocido')}")
+            logger.error("="*60)
             raise HTTPException(status_code=500, detail=f"Error procesando archivo: {result.get('error', 'Error desconocido')}")
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error en endpoint de compras_v2: {str(e)}")
+        logger.error("="*60)
+        logger.error("❌ ERROR CRÍTICO EN ENDPOINT")
+        logger.error(f"  Tipo: {type(e).__name__}")
+        logger.error(f"  Mensaje: {str(e)}")
+        logger.error("="*60)
         import traceback
-        logger.error(f"Traceback completo: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Traceback completo:")
+        logger.error(traceback.format_exc())
+        logger.error("="*60)
+        raise HTTPException(status_code=500, detail=f"Error crítico: {str(e)}")
 
 @app.get("/api/archivos")
 async def get_archivos_procesados(
@@ -1206,7 +1230,10 @@ async def get_materiales_by_compra(imi: int):
 @app.get("/api/compras-v2/evolucion-precios")
 async def get_compras_v2_evolucion_precios(
     material: Optional[str] = Query(None, description="Filtrar por material"),
-    moneda: str = Query("USD", description="Moneda para mostrar precios (USD/MXN)")
+    moneda: str = Query("USD", description="Moneda para mostrar precios (USD/MXN)"),
+    mes: Optional[int] = Query(None, description="Filtrar por mes"),
+    año: Optional[int] = Query(None, description="Filtrar por año"),
+    proveedor: Optional[str] = Query(None, description="Filtrar por proveedor")
 ):
     """Obtiene evolución mensual de precios por kg para compras_v2"""
     try:
@@ -1217,6 +1244,12 @@ async def get_compras_v2_evolucion_precios(
         filtros = {}
         if material:
             filtros['material'] = material
+        if mes:
+            filtros['mes'] = mes
+        if año:
+            filtros['año'] = año
+        if proveedor:
+            filtros['proveedor'] = proveedor
         
         evolucion = service.get_evolucion_precios(filtros, moneda)
         return evolucion
@@ -1553,6 +1586,50 @@ async def update_fechas_estimadas():
         conn.commit()
         
         logger.info(f"Actualización completada: {updated_count} actualizados, {skipped_count} sin cambios")
+        
+        # Actualizar columnas calculadas: dias_transporte y dias_puerto_planta
+        logger.info("Actualizando columnas calculadas: dias_transporte y dias_puerto_planta...")
+        
+        # Verificar si las columnas existen, si no, agregarlas
+        cursor.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'compras_v2' 
+            AND column_name IN ('dias_transporte', 'dias_puerto_planta')
+        """)
+        
+        existing_columns = [row['column_name'] for row in cursor.fetchall()]
+        
+        if 'dias_transporte' not in existing_columns:
+            logger.info("Agregando columna dias_transporte...")
+            cursor.execute("ALTER TABLE compras_v2 ADD COLUMN dias_transporte INTEGER")
+            conn.commit()
+        
+        if 'dias_puerto_planta' not in existing_columns:
+            logger.info("Agregando columna dias_puerto_planta...")
+            cursor.execute("ALTER TABLE compras_v2 ADD COLUMN dias_puerto_planta INTEGER")
+            conn.commit()
+        
+        # Calcular dias_transporte para registros con fechas reales
+        cursor.execute("""
+            UPDATE compras_v2 
+            SET dias_transporte = (fecha_arribo_real - fecha_salida_real)
+            WHERE fecha_salida_real IS NOT NULL 
+              AND fecha_arribo_real IS NOT NULL
+        """)
+        dias_transporte_updated = cursor.rowcount
+        
+        # Calcular dias_puerto_planta para registros con fechas reales
+        cursor.execute("""
+            UPDATE compras_v2 
+            SET dias_puerto_planta = (fecha_planta_real - fecha_arribo_real)
+            WHERE fecha_arribo_real IS NOT NULL 
+              AND fecha_planta_real IS NOT NULL
+        """)
+        dias_puerto_planta_updated = cursor.rowcount
+        
+        conn.commit()
+        logger.info(f"Actualización de columnas calculadas completada: {dias_transporte_updated} dias_transporte, {dias_puerto_planta_updated} dias_puerto_planta")
         
         # Actualizar columnas automáticas en materiales (pu_usd)
         logger.info("Iniciando actualización de columnas automáticas en materiales...")
