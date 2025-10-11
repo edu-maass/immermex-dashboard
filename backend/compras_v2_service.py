@@ -417,13 +417,18 @@ class ComprasV2Service:
             
             for material in materiales:
                 try:
-                    # Obtener información de la compra para calcular pu_usd
+                    # Verificar primero si la compra existe
                     cursor.execute("""
                         SELECT moneda, tipo_cambio_real, tipo_cambio_estimado 
                         FROM compras_v2 
                         WHERE imi = %s
                     """, (material['compra_id'],))
                     compra_info = cursor.fetchone()
+                    
+                    # Si la compra no existe, skip este material (material huérfano)
+                    if not compra_info:
+                        logger.warning(f"⚠️  Material huérfano: {material['material_codigo']} - IMI {material['compra_id']} no existe en compras_v2. Omitiendo...")
+                        continue
                     
                     # Calcular pu_usd
                     pu_usd = self.calculate_pu_usd(
@@ -505,14 +510,18 @@ class ComprasV2Service:
                             datetime.utcnow()
                         ))
                     
+                    # Commit individual para este material
+                    conn.commit()
                     materiales_guardados += 1
+                    logger.info(f"Material {material['material_codigo']} para compra IMI {material['compra_id']} guardado exitosamente")
                     
                 except Exception as e:
                     logger.error(f"Error guardando material {material['material_codigo']} para compra {material['compra_id']}: {str(e)}")
+                    # Rollback individual para este material
+                    conn.rollback()
                     continue
             
-            conn.commit()
-            logger.info(f"Guardados {materiales_guardados} materiales en compras_v2_materiales")
+            logger.info(f"✅ Guardados {materiales_guardados} materiales en compras_v2_materiales")
             
             cursor.close()
             return materiales_guardados
