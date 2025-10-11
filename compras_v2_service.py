@@ -152,6 +152,48 @@ class ComprasV2Service:
             logger.warning(f"Error convirtiendo porcentaje '{value}' a decimal, usando 0.0000")
             return Decimal('0.0000')
     
+    def calculate_dias_transporte(self, fecha_salida_real, fecha_arribo_real):
+        """Calcula días de transporte (fecha_arribo_real - fecha_salida_real)"""
+        if fecha_salida_real is None or fecha_arribo_real is None:
+            return None
+        
+        try:
+            # Si son strings, convertir a date
+            if isinstance(fecha_salida_real, str):
+                from datetime import datetime
+                fecha_salida_real = datetime.fromisoformat(fecha_salida_real).date()
+            if isinstance(fecha_arribo_real, str):
+                from datetime import datetime
+                fecha_arribo_real = datetime.fromisoformat(fecha_arribo_real).date()
+            
+            # Calcular diferencia en días
+            dias = (fecha_arribo_real - fecha_salida_real).days
+            return dias if dias >= 0 else None
+        except Exception as e:
+            logger.warning(f"Error calculando dias_transporte: {str(e)}")
+            return None
+    
+    def calculate_dias_puerto_planta(self, fecha_arribo_real, fecha_planta_real):
+        """Calcula días de puerto a planta (fecha_planta_real - fecha_arribo_real)"""
+        if fecha_arribo_real is None or fecha_planta_real is None:
+            return None
+        
+        try:
+            # Si son strings, convertir a date
+            if isinstance(fecha_arribo_real, str):
+                from datetime import datetime
+                fecha_arribo_real = datetime.fromisoformat(fecha_arribo_real).date()
+            if isinstance(fecha_planta_real, str):
+                from datetime import datetime
+                fecha_planta_real = datetime.fromisoformat(fecha_planta_real).date()
+            
+            # Calcular diferencia en días
+            dias = (fecha_planta_real - fecha_arribo_real).days
+            return dias if dias >= 0 else None
+        except Exception as e:
+            logger.warning(f"Error calculando dias_puerto_planta: {str(e)}")
+            return None
+    
     def _is_valid_update_value(self, value):
         """Determina si un valor es válido para actualización"""
         if value is None:
@@ -207,6 +249,9 @@ class ComprasV2Service:
                             'fecha_salida_estimada': compra.get('fecha_salida_estimada'),
                             'fecha_arribo_estimada': compra.get('fecha_arribo_estimada'),
                             'fecha_planta_estimada': compra.get('fecha_planta_estimada'),
+                            'fecha_salida_real': compra.get('fecha_salida_real'),
+                            'fecha_arribo_real': compra.get('fecha_arribo_real'),
+                            'fecha_planta_real': compra.get('fecha_planta_real'),
                             'moneda': compra.get('moneda'),
                             'dias_credito': compra.get('dias_credito'),
                             'anticipo_pct': compra.get('anticipo_pct'),
@@ -234,9 +279,28 @@ class ComprasV2Service:
                                              'iva_monto_mxn', 'total_con_iva_mxn']:
                                     update_fields.append(f"{field} = %s")
                                     update_values.append(self.safe_decimal(value))
-                        else:
+                                else:
                                     update_fields.append(f"{field} = %s")
                                     update_values.append(value)
+                        
+                        # Calcular dias_transporte y dias_puerto_planta
+                        dias_transporte = self.calculate_dias_transporte(
+                            compra.get('fecha_salida_real'),
+                            compra.get('fecha_arribo_real')
+                        )
+                        dias_puerto_planta = self.calculate_dias_puerto_planta(
+                            compra.get('fecha_arribo_real'),
+                            compra.get('fecha_planta_real')
+                        )
+                        
+                        # Agregar columnas calculadas si tienen valor
+                        if dias_transporte is not None:
+                            update_fields.append("dias_transporte = %s")
+                            update_values.append(dias_transporte)
+                        
+                        if dias_puerto_planta is not None:
+                            update_fields.append("dias_puerto_planta = %s")
+                            update_values.append(dias_puerto_planta)
                         
                         # Siempre actualizar el timestamp
                         update_fields.append("updated_at = %s")
@@ -260,6 +324,17 @@ class ComprasV2Service:
                     else:
                         # Insertar nuevo registro
                         logger.info(f"Insertando nueva compra IMI {compra['imi']}...")
+                        
+                        # Calcular dias_transporte y dias_puerto_planta
+                        dias_transporte = self.calculate_dias_transporte(
+                            compra.get('fecha_salida_real'),
+                            compra.get('fecha_arribo_real')
+                        )
+                        dias_puerto_planta = self.calculate_dias_puerto_planta(
+                            compra.get('fecha_arribo_real'),
+                            compra.get('fecha_planta_real')
+                        )
+                        
                         cursor.execute("""
                             INSERT INTO compras_v2 (
                                 imi, proveedor, fecha_pedido, puerto_origen,
@@ -270,11 +345,12 @@ class ComprasV2Service:
                                 gastos_importacion_divisa, gastos_importacion_mxn,
                                 porcentaje_gastos_importacion,
                                 iva_monto_mxn, total_con_iva_mxn,
+                                dias_transporte, dias_puerto_planta,
                                 created_at, updated_at
                             )
                             VALUES (
                                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                             )
                         """, (
                             compra['imi'],
@@ -297,6 +373,8 @@ class ComprasV2Service:
                             self.safe_percentage(compra['porcentaje_gastos_importacion']),
                             self.safe_decimal(compra['iva_monto_mxn']),
                             self.safe_decimal(compra['total_con_iva_mxn']),
+                            dias_transporte,
+                            dias_puerto_planta,
                             datetime.utcnow(),
                             datetime.utcnow()
                         ))
@@ -780,7 +858,9 @@ class ComprasV2Service:
                     END) as ciclo_compras_promedio,
                     AVG(c2m.pu_divisa) as precio_unitario_promedio_usd,
                     AVG(c2m.pu_mxn) as precio_unitario_promedio_mxn,
-                    COUNT(DISTINCT c2m.material_codigo) as materiales_unicos
+                    COUNT(DISTINCT c2m.material_codigo) as materiales_unicos,
+                    ROUND(AVG(c2.dias_transporte)::numeric, 1) as dias_transporte_promedio,
+                    ROUND(AVG(c2.dias_puerto_planta)::numeric, 1) as dias_puerto_planta_promedio
                 FROM compras_v2 c2
                 LEFT JOIN compras_v2_materiales c2m ON c2.imi = c2m.compra_imi
                 WHERE 1=1
@@ -863,9 +943,22 @@ class ComprasV2Service:
             params = []
             
             # Aplicar filtros
-            if filtros and filtros.get('material'):
-                query += " AND c2m.material_codigo ILIKE %s"
-                params.append(f"%{filtros['material']}%")
+            if filtros:
+                if filtros.get('material'):
+                    query += " AND c2m.material_codigo ILIKE %s"
+                    params.append(f"%{filtros['material']}%")
+                
+                if filtros.get('mes'):
+                    query += " AND EXTRACT(MONTH FROM c2.fecha_pedido) = %s"
+                    params.append(filtros['mes'])
+                
+                if filtros.get('año'):
+                    query += " AND EXTRACT(YEAR FROM c2.fecha_pedido) = %s"
+                    params.append(filtros['año'])
+                
+                if filtros.get('proveedor'):
+                    query += " AND c2.proveedor ILIKE %s"
+                    params.append(f"%{filtros['proveedor']}%")
             
             query += """
                 GROUP BY DATE_TRUNC('month', c2.fecha_pedido)
@@ -1325,33 +1418,37 @@ class ComprasV2Service:
             cursor.close()
             
             if not resultados:
-                return {'labels': [], 'data': [], 'titulo': 'Sin datos'}
+                return {'labels': [], 'data': [], 'data_kg': [], 'titulo': 'Sin datos'}
             
             # Procesar resultados
             labels = []
-            data = []
+            data_costo = []
+            data_kg = []
             
             for row in resultados:
                 material_codigo = row['material_codigo']
                 total_costo = float(row['total_costo']) if row['total_costo'] else 0
+                total_kg = float(row['total_kg']) if row['total_kg'] else 0
                 
                 # Crear etiqueta solo con código de material
                 etiqueta = f"{material_codigo}"
                 
                 labels.append(etiqueta)
-                data.append(total_costo)
+                data_costo.append(total_costo)
+                data_kg.append(total_kg)
             
             return {
                 'labels': labels,
-                'data': data,
-                'titulo': f'Top {len(labels)} Materiales por Costo Total'
+                'data': data_costo,  # Mantener compatibilidad
+                'data_kg': data_kg,  # Nuevos datos de kg
+                'titulo': f'Top {len(labels)} Materiales'
             }
             
         except Exception as e:
             logger.error(f"Error obteniendo compras por material: {str(e)}")
             import traceback
             logger.error(traceback.format_exc())
-            return {'labels': [], 'data': [], 'titulo': 'Sin datos'}
+            return {'labels': [], 'data': [], 'data_kg': [], 'titulo': 'Sin datos'}
     
     def __del__(self):
         """Destructor para cerrar conexión"""
