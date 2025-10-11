@@ -107,7 +107,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
       const [kpisResponse, dataResponse, evolucionResponse, flujoResponse, agingResponse, materialesResponse, proveedoresResponse, añosResponse, topProveedoresResponse, comprasPorMaterialResponse] = await Promise.all([
         apiService.getComprasV2KPIs(filtros),
         apiService.getComprasV2Data(filtros, itemsPerPage, (currentPage - 1) * itemsPerPage),
-        apiService.getComprasV2EvolucionPrecios(filtros.material, monedaPrecios),
+        apiService.getComprasV2EvolucionPrecios(filtros.material, monedaPrecios, filtros),
         apiService.getComprasV2FlujoPagos(filtros, monedaFlujoPagos),
         apiService.getComprasV2AgingCuentasPagar(filtros),
         apiService.getComprasV2MaterialesList(),
@@ -117,6 +117,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
         apiService.getComprasV2PorMaterial(10, filtros)
       ]);
 
+      
       setKpis(kpisResponse);
       setComprasData(dataResponse);
       setTotalItems(dataResponse.total_compras || 0);

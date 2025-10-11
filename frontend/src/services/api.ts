@@ -209,10 +209,17 @@ class ApiService {
     return this.request(`/compras-v2/materiales/${imi}`);
   }
 
-  async getComprasV2EvolucionPrecios(material?: string, moneda: string = 'USD'): Promise<any> {
+  async getComprasV2EvolucionPrecios(material?: string, moneda: string = 'USD', filtros?: any): Promise<any> {
     const params = new URLSearchParams();
     if (material) params.append('material', material);
     params.append('moneda', moneda);
+    
+    // Add other filters if provided
+    if (filtros) {
+      if (filtros.mes) params.append('mes', filtros.mes.toString());
+      if (filtros.año) params.append('año', filtros.año.toString());
+      if (filtros.proveedor) params.append('proveedor', filtros.proveedor);
+    }
     
     const queryString = params.toString();
     const endpoint = queryString ? `/compras-v2/evolucion-precios?${queryString}` : '/compras-v2/evolucion-precios';
