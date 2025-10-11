@@ -423,7 +423,7 @@ def get_latest_data_summary(db):
         
         # Verificar datos en compras_v2 (sistema nuevo)
         try:
-            from compras_v2_service import ComprasV2Service
+            from backend.compras_v2_service import ComprasV2Service
             compras_v2_service = ComprasV2Service()
             conn = compras_v2_service.get_connection()
             

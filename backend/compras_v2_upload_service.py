@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from database import (
     ArchivoProcesado, get_db
 )
-from compras_v2_service import ComprasV2Service
+from backend.compras_v2_service import ComprasV2Service
 import logging
 import os
 from datetime import datetime
