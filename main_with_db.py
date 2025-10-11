@@ -381,7 +381,7 @@ async def upload_file(
 @app.post("/api/upload/compras-v2")
 async def upload_compras_v2_file(
     file: UploadFile = File(...),
-    reemplazar_datos: bool = Query(True, description="Si true, reemplaza todos los datos existentes")
+    reemplazar_datos: bool = Query(False, description="Si true, reemplaza todos los datos existentes. Por defecto False para cargas incrementales")
 ):
     """Endpoint específico para subir archivos Excel de compras_v2 - SISTEMA COMPRAS_V2"""
     try:
