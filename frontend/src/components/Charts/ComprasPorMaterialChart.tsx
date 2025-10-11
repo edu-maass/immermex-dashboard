@@ -130,7 +130,7 @@ export const ComprasPorMaterialChart: FC<ComprasPorMaterialChartProps> = ({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-[500px] w-full">
+        <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -195,7 +195,7 @@ export const ComprasPorMaterialChart: FC<ComprasPorMaterialChartProps> = ({
           </ResponsiveContainer>
         </div>
         {/* Leyenda manual debajo del gráfico */}
-        <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-1 text-xs">
+        <div className="mt-1 grid grid-cols-2 md:grid-cols-3 gap-1 text-xs">
           {chartData.slice(0, 6).map((item, index) => (
             <div key={index} className="flex items-center gap-1">
               <div 

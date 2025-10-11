@@ -502,7 +502,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
           data={evolucionPrecios ? evolucionPrecios.data : []}
           moneda={monedaPrecios}
           onMonedaChange={handleMonedaPreciosChange}
-          titulo={evolucionPrecios?.titulo}
+          titulo="Evolucion Precio Unitario"
         />
 
         {/* Flujo de Pagos */}
@@ -537,7 +537,7 @@ export const ComprasV2Dashboard: React.FC<ComprasV2DashboardProps> = ({ onUpload
             total_compras: comprasPorMaterial.data[index] || 0,
             total_kg: comprasPorMaterial.data_kg ? comprasPorMaterial.data_kg[index] || 0 : 0
           })) : []}
-          titulo={comprasPorMaterial?.titulo || "Compras por Materiales"}
+          titulo="Compras por material"
         />
       </div>
 

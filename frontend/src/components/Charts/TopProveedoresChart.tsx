@@ -66,7 +66,7 @@ export const TopProveedoresChart: FC<TopProveedoresChartProps> = ({
         <CardTitle>{titulo}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[500px] w-full">
+        <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}

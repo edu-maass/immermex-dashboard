@@ -15,7 +15,7 @@ export const ComprasV2EvolucionPreciosChart: FC<ComprasV2EvolucionPreciosChartPr
   titulo = "Evolucion Precio Unitario",
   onMonedaChange 
 }) => {
-  const [periodo, setPeriodo] = useState<'todos' | 'ytd' | '3meses' | '1mes'>('todos');
+  const [periodo, setPeriodo] = useState<'todos' | 'ytd' | '2años' | '3meses' | '1mes'>('todos');
 
   // Safety check for data
   if (!data || !Array.isArray(data) || data.length === 0) {
@@ -51,6 +51,7 @@ export const ComprasV2EvolucionPreciosChart: FC<ComprasV2EvolucionPreciosChartPr
             >
               <option value="todos">Todos los datos</option>
               <option value="ytd">YTD</option>
+              <option value="2años">2 años</option>
               <option value="3meses">3 meses</option>
               <option value="1mes">1 mes</option>
             </select>
@@ -103,6 +104,9 @@ export const ComprasV2EvolucionPreciosChart: FC<ComprasV2EvolucionPreciosChartPr
     switch (periodo) {
       case 'ytd':
         cutoffDate = new Date(now.getFullYear(), 0, 1); // Start of current year
+        break;
+      case '2años':
+        cutoffDate = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate());
         break;
       case '3meses':
         cutoffDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
@@ -173,13 +177,14 @@ export const ComprasV2EvolucionPreciosChart: FC<ComprasV2EvolucionPreciosChartPr
           >
             <option value="todos">Todos los datos</option>
             <option value="ytd">YTD</option>
+            <option value="2años">2 años</option>
             <option value="3meses">3 meses</option>
             <option value="1mes">1 mes</option>
           </select>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-[500px] w-full">
+        <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={chartData}
