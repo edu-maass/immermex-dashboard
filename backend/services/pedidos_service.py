@@ -19,6 +19,9 @@ class PedidosService:
     
     def save_pedidos(self, pedidos_data: list, archivo_id: int) -> int:
         """Guarda datos de pedidos con asignación automática de fechas y días de crédito"""
+        print(f"🔥🔥🔥 === INICIANDO save_pedidos === 🔥🔥🔥")
+        print(f"🔥 Total de pedidos recibidos: {len(pedidos_data)}")
+        print(f"🔥 Archivo ID: {archivo_id}")
         logger.info(f"=== INICIANDO save_pedidos ===")
         logger.info(f"Total de pedidos recibidos: {len(pedidos_data)}")
         logger.info(f"Archivo ID: {archivo_id}")
@@ -74,6 +77,7 @@ class PedidosService:
                 
                 # Ignorar registro si no se puede extraer un folio numérico válido
                 if folio_factura_num is None:
+                    print(f"[SKIP] Saltando pedido - folio_factura no numerico: '{folio_raw}'")
                     logger.warning(f"Saltando pedido - folio_factura no numérico: '{folio_raw}'")
                     continue
                 
@@ -99,9 +103,12 @@ class PedidosService:
                 
                 # Log cada 10 pedidos para seguimiento
                 if count % 10 == 0:
+                    print(f"[PROGRESS] Procesados {count} pedidos...")
                     logger.info(f"Procesados {count} pedidos...")
                     
             except Exception as e:
+                print(f"[ERROR] Error guardando pedido: {str(e)}")
+                print(f"[ERROR] Datos del pedido que fallo: {pedido_data}")
                 logger.error(f"Error guardando pedido: {str(e)}")
                 logger.error(f"Datos del pedido que falló: {pedido_data}")
                 import traceback
@@ -110,6 +117,8 @@ class PedidosService:
         
         # No hacer commit aquí - dejar que el método principal maneje la transacción
         
+        print(f"🔥🔥🔥 === FINALIZANDO save_pedidos === 🔥🔥🔥")
+        print(f"🔥 Total de pedidos guardados exitosamente: {count}")
         logger.info(f"=== FINALIZANDO save_pedidos ===")
         logger.info(f"Total de pedidos guardados exitosamente: {count}")
         if fechas_asignadas > 0:
