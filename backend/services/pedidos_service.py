@@ -19,6 +19,10 @@ class PedidosService:
     
     def save_pedidos(self, pedidos_data: list, archivo_id: int) -> int:
         """Guarda datos de pedidos con asignación automática de fechas y días de crédito"""
+        logger.info(f"=== INICIANDO save_pedidos ===")
+        logger.info(f"Total de pedidos recibidos: {len(pedidos_data)}")
+        logger.info(f"Archivo ID: {archivo_id}")
+        
         count = 0
         
         # Obtener facturas para asignar fechas y días de crédito automáticamente
@@ -67,7 +71,7 @@ class PedidosService:
                 # Crear registro en pedidos_compras (tabla optimizada de Supabase)
                 pedido_compras = PedidosCompras(
                     compra_imi=0,  # Campo específico de compras, inicializar en 0
-                    folio_factura=DataValidator.safe_string(pedido_data.get('folio_factura', '')),
+                    folio_factura=DataValidator.safe_int(pedido_data.get('folio_factura', 0)),  # FIX: Convertir a int en lugar de string
                     material_codigo=DataValidator.safe_string(pedido_data.get('material', '')),  # Mapear material a material_codigo
                     kg=DataValidator.safe_float(pedido_data.get('kg', 0)),
                     precio_unitario=DataValidator.safe_float(pedido_data.get('precio_unitario', 0)),
@@ -80,12 +84,22 @@ class PedidosService:
                 )
                 self.db.add(pedido_compras)
                 count += 1
+                
+                # Log cada 10 pedidos para seguimiento
+                if count % 10 == 0:
+                    logger.info(f"Procesados {count} pedidos...")
+                    
             except Exception as e:
-                logger.warning(f"Error guardando pedido: {str(e)}")
+                logger.error(f"Error guardando pedido: {str(e)}")
+                logger.error(f"Datos del pedido que falló: {pedido_data}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 continue
         
         # No hacer commit aquí - dejar que el método principal maneje la transacción
         
+        logger.info(f"=== FINALIZANDO save_pedidos ===")
+        logger.info(f"Total de pedidos guardados exitosamente: {count}")
         if fechas_asignadas > 0:
             logger.info(f"Se asignaron automáticamente {fechas_asignadas} fechas de factura a pedidos_compras")
         if dias_credito_asignados > 0:
