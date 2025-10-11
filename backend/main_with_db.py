@@ -304,9 +304,12 @@ async def upload_file(
             logger.info(f"Tamaño del archivo: {len(contents)} bytes")
             
             # Procesar usando la nueva función desde bytes
+            print(f"🔥🔥🔥 ANTES de process_excel_from_bytes - Timestamp: {datetime.now().isoformat()}")
             logger.info(f"🔥 ANTES de process_excel_from_bytes - Timestamp: {datetime.now().isoformat()}")
             processed_data_dict, kpis = process_excel_from_bytes(contents, file.filename)
+            print(f"🔥🔥🔥 DESPUÉS de process_excel_from_bytes - Timestamp: {datetime.now().isoformat()}")
             logger.info(f"🔥 DESPUÉS de process_excel_from_bytes - Timestamp: {datetime.now().isoformat()}")
+            print(f"🔥🔥🔥 Datos procesados exitosamente. Claves: {list(processed_data_dict.keys())}")
             logger.info(f"Datos procesados exitosamente. Claves: {list(processed_data_dict.keys())}")
             
             # Verificar estructura de datos procesados
@@ -326,9 +329,12 @@ async def upload_file(
             }
             
             # Guardar en base de datos
+            print(f"🔥🔥🔥 INICIANDO GUARDADO EN BASE DE DATOS - Timestamp: {datetime.now().isoformat()}")
             logger.info("Iniciando guardado en base de datos...")
             db_service = DatabaseService(db)
+            print(f"🔥🔥🔥 DatabaseService creado, llamando a save_processed_data...")
             result = db_service.save_processed_data(processed_data_dict, archivo_info)
+            print(f"🔥🔥🔥 save_processed_data completado - Result: {result.get('success', 'unknown')}")
             
             # Verificar si hubo error en el guardado
             if not result.get("success", True):
