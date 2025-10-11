@@ -1505,7 +1505,10 @@ async def update_fechas_estimadas():
                 fecha_pedido,
                 fecha_salida_estimada,
                 fecha_arribo_estimada,
-                fecha_planta_estimada
+                fecha_planta_estimada,
+                fecha_salida_real,
+                dias_credito,
+                fecha_vencimiento
             FROM compras_v2 
             WHERE fecha_pedido IS NOT NULL
             ORDER BY imi
@@ -1549,6 +1552,9 @@ async def update_fechas_estimadas():
             fecha_salida_actual = record['fecha_salida_estimada']
             fecha_arribo_actual = record['fecha_arribo_estimada']
             fecha_planta_actual = record['fecha_planta_estimada']
+            fecha_salida_real = record['fecha_salida_real']
+            dias_credito = record['dias_credito']
+            fecha_vencimiento_actual = record['fecha_vencimiento']
             
             # Obtener datos del proveedor
             proveedor_data = proveedores_data.get(proveedor, {
@@ -1560,6 +1566,14 @@ async def update_fechas_estimadas():
             fecha_salida_estimada = fecha_pedido + timedelta(days=proveedor_data['promedio_dias_produccion'])
             fecha_arribo_estimada = fecha_salida_estimada + timedelta(days=proveedor_data['promedio_dias_transporte_maritimo'])
             fecha_planta_estimada = fecha_arribo_estimada + timedelta(days=15)
+            
+            # Calcular fecha de vencimiento
+            fecha_vencimiento = None
+            if dias_credito:
+                if fecha_salida_real:
+                    fecha_vencimiento = fecha_salida_real + timedelta(days=dias_credito)
+                elif fecha_salida_estimada:
+                    fecha_vencimiento = fecha_salida_estimada + timedelta(days=dias_credito)
             
             # Verificar si necesita actualización
             needs_update = False
@@ -1579,6 +1593,11 @@ async def update_fechas_estimadas():
             if fecha_planta_actual != fecha_planta_estimada:
                 update_fields.append("fecha_planta_estimada = %s")
                 update_values.append(fecha_planta_estimada)
+                needs_update = True
+            
+            if fecha_vencimiento and fecha_vencimiento_actual != fecha_vencimiento:
+                update_fields.append("fecha_vencimiento = %s")
+                update_values.append(fecha_vencimiento)
                 needs_update = True
             
             if needs_update:

@@ -413,6 +413,42 @@ class ComprasV2UploadService:
                 
                 # Tipo de cambio estimado: por defecto 20, o lo que venga en Excel
                 tipo_cambio_estimado = float(row['tipo_cambio_estimado']) if 'tipo_cambio_estimado' in row and pd.notna(row['tipo_cambio_estimado']) else 20.0
+                tipo_cambio_real = float(row['tipo_cambio_real']) if 'tipo_cambio_real' in row and pd.notna(row['tipo_cambio_real']) else 0
+                
+                # Usar tipo de cambio real si existe, sino el estimado
+                tipo_cambio_efectivo = tipo_cambio_real if tipo_cambio_real > 0 else tipo_cambio_estimado
+                
+                # Calcular gastos de importación en MXN si no viene
+                gastos_importacion_divisa = float(row['gastos_importacion_divisa']) if 'gastos_importacion_divisa' in row and pd.notna(row['gastos_importacion_divisa']) else 0
+                gastos_importacion_mxn = float(row['gastos_importacion_mxn']) if 'gastos_importacion_mxn' in row and pd.notna(row['gastos_importacion_mxn']) else 0
+                
+                if gastos_importacion_mxn == 0 and gastos_importacion_divisa > 0 and tipo_cambio_efectivo > 0:
+                    gastos_importacion_mxn = gastos_importacion_divisa * tipo_cambio_efectivo
+                
+                # Calcular IVA en MXN si no viene
+                iva_monto_divisa = float(row['iva_monto_divisa']) if 'iva_monto_divisa' in row and pd.notna(row['iva_monto_divisa']) else 0
+                iva_monto_mxn = float(row['iva_monto_mxn']) if 'iva_monto_mxn' in row and pd.notna(row['iva_monto_mxn']) else 0
+                
+                if iva_monto_mxn == 0 and iva_monto_divisa > 0 and tipo_cambio_efectivo > 0:
+                    iva_monto_mxn = iva_monto_divisa * tipo_cambio_efectivo
+                
+                # Calcular total con IVA en MXN si no viene
+                total_con_iva_divisa = float(row['total_con_iva_divisa']) if 'total_con_iva_divisa' in row and pd.notna(row['total_con_iva_divisa']) else 0
+                total_con_iva_mxn = float(row['total_con_iva_mxn']) if 'total_con_iva_mxn' in row and pd.notna(row['total_con_iva_mxn']) else 0
+                
+                if total_con_iva_mxn == 0 and total_con_iva_divisa > 0 and tipo_cambio_efectivo > 0:
+                    total_con_iva_mxn = total_con_iva_divisa * tipo_cambio_efectivo
+                
+                # Calcular fecha de vencimiento
+                fecha_vencimiento = safe_date(row.get('fecha_vencimiento'))
+                dias_credito = int(row['dias_credito']) if 'dias_credito' in row and pd.notna(row['dias_credito']) else None
+                
+                if not fecha_vencimiento and fecha_salida_real and dias_credito:
+                    from datetime import timedelta
+                    fecha_vencimiento = fecha_salida_real + timedelta(days=dias_credito)
+                elif not fecha_vencimiento and fecha_salida_estimada and dias_credito:
+                    from datetime import timedelta
+                    fecha_vencimiento = fecha_salida_estimada + timedelta(days=dias_credito)
                 
                 # Calcular fechas estimadas usando datos del proveedor
                 fecha_pedido = safe_date(row.get('fecha_pedido'))
@@ -455,12 +491,15 @@ class ComprasV2UploadService:
                     'fecha_anticipo': safe_date(row.get('fecha_anticipo')),
                     'fecha_pago_factura': safe_date(row.get('fecha_pago_factura')),
                     'tipo_cambio_estimado': tipo_cambio_estimado,
-                    'tipo_cambio_real': float(row['tipo_cambio_real']) if 'tipo_cambio_real' in row and pd.notna(row['tipo_cambio_real']) else 0,
-                    'gastos_importacion_divisa': float(row['gastos_importacion_divisa']) if 'gastos_importacion_divisa' in row and pd.notna(row['gastos_importacion_divisa']) else 0,
-                    'gastos_importacion_mxn': float(row['gastos_importacion_mxn']) if 'gastos_importacion_mxn' in row and pd.notna(row['gastos_importacion_mxn']) else 0,
+                    'tipo_cambio_real': tipo_cambio_real,
+                    'gastos_importacion_divisa': gastos_importacion_divisa,
+                    'gastos_importacion_mxn': gastos_importacion_mxn,
                     'porcentaje_gastos_importacion': float(row['porcentaje_gastos_importacion']) if 'porcentaje_gastos_importacion' in row and pd.notna(row['porcentaje_gastos_importacion']) else 0,
-                    'iva_monto_mxn': float(row['iva_monto_mxn']) if 'iva_monto_mxn' in row and pd.notna(row['iva_monto_mxn']) else 0,
-                    'total_con_iva_mxn': float(row['total_con_iva_mxn']) if 'total_con_iva_mxn' in row and pd.notna(row['total_con_iva_mxn']) else 0,
+                    'iva_monto_divisa': iva_monto_divisa,
+                    'iva_monto_mxn': iva_monto_mxn,
+                    'total_con_iva_divisa': total_con_iva_divisa,
+                    'total_con_iva_mxn': total_con_iva_mxn,
+                    'fecha_vencimiento': fecha_vencimiento,
                     'dias_transporte': dias_transporte,
                     'dias_puerto_planta': dias_puerto_planta,
                 }
@@ -495,26 +534,31 @@ class ComprasV2UploadService:
                 kg = float(row['kg']) if 'kg' in row and pd.notna(row['kg']) else 0
                 pu_divisa = float(row['pu_divisa']) if 'pu_divisa' in row and pd.notna(row['pu_divisa']) else 0
                 
-                # Obtener gastos de importación para calcular pu_mxn_importacion
-                # Los gastos_importacion_mxn vienen a nivel de compra, necesitamos el porcentaje
-                porcentaje_gastos = 0.0
-                gastos_importacion_mxn = 0.0
-                
-                # Nota: gastos_importacion_mxn es a nivel de compra, no de material
-                # El porcentaje se debe obtener de la compra para este material
-                # Por ahora usamos 0 y se calculará en el servicio con datos de la compra
+                # Obtener datos de la compra para cálculos
+                # Nota: Los datos de la compra se obtendrán en el servicio, aquí solo preparamos los datos básicos
                 
                 # Calcular campos automáticamente
                 pu_mxn = float(row['pu_mxn']) if 'pu_mxn' in row and pd.notna(row['pu_mxn']) else 0
                 costo_total_divisa = float(row['costo_total_divisa']) if 'costo_total_divisa' in row and pd.notna(row['costo_total_divisa']) else (kg * pu_divisa)
+                
+                # Si pu_mxn no viene, se calculará en el servicio usando tipo de cambio
+                # Por ahora solo guardamos lo que viene del Excel
+                
+                # Calcular costo_total_mxn solo si tenemos pu_mxn
                 costo_total_mxn = float(row['costo_total_mxn']) if 'costo_total_mxn' in row and pd.notna(row['costo_total_mxn']) else (kg * pu_mxn) if pu_mxn > 0 else 0
                 
-                # pu_mxn_importacion se calcula en el servicio usando gastos_importacion_mxn de la compra
-                # Por ahora guardamos 0 y el servicio lo calculará
+                # Los siguientes campos se calcularán en el servicio usando datos de la compra:
+                # - pu_mxn (si no viene)
+                # - porcentaje_gastos_importacion
+                # - pu_mxn_importacion
+                # - costo_total_mxn_importacion
+                # - iva (si no viene)
+                # - costo_total_con_iva
+                
                 pu_mxn_importacion = float(row['pu_mxn_importacion']) if 'pu_mxn_importacion' in row and pd.notna(row['pu_mxn_importacion']) else 0
                 costo_total_mxn_imporacion = float(row['costo_total_mxn_importacion']) if 'costo_total_mxn_importacion' in row and pd.notna(row['costo_total_mxn_importacion']) else 0
                 iva = float(row['iva']) if 'iva' in row and pd.notna(row['iva']) else 0
-                costo_total_con_iva = float(row['costo_total_con_iva']) if 'costo_total_con_iva' in row and pd.notna(row['costo_total_con_iva']) else (costo_total_mxn_imporacion + iva) if costo_total_mxn_imporacion > 0 else 0
+                costo_total_con_iva = float(row['costo_total_con_iva']) if 'costo_total_con_iva' in row and pd.notna(row['costo_total_con_iva']) else 0
                 
                 material = {
                     'compra_id': compra_id,

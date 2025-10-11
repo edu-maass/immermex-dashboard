@@ -420,7 +420,9 @@ class ComprasV2Service:
                     # Verificar primero si la compra existe y obtener datos necesarios
                     cursor.execute("""
                         SELECT moneda, tipo_cambio_real, tipo_cambio_estimado,
-                               gastos_importacion_mxn, porcentaje_gastos_importacion
+                               gastos_importacion_mxn, porcentaje_gastos_importacion,
+                               costo_total_mxn, gastos_importacion_divisa, iva_monto_divisa,
+                               total_con_iva_divisa
                         FROM compras_v2 
                         WHERE imi = %s
                     """, (material['compra_id'],))
@@ -439,26 +441,50 @@ class ComprasV2Service:
                         compra_info['tipo_cambio_estimado'] if compra_info else None    # tipo_cambio_estimado
                     )
                     
-                    # Calcular pu_mxn_importacion usando porcentaje_gastos_importacion
-                    # Si no viene del Excel (es 0), calcular usando el porcentaje de gastos
+                    # Calcular pu_mxn si no viene del Excel
+                    pu_divisa = self.safe_decimal(material['pu_divisa'])
                     pu_mxn = self.safe_decimal(material['pu_mxn'])
-                    porcentaje_gastos = self.safe_decimal(compra_info.get('porcentaje_gastos_importacion', 0))
                     
-                    if material.get('pu_mxn_importacion', 0) == 0:
-                        # Calcular: pu_mxn * (1 + porcentaje_gastos/100)
-                        pu_mxn_importacion = pu_mxn * (1 + porcentaje_gastos / 100) if porcentaje_gastos > 0 else pu_mxn
+                    if pu_mxn == 0 and pu_divisa > 0:
+                        # Usar tipo de cambio real si existe, sino el estimado
+                        tipo_cambio_efectivo = compra_info.get('tipo_cambio_real') or compra_info.get('tipo_cambio_estimado') or 20.0
+                        if compra_info.get('moneda') == 'USD':
+                            pu_mxn = pu_divisa * tipo_cambio_efectivo
+                    
+                    # Calcular porcentaje_gastos_importacion si no viene
+                    porcentaje_gastos = self.safe_decimal(compra_info.get('porcentaje_gastos_importacion', 0))
+                    gastos_importacion_mxn = self.safe_decimal(compra_info.get('gastos_importacion_mxn', 0))
+                    costo_total_mxn_compra = self.safe_decimal(compra_info.get('costo_total_mxn', 0))
+                    
+                    if porcentaje_gastos == 0 and gastos_importacion_mxn > 0 and costo_total_mxn_compra > 0:
+                        porcentaje_gastos = (gastos_importacion_mxn / costo_total_mxn_compra) * 100
+                    
+                    # Calcular pu_mxn_importacion
+                    if material.get('pu_mxn_importacion', 0) == 0 and pu_mxn > 0:
+                        pu_mxn_importacion = pu_mxn * (1 + porcentaje_gastos / 100)
                     else:
                         pu_mxn_importacion = self.safe_decimal(material['pu_mxn_importacion'])
                     
-                    # Calcular costo_total_mxn_importacion
+                    # Calcular costo_total_mxn
                     kg = self.safe_decimal(material['kg'])
-                    if material.get('costo_total_mxn_imporacion', 0) == 0:
-                        costo_total_mxn_importacion = kg * pu_mxn_importacion
+                    costo_total_mxn = self.safe_decimal(material['costo_total_mxn'])
+                    
+                    if costo_total_mxn == 0 and pu_mxn > 0:
+                        costo_total_mxn = kg * pu_mxn
+                    
+                    # Calcular costo_total_mxn_importacion
+                    if material.get('costo_total_mxn_imporacion', 0) == 0 and costo_total_mxn > 0:
+                        costo_total_mxn_importacion = costo_total_mxn * (1 + porcentaje_gastos / 100)
                     else:
                         costo_total_mxn_importacion = self.safe_decimal(material['costo_total_mxn_imporacion'])
                     
-                    # Calcular costo_total_con_iva
+                    # Calcular IVA si no viene
                     iva = self.safe_decimal(material.get('iva', 0))
+                    if iva == 0 and costo_total_mxn_importacion > 0:
+                        # Asumir 16% de IVA si no viene especificado
+                        iva = costo_total_mxn_importacion * 0.16
+                    
+                    # Calcular costo_total_con_iva
                     if material.get('costo_total_con_iva', 0) == 0:
                         costo_total_con_iva = costo_total_mxn_importacion + iva
                     else:
