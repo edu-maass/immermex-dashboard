@@ -417,9 +417,10 @@ class ComprasV2Service:
             
             for material in materiales:
                 try:
-                    # Verificar primero si la compra existe
+                    # Verificar primero si la compra existe y obtener datos necesarios
                     cursor.execute("""
-                        SELECT moneda, tipo_cambio_real, tipo_cambio_estimado 
+                        SELECT moneda, tipo_cambio_real, tipo_cambio_estimado,
+                               gastos_importacion_mxn, porcentaje_gastos_importacion
                         FROM compras_v2 
                         WHERE imi = %s
                     """, (material['compra_id'],))
@@ -437,6 +438,31 @@ class ComprasV2Service:
                         compra_info['tipo_cambio_real'] if compra_info else None,   # tipo_cambio_real
                         compra_info['tipo_cambio_estimado'] if compra_info else None    # tipo_cambio_estimado
                     )
+                    
+                    # Calcular pu_mxn_importacion usando porcentaje_gastos_importacion
+                    # Si no viene del Excel (es 0), calcular usando el porcentaje de gastos
+                    pu_mxn = self.safe_decimal(material['pu_mxn'])
+                    porcentaje_gastos = self.safe_decimal(compra_info.get('porcentaje_gastos_importacion', 0))
+                    
+                    if material.get('pu_mxn_importacion', 0) == 0:
+                        # Calcular: pu_mxn * (1 + porcentaje_gastos/100)
+                        pu_mxn_importacion = pu_mxn * (1 + porcentaje_gastos / 100) if porcentaje_gastos > 0 else pu_mxn
+                    else:
+                        pu_mxn_importacion = self.safe_decimal(material['pu_mxn_importacion'])
+                    
+                    # Calcular costo_total_mxn_importacion
+                    kg = self.safe_decimal(material['kg'])
+                    if material.get('costo_total_mxn_imporacion', 0) == 0:
+                        costo_total_mxn_importacion = kg * pu_mxn_importacion
+                    else:
+                        costo_total_mxn_importacion = self.safe_decimal(material['costo_total_mxn_imporacion'])
+                    
+                    # Calcular costo_total_con_iva
+                    iva = self.safe_decimal(material.get('iva', 0))
+                    if material.get('costo_total_con_iva', 0) == 0:
+                        costo_total_con_iva = costo_total_mxn_importacion + iva
+                    else:
+                        costo_total_con_iva = self.safe_decimal(material['costo_total_con_iva'])
                     
                     # Verificar si ya existe (usar compra_id + material_codigo como clave compuesta)
                     cursor.execute("""
@@ -465,16 +491,16 @@ class ComprasV2Service:
                                 updated_at = %s
                             WHERE compra_id = %s AND material_codigo = %s
                         """, (
-                            self.safe_decimal(material['kg']),
+                            kg,
                             self.safe_decimal(material['pu_divisa']),
-                            self.safe_decimal(material['pu_mxn']),
+                            pu_mxn,
                             pu_usd,
                             self.safe_decimal(material['costo_total_divisa']),
                             self.safe_decimal(material['costo_total_mxn']),
-                            self.safe_decimal(material['pu_mxn_importacion']),
-                            self.safe_decimal(material['costo_total_mxn_imporacion']),
-                            self.safe_decimal(material['iva']),
-                            self.safe_decimal(material['costo_total_con_iva']),
+                            pu_mxn_importacion,
+                            costo_total_mxn_importacion,
+                            iva,
+                            costo_total_con_iva,
                             material['compra_imi'],
                             datetime.utcnow(),
                             material['compra_id'],
@@ -495,16 +521,16 @@ class ComprasV2Service:
                         """, (
                             material['compra_id'],
                             material['material_codigo'],
-                            self.safe_decimal(material['kg']),
+                            kg,
                             self.safe_decimal(material['pu_divisa']),
-                            self.safe_decimal(material['pu_mxn']),
+                            pu_mxn,
                             pu_usd,
                             self.safe_decimal(material['costo_total_divisa']),
                             self.safe_decimal(material['costo_total_mxn']),
-                            self.safe_decimal(material['pu_mxn_importacion']),
-                            self.safe_decimal(material['costo_total_mxn_imporacion']),
-                            self.safe_decimal(material['iva']),
-                            self.safe_decimal(material['costo_total_con_iva']),
+                            pu_mxn_importacion,
+                            costo_total_mxn_importacion,
+                            iva,
+                            costo_total_con_iva,
                             material['compra_imi'],
                             datetime.utcnow(),
                             datetime.utcnow()

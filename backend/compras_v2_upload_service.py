@@ -402,11 +402,23 @@ class ComprasV2UploadService:
                 if fecha_arribo_real and fecha_planta_real:
                     dias_puerto_planta = (fecha_planta_real - fecha_arribo_real).days
                 
+                # Obtener datos del proveedor
+                proveedor_nombre = str(row['proveedor']) if 'proveedor' in row and pd.notna(row['proveedor']) else ''
+                proveedor_info = self._get_proveedor_info(proveedor_nombre) if proveedor_nombre else {}
+                
+                # Puerto origen: primero buscar en Excel, luego en tabla proveedores
+                puerto_origen = str(row['puerto_origen']) if 'puerto_origen' in row and pd.notna(row['puerto_origen']) else ''
+                if not puerto_origen and proveedor_info:
+                    puerto_origen = proveedor_info.get('puerto_origen', '')
+                
+                # Tipo de cambio estimado: por defecto 20, o lo que venga en Excel
+                tipo_cambio_estimado = float(row['tipo_cambio_estimado']) if 'tipo_cambio_estimado' in row and pd.notna(row['tipo_cambio_estimado']) else 20.0
+                
                 compra = {
                     'imi': int(row['imi']) if 'imi' in row and pd.notna(row['imi']) else 0,
-                    'proveedor': str(row['proveedor']) if 'proveedor' in row and pd.notna(row['proveedor']) else '',
+                    'proveedor': proveedor_nombre,
                     'fecha_pedido': safe_date(row.get('fecha_pedido')),
-                    'puerto_origen': str(row['puerto_origen']) if 'puerto_origen' in row and pd.notna(row['puerto_origen']) else '',
+                    'puerto_origen': puerto_origen,
                     'fecha_salida_estimada': safe_date(row.get('fecha_salida_estimada')),
                     'fecha_arribo_estimada': safe_date(row.get('fecha_arribo_estimada')),
                     'fecha_planta_estimada': safe_date(row.get('fecha_planta_estimada')),
@@ -419,7 +431,7 @@ class ComprasV2UploadService:
                     'anticipo_monto': float(row['anticipo_monto']) if 'anticipo_monto' in row and pd.notna(row['anticipo_monto']) else 0,
                     'fecha_anticipo': safe_date(row.get('fecha_anticipo')),
                     'fecha_pago_factura': safe_date(row.get('fecha_pago_factura')),
-                    'tipo_cambio_estimado': float(row['tipo_cambio_estimado']) if 'tipo_cambio_estimado' in row and pd.notna(row['tipo_cambio_estimado']) else 0,
+                    'tipo_cambio_estimado': tipo_cambio_estimado,
                     'tipo_cambio_real': float(row['tipo_cambio_real']) if 'tipo_cambio_real' in row and pd.notna(row['tipo_cambio_real']) else 0,
                     'gastos_importacion_divisa': float(row['gastos_importacion_divisa']) if 'gastos_importacion_divisa' in row and pd.notna(row['gastos_importacion_divisa']) else 0,
                     'gastos_importacion_mxn': float(row['gastos_importacion_mxn']) if 'gastos_importacion_mxn' in row and pd.notna(row['gastos_importacion_mxn']) else 0,
@@ -460,14 +472,26 @@ class ComprasV2UploadService:
                 kg = float(row['kg']) if 'kg' in row and pd.notna(row['kg']) else 0
                 pu_divisa = float(row['pu_divisa']) if 'pu_divisa' in row and pd.notna(row['pu_divisa']) else 0
                 
+                # Obtener gastos de importación para calcular pu_mxn_importacion
+                # Los gastos_importacion_mxn vienen a nivel de compra, necesitamos el porcentaje
+                porcentaje_gastos = 0.0
+                gastos_importacion_mxn = 0.0
+                
+                # Nota: gastos_importacion_mxn es a nivel de compra, no de material
+                # El porcentaje se debe obtener de la compra para este material
+                # Por ahora usamos 0 y se calculará en el servicio con datos de la compra
+                
                 # Calcular campos automáticamente
                 pu_mxn = float(row['pu_mxn']) if 'pu_mxn' in row and pd.notna(row['pu_mxn']) else 0
                 costo_total_divisa = float(row['costo_total_divisa']) if 'costo_total_divisa' in row and pd.notna(row['costo_total_divisa']) else (kg * pu_divisa)
                 costo_total_mxn = float(row['costo_total_mxn']) if 'costo_total_mxn' in row and pd.notna(row['costo_total_mxn']) else (kg * pu_mxn) if pu_mxn > 0 else 0
-                pu_mxn_importacion = float(row['pu_mxn_importacion']) if 'pu_mxn_importacion' in row and pd.notna(row['pu_mxn_importacion']) else pu_mxn
-                costo_total_mxn_imporacion = float(row['costo_total_mxn_importacion']) if 'costo_total_mxn_importacion' in row and pd.notna(row['costo_total_mxn_importacion']) else (kg * pu_mxn_importacion)
+                
+                # pu_mxn_importacion se calcula en el servicio usando gastos_importacion_mxn de la compra
+                # Por ahora guardamos 0 y el servicio lo calculará
+                pu_mxn_importacion = float(row['pu_mxn_importacion']) if 'pu_mxn_importacion' in row and pd.notna(row['pu_mxn_importacion']) else 0
+                costo_total_mxn_imporacion = float(row['costo_total_mxn_importacion']) if 'costo_total_mxn_importacion' in row and pd.notna(row['costo_total_mxn_importacion']) else 0
                 iva = float(row['iva']) if 'iva' in row and pd.notna(row['iva']) else 0
-                costo_total_con_iva = float(row['costo_total_con_iva']) if 'costo_total_con_iva' in row and pd.notna(row['costo_total_con_iva']) else (costo_total_mxn_imporacion + iva)
+                costo_total_con_iva = float(row['costo_total_con_iva']) if 'costo_total_con_iva' in row and pd.notna(row['costo_total_con_iva']) else (costo_total_mxn_imporacion + iva) if costo_total_mxn_imporacion > 0 else 0
                 
                 material = {
                     'compra_id': compra_id,
@@ -510,6 +534,37 @@ class ComprasV2UploadService:
             
         except Exception as e:
             logger.warning(f"[COMPRAS_V2_PROCESSOR] No se pudo obtener mapeo de IDs: {str(e)}")
+            return {}
+    
+    def _get_proveedor_info(self, nombre_proveedor: str) -> dict:
+        """Obtiene información del proveedor desde la base de datos"""
+        try:
+            conn = self.compras_service.get_connection()
+            if not conn:
+                return {}
+            
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT puerto_origen, dias_produccion_promedio, dias_transporte_promedio
+                FROM proveedores
+                WHERE nombre = %s
+            """, (nombre_proveedor,))
+            
+            result = cursor.fetchone()
+            cursor.close()
+            
+            if result:
+                return {
+                    'puerto_origen': result['puerto_origen'],
+                    'dias_produccion': result['dias_produccion_promedio'],
+                    'dias_transporte': result['dias_transporte_promedio']
+                }
+            else:
+                logger.warning(f"[COMPRAS_V2_PROCESSOR] Proveedor '{nombre_proveedor}' no encontrado en tabla proveedores")
+                return {}
+                
+        except Exception as e:
+            logger.warning(f"[COMPRAS_V2_PROCESSOR] Error obteniendo info de proveedor: {str(e)}")
             return {}
     
     def __del__(self):
