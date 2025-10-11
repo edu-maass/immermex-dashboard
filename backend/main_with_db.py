@@ -97,15 +97,28 @@ async def options_handler(path: str):
     )
 
 # Endpoint de prueba para verificar CORS
+@app.get("/api/version-test")
+async def version_test():
+    """Endpoint simple para verificar versión del deployment"""
+    print(f"🔥🔥🔥 VERSION TEST - Timestamp: {datetime.now().isoformat()}")
+    logger.info(f"🚀 VERSION TEST - logger test")
+    return {
+        "message": "Version test successful",
+        "version": "V3_OCTOBER_11_2025_06_05AM",
+        "commit": "LATEST",
+        "timestamp": datetime.now().isoformat()
+    }
+
 @app.get("/api/cors-test")
 async def cors_test():
     """Endpoint de prueba para verificar configuración CORS"""
+    print(f"🔥🔥🔥 CORS TEST EJECUTADO - Timestamp: {datetime.now().isoformat()}")
     origins = get_cors_origins()
     env = os.getenv("ENVIRONMENT", "development")
     allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "not_set")
     
     return {
-        "message": "CORS test successful",
+        "message": "CORS test successful - V2_WITH_PRINT_STATEMENTS",
         "environment": env,
         "allowed_origins": origins,
         "allowed_origins_env": allowed_origins_env,
