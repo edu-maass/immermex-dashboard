@@ -100,6 +100,12 @@ class DatabaseService:
             anticipos_count = self._save_anticipos(processed_data_dict.get("cfdi_clean", []), archivo_id)
             logger.info("Guardando pedidos...")
             # FIX: Usar la clave correcta "pedidos_compras_clean" en lugar de "pedidos_clean"
+            print(f"🔥🔥🔥 DEBUG: processed_data_dict type: {type(processed_data_dict)}")
+            print(f"🔥🔥🔥 DEBUG: processed_data_dict is None: {processed_data_dict is None}")
+            if processed_data_dict is not None:
+                print(f"🔥🔥🔥 DEBUG: processed_data_dict keys: {list(processed_data_dict.keys())}")
+            else:
+                print(f"🔥🔥🔥 ERROR: processed_data_dict is None!")
             pedidos_data_to_save = processed_data_dict.get("pedidos_compras_clean", [])
             print(f"🔥🔥🔥 ANTES DE save_pedidos: Recibidos {len(pedidos_data_to_save)} pedidos para guardar")
             print(f"🔥 Claves disponibles en processed_data_dict: {list(processed_data_dict.keys())}")
