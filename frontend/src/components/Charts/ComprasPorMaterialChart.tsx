@@ -57,8 +57,7 @@ export const ComprasPorMaterialChart: FC<ComprasPorMaterialChartProps> = ({
   };
 
   const formatKG = (value: number) => {
-    if (value >= 1000000) return `${Math.round(value / 1000000)}M kg`;
-    if (value >= 1000) return `${Math.round(value / 1000)}K kg`;
+    if (value >= 1000) return `${(value / 1000).toFixed(1)} ton`;
     return `${value.toFixed(0)} kg`;
   };
 
