@@ -68,10 +68,22 @@ class PedidosService:
                         dias_credito_pedido = dias_credito_por_folio[folio_limpio]
                         dias_credito_asignados += 1
                 
+                # Extraer folio_factura numérico de la cadena completa
+                folio_raw = pedido_data.get('folio_factura', '')
+                folio_factura_num = self._extract_numeric_folio(folio_raw)
+                
+                # Ignorar registro si no se puede extraer un folio numérico válido
+                if folio_factura_num is None:
+                    logger.warning(f"Saltando pedido - folio_factura no numérico: '{folio_raw}'")
+                    continue
+                
+                # Obtener IMI de la columna "Pedido"
+                imi = DataValidator.safe_int(pedido_data.get('pedido', 0))
+                
                 # Crear registro en pedidos_compras (tabla optimizada de Supabase)
                 pedido_compras = PedidosCompras(
-                    compra_imi=0,  # Campo específico de compras, inicializar en 0
-                    folio_factura=DataValidator.safe_int(pedido_data.get('folio_factura', 0)),  # FIX: Convertir a int en lugar de string
+                    compra_imi=imi,  # Usar IMI de la columna "Pedido"
+                    folio_factura=folio_factura_num,  # Folio numérico extraído
                     material_codigo=DataValidator.safe_string(pedido_data.get('material', '')),  # Mapear material a material_codigo
                     kg=DataValidator.safe_float(pedido_data.get('kg', 0)),
                     precio_unitario=DataValidator.safe_float(pedido_data.get('precio_unitario', 0)),
@@ -106,6 +118,32 @@ class PedidosService:
             logger.info(f"Se asignaron automáticamente {dias_credito_asignados} días de crédito a pedidos_compras")
         
         return count
+    
+    def _extract_numeric_folio(self, folio_raw: str) -> int:
+        """Extrae el número de folio de una cadena que contiene texto adicional
+        
+        Ejemplo: '29,975 PT.202506124013IM251849/10' -> 29975
+        """
+        if not folio_raw:
+            return None
+            
+        # Convertir a string y limpiar
+        folio_str = str(folio_raw).strip()
+        
+        # Remover comas y espacios
+        folio_str = folio_str.replace(',', '')
+        
+        # Extraer solo la parte numérica al inicio (antes del primer espacio o caracter no numérico)
+        import re
+        match = re.match(r'^(\d+)', folio_str)
+        
+        if match:
+            try:
+                return int(match.group(1))
+            except (ValueError, TypeError):
+                return None
+        
+        return None
     
     def _categorize_material(self, material: str) -> str:
         """Categoriza el material basado en su código o nombre"""
