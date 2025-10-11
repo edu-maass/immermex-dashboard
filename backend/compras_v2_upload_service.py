@@ -94,21 +94,36 @@ class ComprasV2UploadService:
             else:
                 logger.info("[COMPRAS_V2_SERVICE] Modo incremental: Conservando datos existentes, actualizando/insertando según corresponda...")
             
-            # Crear nuevo registro
-            archivo = ArchivoProcesado(
-                nombre_archivo=filename,
-                tamaño_archivo=file_size,
-                algoritmo_usado="compras_v2_robust",
-                estado="en_proceso",
-                fecha_procesamiento=datetime.utcnow()
-            )
+            # Verificar si ya existe un archivo con el mismo nombre
+            existing_archivo = db.query(ArchivoProcesado).filter(
+                ArchivoProcesado.nombre_archivo == filename
+            ).first()
             
-            db.add(archivo)
-            db.commit()
-            db.refresh(archivo)  # Refrescar para obtener el ID
-            
-            logger.info(f"[COMPRAS_V2_SERVICE] Archivo creado: ID={archivo.id}, nombre={filename}")
-            return archivo.id
+            if existing_archivo:
+                # Actualizar el archivo existente
+                existing_archivo.estado = "en_proceso"
+                existing_archivo.fecha_procesamiento = datetime.utcnow()
+                existing_archivo.tamaño_archivo = file_size
+                db.commit()
+                db.refresh(existing_archivo)
+                logger.info(f"[COMPRAS_V2_SERVICE] Archivo existente actualizado: ID={existing_archivo.id}, nombre={filename}")
+                return existing_archivo.id
+            else:
+                # Crear nuevo registro
+                archivo = ArchivoProcesado(
+                    nombre_archivo=filename,
+                    tamaño_archivo=file_size,
+                    algoritmo_usado="compras_v2_robust",
+                    estado="en_proceso",
+                    fecha_procesamiento=datetime.utcnow()
+                )
+                
+                db.add(archivo)
+                db.commit()
+                db.refresh(archivo)  # Refrescar para obtener el ID
+                
+                logger.info(f"[COMPRAS_V2_SERVICE] Archivo creado: ID={archivo.id}, nombre={filename}")
+                return archivo.id
             
         except Exception as e:
             logger.error(f"[COMPRAS_V2_SERVICE] Error creando archivo: {str(e)}")
@@ -362,23 +377,33 @@ class ComprasV2UploadService:
                 if 'imi' not in row or pd.isna(row['imi']) or row['imi'] == '':
                     continue
                 
+                # Helper para convertir fechas y manejar NaT
+                def safe_date(value):
+                    if value is None or pd.isna(value):
+                        return None
+                    try:
+                        dt = pd.to_datetime(value, errors='coerce')
+                        return None if pd.isna(dt) else dt
+                    except:
+                        return None
+                
                 compra = {
                     'imi': int(row['imi']) if 'imi' in row and pd.notna(row['imi']) else 0,
                     'proveedor': str(row['proveedor']) if 'proveedor' in row and pd.notna(row['proveedor']) else '',
-                    'fecha_pedido': pd.to_datetime(row['fecha_pedido'], errors='coerce') if 'fecha_pedido' in row else None,
+                    'fecha_pedido': safe_date(row.get('fecha_pedido')),
                     'puerto_origen': str(row['puerto_origen']) if 'puerto_origen' in row and pd.notna(row['puerto_origen']) else '',
-                    'fecha_salida_estimada': pd.to_datetime(row['fecha_salida_estimada'], errors='coerce') if 'fecha_salida_estimada' in row else None,
-                    'fecha_arribo_estimada': pd.to_datetime(row['fecha_arribo_estimada'], errors='coerce') if 'fecha_arribo_estimada' in row else None,
-                    'fecha_planta_estimada': pd.to_datetime(row['fecha_planta_estimada'], errors='coerce') if 'fecha_planta_estimada' in row else None,
-                    'fecha_salida_real': pd.to_datetime(row['fecha_salida_real'], errors='coerce') if 'fecha_salida_real' in row else None,
-                    'fecha_arribo_real': pd.to_datetime(row['fecha_arribo_real'], errors='coerce') if 'fecha_arribo_real' in row else None,
-                    'fecha_planta_real': pd.to_datetime(row['fecha_planta_real'], errors='coerce') if 'fecha_planta_real' in row else None,
+                    'fecha_salida_estimada': safe_date(row.get('fecha_salida_estimada')),
+                    'fecha_arribo_estimada': safe_date(row.get('fecha_arribo_estimada')),
+                    'fecha_planta_estimada': safe_date(row.get('fecha_planta_estimada')),
+                    'fecha_salida_real': safe_date(row.get('fecha_salida_real')),
+                    'fecha_arribo_real': safe_date(row.get('fecha_arribo_real')),
+                    'fecha_planta_real': safe_date(row.get('fecha_planta_real')),
                     'moneda': str(row['moneda']) if 'moneda' in row and pd.notna(row['moneda']) else 'USD',
                     'dias_credito': int(row['dias_credito']) if 'dias_credito' in row and pd.notna(row['dias_credito']) else None,
                     'anticipo_pct': float(row['anticipo_pct']) if 'anticipo_pct' in row and pd.notna(row['anticipo_pct']) else 0,
                     'anticipo_monto': float(row['anticipo_monto']) if 'anticipo_monto' in row and pd.notna(row['anticipo_monto']) else 0,
-                    'fecha_anticipo': pd.to_datetime(row['fecha_anticipo'], errors='coerce') if 'fecha_anticipo' in row else None,
-                    'fecha_pago_factura': pd.to_datetime(row['fecha_pago_factura'], errors='coerce') if 'fecha_pago_factura' in row else None,
+                    'fecha_anticipo': safe_date(row.get('fecha_anticipo')),
+                    'fecha_pago_factura': safe_date(row.get('fecha_pago_factura')),
                     'tipo_cambio_estimado': float(row['tipo_cambio_estimado']) if 'tipo_cambio_estimado' in row and pd.notna(row['tipo_cambio_estimado']) else 0,
                     'tipo_cambio_real': float(row['tipo_cambio_real']) if 'tipo_cambio_real' in row and pd.notna(row['tipo_cambio_real']) else 0,
                     'gastos_importacion_divisa': float(row['gastos_importacion_divisa']) if 'gastos_importacion_divisa' in row and pd.notna(row['gastos_importacion_divisa']) else 0,
