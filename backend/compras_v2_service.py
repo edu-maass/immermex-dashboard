@@ -433,9 +433,9 @@ class ComprasV2Service:
                     # Calcular pu_usd
                     pu_usd = self.calculate_pu_usd(
                         material['pu_divisa'],
-                        compra_info[0] if compra_info else 'USD',  # moneda
-                        compra_info[1] if compra_info else None,   # tipo_cambio_real
-                        compra_info[2] if compra_info else None    # tipo_cambio_estimado
+                        compra_info['moneda'] if compra_info else 'USD',  # moneda
+                        compra_info['tipo_cambio_real'] if compra_info else None,   # tipo_cambio_real
+                        compra_info['tipo_cambio_estimado'] if compra_info else None    # tipo_cambio_estimado
                     )
                     
                     # Verificar si ya existe (usar compra_id + material_codigo como clave compuesta)
