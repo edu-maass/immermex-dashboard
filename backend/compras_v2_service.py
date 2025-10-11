@@ -438,9 +438,9 @@ class ComprasV2Service:
                         compra_info[2] if compra_info else None    # tipo_cambio_estimado
                     )
                     
-                    # Verificar si ya existe
+                    # Verificar si ya existe (usar compra_id + material_codigo como clave compuesta)
                     cursor.execute("""
-                        SELECT id FROM compras_v2_materiales 
+                        SELECT compra_id FROM compras_v2_materiales 
                         WHERE compra_id = %s AND material_codigo = %s
                     """, (material['compra_id'], material['material_codigo']))
                     existing = cursor.fetchone()
@@ -516,7 +516,10 @@ class ComprasV2Service:
                     logger.info(f"Material {material['material_codigo']} para compra IMI {material['compra_id']} guardado exitosamente")
                     
                 except Exception as e:
-                    logger.error(f"Error guardando material {material['material_codigo']} para compra {material['compra_id']}: {str(e)}")
+                    error_msg = str(e) if str(e) else repr(e)
+                    logger.error(f"Error guardando material {material['material_codigo']} para compra {material['compra_id']}: {error_msg}")
+                    import traceback
+                    logger.error(f"Traceback: {traceback.format_exc()}")
                     # Rollback individual para este material
                     conn.rollback()
                     continue
