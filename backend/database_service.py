@@ -78,6 +78,7 @@ class DatabaseService:
             
             # CRITICAL: No hacer commit intermedio - usar flush() para asegurar visibilidad
             logger.info("🔥🔥🔥 NEW DEPLOYMENT CONFIRMATION - DATABASE SERVICE 🔥🔥🔥")
+            logger.info("🔥🔥🔥 FIXED TRANSACTION ISSUES - IMPROVED COMMIT HANDLING 🔥🔥🔥")
             logger.info("ArchivoProcesado ya fue committeado en _create_archivo_record")
             logger.info("🔥🔥🔥 ARCHIVO YA COMMITTED - No need for additional commit 🔥🔥🔥")
             
@@ -106,27 +107,46 @@ class DatabaseService:
             # Actualizar registro de archivo y hacer commit final
             total_registros = facturas_count + cobranzas_count + anticipos_count + pedidos_count
             
-            # Buscar el archivo nuevamente para actualizarlo - usar nueva sesión para evitar ObjectDeletedError
+            # Actualizar registro de archivo - usar commit inmediato para evitar problemas de transacción
+            logger.info(f"Actualizando archivo ID {archivo_id} con {total_registros} registros...")
             try:
+                # Hacer commit inmediato de todos los datos guardados
+                self.db.commit()
+                logger.info(f"✅ Commit exitoso de todos los datos guardados")
+                
+                # Actualizar el archivo con una nueva consulta
                 archivo_final = self.db.query(ArchivoProcesado).filter(ArchivoProcesado.id == archivo_id).first()
                 if archivo_final:
                     archivo_final.registros_procesados = total_registros
                     archivo_final.estado = "procesado"
                     self.db.commit()  # Commit final para actualizar el estado del archivo
-                    logger.info(f"Datos guardados exitosamente: {total_registros} registros")
+                    logger.info(f"✅ Datos guardados exitosamente: {total_registros} registros")
+                    logger.info(f"   - Facturas: {facturas_count}")
+                    logger.info(f"   - Cobranzas: {cobranzas_count}")
+                    logger.info(f"   - Anticipos: {anticipos_count}")
+                    logger.info(f"   - Pedidos: {pedidos_count}")
                 else:
-                    logger.error(f"No se encontró archivo con ID {archivo_id} para actualizar")
+                    logger.error(f"❌ No se encontró archivo con ID {archivo_id} para actualizar")
+                    # Intentar actualización directa con SQL
+                    from sqlalchemy import text
+                    self.db.execute(text("UPDATE archivos_procesados SET registros_procesados = :total, estado = 'procesado' WHERE id = :archivo_id"), 
+                                  {"total": total_registros, "archivo_id": archivo_id})
+                    self.db.commit()
+                    logger.info(f"✅ Actualización directa exitosa: {total_registros} registros")
             except Exception as update_error:
-                logger.error(f"Error actualizando archivo final: {str(update_error)}")
+                logger.error(f"❌ Error actualizando archivo final: {str(update_error)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 # Intentar actualización directa con SQL si falla la ORM
                 try:
                     from sqlalchemy import text
                     self.db.execute(text("UPDATE archivos_procesados SET registros_procesados = :total, estado = 'procesado' WHERE id = :archivo_id"), 
                                   {"total": total_registros, "archivo_id": archivo_id})
                     self.db.commit()
-                    logger.info(f"Actualización directa exitosa: {total_registros} registros")
+                    logger.info(f"✅ Actualización directa exitosa: {total_registros} registros")
                 except Exception as sql_error:
-                    logger.error(f"Error en actualización directa: {str(sql_error)}")
+                    logger.error(f"❌ Error en actualización directa: {str(sql_error)}")
+                    logger.error(f"SQL Traceback: {traceback.format_exc()}")
             
             return {
                 "success": True,
